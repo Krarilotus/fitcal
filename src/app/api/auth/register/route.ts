@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { createUserSession } from "@/lib/auth/session";
 import { registerSchema } from "@/lib/auth/validation";
+import { normalizeMeasurementDate } from "@/lib/measurements";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -12,6 +13,11 @@ export async function POST(request: Request) {
       email: formData.get("email"),
       name: formData.get("name"),
       password: formData.get("password"),
+      birthDate: formData.get("birthDate"),
+      heightCm: formData.get("heightCm"),
+      waistCircumferenceCm: formData.get("waistCircumferenceCm"),
+      weightKg: formData.get("weightKg"),
+      motivation: formData.get("motivation"),
     });
 
     const existingUser = await prisma.user.findUnique({
@@ -26,12 +32,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await prisma.user.create({
-      data: {
-        email: parsed.email,
-        name: parsed.name || null,
-        passwordHash: await hashPassword(parsed.password),
-      },
+    const passwordHash = await hashPassword(parsed.password);
+    const shouldCreateMeasurement =
+      parsed.waistCircumferenceCm !== undefined || parsed.weightKg !== undefined;
+
+    const user = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          email: parsed.email,
+          name: parsed.name || null,
+          passwordHash,
+          birthDate: parsed.birthDate ?? null,
+          heightCm: parsed.heightCm ?? null,
+          motivation: parsed.motivation || null,
+        },
+      });
+
+      if (shouldCreateMeasurement) {
+        await tx.measurementEntry.create({
+          data: {
+            userId: createdUser.id,
+            measuredAt: normalizeMeasurementDate(),
+            waistCircumferenceCm: parsed.waistCircumferenceCm,
+            weightKg: parsed.weightKg,
+            notes: "Startwert bei Registrierung",
+          },
+        });
+      }
+
+      return createdUser;
     });
 
     await createUserSession(user.id);

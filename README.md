@@ -1,8 +1,8 @@
 # FitCal
 
-Fitness-Challenge Web App (Next.js + TypeScript), ausgelegt fuer lokalen Dev-Start und Docker-Deployment auf einem bestehenden Linux-Server.
+Next.js-App fuer die FitCal-Challenge. Deployment-Ziel ist `fitcal.hisqu.de` hinter Nginx, in Docker, mit SQLite, Uploads auf Disk und Passwort-Reset ueber Resend.
 
-## 1) Lokales Ausprobieren (Git Bash)
+## Lokal starten
 
 Voraussetzungen:
 - Node.js 22 LTS
@@ -13,101 +13,115 @@ git clone <repo-url>
 cd fitcal
 npm ci
 cp .env.example .env
-npm run db:push
+npx prisma db push
 npm run dev
 ```
 
-App danach unter `http://localhost:3000`.
+Danach:
+- App: `http://localhost:3000`
 
-Build-Test lokal:
+## Wichtige Dateien
 
-```bash
-npm run build
-npm run start
-```
+- lokale Vorlage: [`.env.example`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.example)
+- Server-Vorlage: [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server)
+- Docker: [`docker-compose.yml`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/docker-compose.yml)
+- Nginx fertig: [`deploy/nginx-fitcal.conf`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/nginx-fitcal.conf)
 
-## 2) Umgebungsvariablen
+## Resend + STRATO
 
-Lege im Projekt eine `.env` (lokal) bzw. `.env.production` (Server) an. Lokal kannst du direkt `.env.example` kopieren.
+Ziel:
+- Versand ueber Resend
+- Absender: `fitcal@mail.hisqu.de`
+- Antworten an `fitcal@hisqu.de`
+- Empfang der Antworten ueber STRATO-Postfach/Alias
 
-Beispiel:
+Wichtig:
+- Resend macht den Versand.
+- STRATO macht das echte Postfach bzw. den Alias.
+- In deinem Fall reicht es, wenn `fitcal@hisqu.de` als Alias auf das vorhandene `webmaster@[Alle Domains]`-Postfach zeigt.
+- Die Sending-Domain in Resend ist `mail.hisqu.de`.
+
+### 1. STRATO Mail vorbereiten
+
+In STRATO:
+- `E-Mail`
+- bestehendes Postfach `webmaster@[Alle Domains]`
+- unter `Weitere Namen (Aliasse) zum Postfach anlegen`
+- Alias `fitcal` hinzufuegen
+- speichern
+
+Nicht noetig:
+- Catchall aktivieren
+
+### 2. Resend vorbereiten
+
+Im neuen Resend-Account:
+1. `Domains`
+2. `Add Domain`
+3. `mail.hisqu.de` eintragen
+4. speichern
+5. die angezeigten DNS-Records offen lassen
+
+### 3. DNS in STRATO setzen
+
+In STRATO:
+- `Domains`
+- `hisqu.de`
+- `Subdomains`
+- Subdomain `mail`
+- `DNS-Verwaltung`
+
+Dann:
+- alle von Resend angezeigten Records 1:1 eintragen
+- speichern
+- in Resend `Verify` / `Refresh`
+
+Wichtig:
+- die Resend-Records werden auf der Subdomain `mail` gesetzt
+- keine eigenen TXT-Werte erfinden
+
+### 4. API Key in Resend erzeugen
+
+In Resend:
+1. `API Keys`
+2. `Create API Key`
+3. Name: `fitcal-production`
+4. Permission: `Sending`
+5. Key kopieren
+
+## `.env.server`
+
+Die vorbereitete Datei [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) ist fuer deinen lokalen Rechner gedacht, damit du sie spaeter einfach auf den Server kopieren kannst. Auf dem Server selbst benennst du sie in `.env.production` um.
+
+Alternativ kannst du direkt [`.env.production.example`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.production.example) als Vorlage benutzen.
+
+Inhalt fuer `.env.production`:
 
 ```env
 NODE_ENV=production
 PORT=3000
+
 FITCAL_BIND_IP=127.0.0.1
 FITCAL_HOST_PORT=3107
 FITCAL_DATA_DIR=/opt/fitcal/data
 FITCAL_UPLOAD_DIR=/opt/fitcal/uploads
 
-# In-Container persistente Daten
 DATABASE_URL=file:/app/data/fitcal.db
 UPLOAD_BASE_DIR=/app/uploads
 APP_TIMEZONE=Europe/Berlin
 
-# Auth
 AUTH_URL=https://fitcal.hisqu.de
 
-# SMTP (Passwort-Reset)
-SMTP_HOST=smtp.example.tld
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=fitcal@example.tld
-SMTP_PASS=replace-with-smtp-password
-SMTP_FROM="FitCal <fitcal@hisqu.de>"
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
+RESEND_FROM="FitCal <fitcal@mail.hisqu.de>"
+RESEND_REPLY_TO="fitcal@hisqu.de"
 ```
 
-Lokal minimal ausreichend:
+Wenn `3107` belegt ist, nimm einen anderen freien Port und passe dann auch Nginx an.
 
-```env
-DATABASE_URL=file:./dev.db
-FITCAL_UPLOAD_DIR=./data/uploads
-AUTH_URL=http://localhost:3000
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM="FitCal <fitcal@example.test>"
-```
+## Server vorbereiten
 
-Hinweis: Ohne SMTP-Konfiguration schreibt die App Reset-Links ins Server-Log.
-
-## 3) Docker lokal/Server
-
-### Build
-
-```bash
-docker build -t fitcal:latest .
-```
-
-### Start mit Docker Compose
-
-```bash
-docker compose up -d --build
-```
-
-Die Compose-Datei mappt standardmaessig auf `127.0.0.1:3107 -> container:3000`.
-Beim Container-Start wird `prisma db push` automatisch ausgefuehrt, sodass die SQLite-Datei bei Bedarf initialisiert wird.
-
-Health/Logs:
-
-```bash
-docker compose ps
-docker compose logs -f fitcal
-```
-
-Stop:
-
-```bash
-docker compose down
-```
-
-## 4) Deployment auf Linux-Server (PuTTY + Git Bash Workflow)
-
-### 4.1 Server-User und Verzeichnisse (least privileged)
-
-In PuTTY als Root oder sudo-User:
+Als Root oder sudo-User:
 
 ```bash
 sudo adduser --system --group --home /opt/fitcal --shell /usr/sbin/nologin fitcal
@@ -119,33 +133,37 @@ sudo chmod 750 /opt/fitcal /opt/fitcal/data /opt/fitcal/uploads
 sudo usermod -aG docker fitcal
 ```
 
-`fitcal` besitzt nur App, DB und Upload-Pfade und kann Docker ohne Root nutzen.
+Freien Port pruefen:
 
-### 4.2 Code auf den Server bringen
+```bash
+ss -ltn
+ss -ltn | grep ':3107 '
+```
 
-Option A (empfohlen): Pull direkt auf dem Server
+## Code auf den Server
 
 ```bash
 cd /opt/fitcal/app
 sudo -u fitcal git clone <repo-url> .
+```
+
+Dann entweder:
+
+Option A:
+- deine lokale [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) per SCP/WinSCP nach `/opt/fitcal/app/.env.production` hochladen
+
+Option B:
+
+```bash
+cd /opt/fitcal/app
 sudo -u fitcal cp .env.production.example .env.production
 sudo -u fitcal nano .env.production
 ```
 
-Option B: Aus Git Bash pushen, dann auf Server `git pull`.
-
-### 4.3 Starten/Updaten
+## Docker starten
 
 ```bash
 cd /opt/fitcal/app
-sudo -u fitcal docker compose --env-file .env.production up -d --build
-```
-
-Update:
-
-```bash
-cd /opt/fitcal/app
-sudo -u fitcal git pull
 sudo -u fitcal docker compose --env-file .env.production up -d --build
 ```
 
@@ -157,56 +175,59 @@ sudo -u fitcal docker compose logs -f fitcal
 curl -I http://127.0.0.1:3107
 ```
 
-## 5) Reverse Proxy fuer `fitcal.hisqu.de`
+## Nginx fuer `fitcal.hisqu.de`
 
-Beispiel-Nginx-Konfiguration: siehe `deploy/nginx-fitcal.conf.example`.
+Die fertige Datei liegt hier:
+- [`deploy/nginx-fitcal.conf`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/nginx-fitcal.conf)
 
-Kurzprinzip:
-- TLS endet am Reverse Proxy (`443`)
-- Proxy leitet intern auf `127.0.0.1:3107`
-- WebSocket-Header werden durchgereicht
+Wenn dein Host-Port nicht `3107` ist, in der Datei `proxy_pass` anpassen.
 
-Reload:
+Auf dem Server:
+
+```bash
+sudo mkdir -p /var/www/certbot
+sudo cp /opt/fitcal/app/deploy/nginx-fitcal.conf /etc/nginx/sites-available/fitcal.hisqu.de.conf
+sudo ln -s /etc/nginx/sites-available/fitcal.hisqu.de.conf /etc/nginx/sites-enabled/fitcal.hisqu.de.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## DNS fuer die App
+
+In STRATO:
+- `A`-Record: `fitcal` -> `<SERVER_IPV4>`
+- optional `AAAA`-Record: `fitcal` -> `<SERVER_IPV6>`
+
+Dann zeigt `fitcal.hisqu.de` auf deinen Server.
+
+## TLS / HTTPS
+
+Wenn Nginx steht und DNS aufloest:
+
+```bash
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d fitcal.hisqu.de
+```
+
+Danach:
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## 6) DNS/Strato (Annahmen klar markiert)
+## Live-Test
 
-Annahme:
-- Deine Server-IP ist statisch und erreichbar.
-- Die Domain `hisqu.de` wird bei Strato DNS-verwaltet.
-- Der Reverse Proxy auf dem Server terminiert HTTPS.
+1. `https://fitcal.hisqu.de` im Browser oeffnen
+2. Account registrieren
+3. Passwort-Reset anfordern
+4. prüfen:
+- kommt die Mail an?
+- ist der Absender `fitcal@mail.hisqu.de`?
+- kommen Antworten im STRATO-Postfach an?
 
-Dann in Strato DNS:
-- `A`-Record: Host `fitcal` -> `<SERVER_IPV4>`
-- Optional `AAAA`-Record: Host `fitcal` -> `<SERVER_IPV6>`
-- TTL z. B. 300 Sekunden waehrend Setup
-
-Nach DNS-Propagation sollte `https://fitcal.hisqu.de` auf den Reverse Proxy zeigen.
-
-## 7) Persistenz, Sicherheit, Betrieb
-
-- SQLite liegt in `/opt/fitcal/data` (per Volume in Container als `/app/data`).
-- User-Uploads liegen in `/opt/fitcal/uploads` (im Container `/app/uploads`).
-- Container laeuft ohne Root-User (UID/GID 10001 in Dockerfile).
-- Nur lokaler Host-Port wird gebunden (`127.0.0.1:3107`), kein direkter Internet-Port.
-- Logs via `docker compose logs`; optional spaeter mit zentralem Logging (Loki/ELK).
-
-## 8) Git Bash / PuTTY Quick Commands
-
-Lokal (Git Bash):
-
-```bash
-npm ci
-npm run dev
-docker build -t fitcal:latest .
-docker compose up -d --build
-```
-
-Server (PuTTY):
+## Update spaeter
 
 ```bash
 cd /opt/fitcal/app
@@ -214,3 +235,11 @@ sudo -u fitcal git pull
 sudo -u fitcal docker compose --env-file .env.production up -d --build
 sudo -u fitcal docker compose logs -f fitcal
 ```
+
+## Hinweise
+
+- Der Container bindet nur lokal an `127.0.0.1`.
+- Oeffentlich geht alles ueber Nginx.
+- Uploads liegen in `/opt/fitcal/uploads`.
+- SQLite liegt in `/opt/fitcal/data`.
+- Ohne Resend-Konfiguration schreibt die App Reset-Links nur ins Log.

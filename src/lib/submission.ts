@@ -50,7 +50,7 @@ export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput 
 
 export function assertSubmissionMatchesRules(input: ParsedSubmissionInput) {
   if (input.pushupSets.length > MAX_SETS_PER_EXERCISE || input.situpSets.length > MAX_SETS_PER_EXERCISE) {
-    throw new Error("Es sind maximal zwei Sets pro Uebung erlaubt.");
+    throw new Error("Es sind maximal zwei Sets pro Übung erlaubt.");
   }
 
   const target = getRequiredReps(input.challengeDate);
@@ -58,7 +58,7 @@ export function assertSubmissionMatchesRules(input: ParsedSubmissionInput) {
   const situpTotal = input.situpSets.reduce((sum, current) => sum + current, 0);
 
   if (pushupTotal < target + input.extraPushups) {
-    throw new Error("Die Liegestuetz-Sets decken Ziel und Extras noch nicht ab.");
+    throw new Error("Die Liegestütz-Sets decken Ziel und Extras noch nicht ab.");
   }
 
   if (situpTotal < target + input.extraSitups) {
@@ -77,7 +77,7 @@ export function getVideoFiles(formData: FormData) {
 
   for (const file of files) {
     if (file.size > MAX_VIDEO_SIZE_BYTES) {
-      throw new Error("Jede Videodatei darf hoechstens 100 MB gross sein.");
+      throw new Error("Jede Videodatei darf höchstens 100 MB groß sein.");
     }
   }
 

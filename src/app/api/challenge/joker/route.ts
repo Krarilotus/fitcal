@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
+  CHALLENGE_START_DATE,
   canSubmitForDate,
   countJokersForMonth,
   getMonthKey,
+  isFreeChallengeDay,
 } from "@/lib/challenge";
 
 export async function POST(request: Request) {
@@ -14,18 +16,13 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (!user.challengeEnrollment) {
-    return NextResponse.redirect(
-      new URL("/dashboard?error=Bitte%20zuerst%20die%20Challenge%20aktivieren", request.url),
-    );
-  }
-
   const formData = await request.formData();
   const challengeDate = String(formData.get("challengeDate") || "");
 
   if (
     !challengeDate ||
-    challengeDate < user.challengeEnrollment.joinedChallengeDate ||
+    challengeDate < CHALLENGE_START_DATE ||
+    isFreeChallengeDay(challengeDate) ||
     !canSubmitForDate(challengeDate)
   ) {
     return NextResponse.redirect(
@@ -51,7 +48,10 @@ export async function POST(request: Request) {
 
   if (countJokersForMonth(existingEntries, monthKey) >= 2) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=Monatliches%20Joker-Kontingent%20ist%20bereits%20aufgebraucht", request.url),
+      new URL(
+        "/dashboard?error=Monatliches%20Joker-Kontingent%20ist%20bereits%20aufgebraucht",
+        request.url,
+      ),
     );
   }
 

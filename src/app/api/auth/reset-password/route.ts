@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     });
 
     if (!resetToken || resetToken.usedAt || resetToken.expiresAt <= new Date()) {
-      throw new Error("Der Reset-Link ist ungueltig oder abgelaufen.");
+      throw new Error("Der Reset-Link ist ungültig oder abgelaufen.");
     }
 
     const newPasswordHash = await hashPassword(parsed.password);

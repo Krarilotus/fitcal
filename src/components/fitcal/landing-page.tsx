@@ -1,57 +1,38 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { ArrowRight, PlayCircle } from "lucide-react";
 import {
   calculateDebtForMissedDays,
   type ChallengeSnapshot,
 } from "@/components/fitcal/challenge-utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const rules = [
-  {
-    title: "Daily Sets",
-    description:
-      "Pro Tag maximal 2 Sets Liegestuetz und maximal 2 Sets Situps.",
-  },
-  {
-    title: "Zielformel",
-    description:
-      "round_up(1 + 2.5 * sqrt(days since 2026-04-01)) fuer beide Uebungen.",
-  },
-  {
-    title: "Video Proof",
-    description:
-      "1 bis 4 Videos pro Tag, je Datei max 100 MB, Speicherung im User-Ordner.",
-  },
-  {
-    title: "Upload Fenster",
-    description:
-      "Uploads nur fuer heute und gestern, jeweils spaetestens 24h nach Tagende.",
-  },
-  {
-    title: "Joker Tage",
-    description: "2 Joker pro Monat, sichtbar im Dashboard und aktiv waehlbar.",
-  },
-  {
-    title: "Schulden",
-    description:
-      "Bei unerlaubtem Slack: 10 EUR fuer den ersten Tag, danach +2 EUR je weiterem Tag.",
-  },
-  {
-    title: "Debt Reduction",
-    description:
-      "Extra im erlaubten Set: 0.05 EUR pro Liegestuetz und 0.02 EUR pro Situp.",
-  },
-  {
-    title: "Onboarding Fenster",
-    description:
-      "Tag 1-14 sind kostenlos ohne Upload. Fuer Teilnahme mindestens 10 Upload-Tage ab Tag 15.",
-  },
+  "Maximal 2 Sets pro Sportart.",
+  "Videos bis zu 24 Stunden später hochladen.",
+  "Qualifikation durch 10 Uploads in den ersten 14 Tagen.",
+  "2 Slack-Day-Joker pro Monat.",
+  "Slacken kostet 10 € plus 2 € für jeden weiteren Tag.",
+  "Maximal 4 Videos, weil maximal 4 Sets dokumentiert werden.",
+  "Max. 100 MB pro Datei.",
 ];
 
-const cardAnimationStyles: CSSProperties[] = [
-  { animationDelay: "20ms" },
-  { animationDelay: "80ms" },
-  { animationDelay: "140ms" },
-  { animationDelay: "200ms" },
+const flow = [
+  {
+    label: "01",
+    title: "Trainieren",
+    body: "Pro Tag maximal zwei Sets Liegestütze und zwei Sets Sit-ups.",
+  },
+  {
+    label: "02",
+    title: "Hochladen",
+    body: "Ein Clip oder bis zu vier Teile. Uploads sind heute und gestern offen.",
+  },
+  {
+    label: "03",
+    title: "Stand halten",
+    body: "Joker, Schulden und Extras werden danach im Dashboard verrechnet.",
+  },
 ];
 
 export function FitcalLandingPage({
@@ -59,211 +40,185 @@ export function FitcalLandingPage({
 }: {
   snapshot: ChallengeSnapshot;
 }) {
-  const missedDaysPreview = 3;
-  const debtPreview = calculateDebtForMissedDays(missedDaysPreview);
+  const debtExamples = [1, 3, 5].map((missedDays) => ({
+    missedDays,
+    amount: calculateDebtForMissedDays(missedDays),
+  }));
 
   return (
-    <div className="fitcal-bg relative min-h-screen overflow-x-hidden text-[var(--fc-ink)]">
-      <div className="fitcal-overlay pointer-events-none absolute inset-0 -z-10" />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 pb-16 pt-8 md:px-10">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="inline-flex items-center gap-3">
-            <span className="fitcal-dot" />
-            <p className="text-sm font-medium tracking-[0.14em] text-[var(--fc-muted)] uppercase">
-              FitCal Challenge 2026
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link className="fitcal-btn fitcal-btn-ghost" href="#rules">
-              Regeln ansehen
-            </Link>
-            <Link className="fitcal-btn fitcal-btn-main" href="/login">
-              Login
-            </Link>
+    <div className="fitcal-shell min-h-screen text-[var(--fc-ink)]">
+      <div className="fitcal-noise pointer-events-none absolute inset-0 -z-20" />
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 pb-12 pt-5 sm:px-6 sm:pb-20 sm:pt-8 lg:gap-10">
+        <header className="fitcal-topbar">
+          <Link
+            className="inline-flex items-center gap-3 text-sm font-medium tracking-[0.16em] uppercase text-[var(--fc-muted)]"
+            href="/"
+          >
+            <span className="fitcal-brand-dot" />
+            FitCal 2026
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost">
+              <Link href="#regeln">Regeln</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/login">Login</Link>
+            </Button>
           </div>
         </header>
 
-        <section className="grid items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <article className="fitcal-panel fitcal-rise relative overflow-hidden">
-            <p className="text-sm tracking-[0.12em] text-[var(--fc-muted)] uppercase">
-              365 Tage. 2 Sets. Sauber dokumentiert.
-            </p>
-            <h1 className="mt-4 max-w-2xl text-5xl leading-[0.94] font-[var(--font-dm-serif-display)] md:text-7xl">
-              Klarer Plan fuer
+        <section className="fitcal-landing-hero fitcal-rise">
+          <div className="fitcal-landing-copy">
+            <Badge variant="accent">Challenge</Badge>
+            <h1 className="mt-5 max-w-4xl text-5xl leading-[0.88] font-[var(--font-dm-serif-display)] tracking-[-0.05em] sm:text-7xl lg:text-[7rem]">
+              Jeden Tag
               <br />
-              deine Fitness-Challenge
+              klar trainieren.
+              <br />
+              Sauber belegen.
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--fc-muted)] md:text-lg">
-              Die Seite zeigt Tagesziel, Joker, offene Uploads und Schulden live
-              nach Regelwerk. Tage werden strikt nach Mitteleuropa
-              ({snapshot.timezoneLabel}) gerechnet.
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--fc-muted)] sm:text-lg">
+              Tagesziel, Uploads, Joker, Schulden und Verlauf sind an einem Ort
+              gebündelt.
             </p>
+
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link className="fitcal-btn fitcal-btn-main" href="/login">
-                Jetzt einloggen und opt-in
-              </Link>
-              <Link className="fitcal-btn fitcal-btn-ghost" href="#dashboard">
-                Dashboard Preview
-              </Link>
+              <Button asChild size="lg">
+                <Link href="/register">
+                  Account anlegen
+                  <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="secondary">
+                <Link href="/login">Zum Dashboard</Link>
+              </Button>
             </div>
+          </div>
+
+          <div className="fitcal-target-stage">
+            <div className="fitcal-target-panel">
+              <div className="fitcal-target-topline">
+                <span className="fitcal-soft-label">Heute pro Übung</span>
+                <Badge variant="warm">Tag {snapshot.challengeDay}</Badge>
+              </div>
+              <p className="mt-4 text-7xl leading-none font-semibold tracking-[-0.06em] sm:text-8xl">
+                {snapshot.targetReps}
+              </p>
+              <div className="fitcal-target-meta">
+                <p>{snapshot.todayLabel}</p>
+                <p>je Übung gleich viele Wiederholungen</p>
+              </div>
+            </div>
+
+            <p className="fitcal-landing-side-note">
+              Tagesziel für heute. Alles Weitere steht unten in den Regeln und im
+              aufklappbaren Detailbereich.
+            </p>
+          </div>
+        </section>
+
+        <section className="fitcal-rule-ribbon fitcal-rise" id="regeln">
+          <div className="flex items-center justify-between gap-4">
+            <Badge>Regeln</Badge>
+            <p className="text-sm text-[var(--fc-muted)]">Der Rahmen für jeden Tag.</p>
+          </div>
+
+          <ol className="fitcal-rule-list">
+            {rules.map((rule) => (
+              <li key={rule}>{rule}</li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+          <article className="fitcal-stream-panel fitcal-rise">
+            <p className="fitcal-section-kicker">Ablauf</p>
+            <div className="mt-3 grid gap-4 md:grid-cols-3">
+              {flow.map((item) => (
+                <div className="fitcal-sequence-card" key={item.label}>
+                  <span>{item.label}</span>
+                  <h2>{item.title}</h2>
+                  <p>{item.body}</p>
+                </div>
+              ))}
+            </div>
+
+            <details className="fitcal-detail-drawer mt-5">
+              <summary>Details und Beispielrechnungen</summary>
+              <div className="fitcal-detail-grid">
+                <div>
+                  <span className="fitcal-soft-label">Tagesziel</span>
+                  <p className="mt-2 text-sm leading-7 text-[var(--fc-muted)]">
+                    Die Wiederholungen pro Übung folgen:
+                    <br />
+                    <code>round_up(1 + 2.5 * sqrt(Tage seit 01.04.2026))</code>
+                  </p>
+                  <p className="mt-2 text-sm leading-7 text-[var(--fc-muted)]">
+                    Heute ergibt das {snapshot.targetReps} Wiederholungen pro
+                    Übung.
+                  </p>
+                </div>
+                <div>
+                  <span className="fitcal-soft-label">Upload-Fenster</span>
+                  <p className="mt-2 text-sm leading-7 text-[var(--fc-muted)]">
+                    Uploads sind bis zu 24 Stunden später offen. Maßgeblich ist
+                    Europe/Berlin.
+                  </p>
+                </div>
+                <div>
+                  <span className="fitcal-soft-label">Schuldenbeispiele</span>
+                  <div className="mt-2 space-y-2">
+                    {debtExamples.map((entry) => (
+                      <p
+                        className="text-sm leading-7 text-[var(--fc-muted)]"
+                        key={entry.missedDays}
+                      >
+                        {entry.missedDays} Slack-Tag
+                        {entry.missedDays > 1 ? "e" : ""}: {entry.amount} €
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
           </article>
 
-          <aside className="fitcal-panel fitcal-rise grid grid-cols-2 gap-3 [animation-delay:120ms]">
-            <div className="fitcal-kpi">
-              <p className="fitcal-kpi-label">Heute (Tag)</p>
-              <p className="fitcal-kpi-value">{snapshot.challengeDay}</p>
-            </div>
-            <div className="fitcal-kpi">
-              <p className="fitcal-kpi-label">Formelziel</p>
-              <p className="fitcal-kpi-value">{snapshot.targetReps}</p>
-            </div>
-            <div className="fitcal-kpi col-span-2">
-              <p className="fitcal-kpi-label">Formel</p>
-              <p className="fitcal-kpi-code">
-                round_up(1 + 2.5 * sqrt({snapshot.daysSinceStart}))
-              </p>
-              <p className="mt-2 text-sm text-[var(--fc-muted)]">
-                Ziel fuer Situps: <strong>{snapshot.targetReps}</strong> und
-                Liegestuetz: <strong>{snapshot.targetReps}</strong>
+          <article className="fitcal-proof-panel fitcal-rise">
+            <div>
+              <p className="fitcal-section-kicker">Videos</p>
+              <p className="mt-3 text-3xl leading-tight font-[var(--font-dm-serif-display)]">
+                Maximal 4 Videos. Extras müssen im Video zu sehen sein.
               </p>
             </div>
-          </aside>
-        </section>
 
-        <section id="rules" className="space-y-4">
-          <div className="flex items-end justify-between gap-3">
-            <h2 className="text-3xl font-semibold tracking-tight">Regeln kompakt</h2>
-            <p className="text-sm text-[var(--fc-muted)]">
-              Schnell scanbar, direkt aus dem Challenge-Briefing.
+            <p className="text-sm leading-7 text-[rgba(246,239,227,0.78)]">
+              Eine Datei reicht. Wenn nötig kannst du auf bis zu vier Teile
+              aufteilen. Max. 100 MB pro Datei.
             </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {rules.map((rule, index) => (
-              <article
-                className="fitcal-mini-panel fitcal-rise"
-                key={rule.title}
-                style={cardAnimationStyles[index % cardAnimationStyles.length]}
-              >
-                <p className="text-xs font-semibold tracking-[0.11em] text-[var(--fc-muted)] uppercase">
-                  {rule.title}
-                </p>
-                <p className="mt-2 text-sm leading-relaxed">{rule.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
 
-        <section id="dashboard" className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <article className="fitcal-panel fitcal-rise [animation-delay:60ms]">
-            <h3 className="text-2xl font-semibold tracking-tight">Referenzvideos</h3>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--fc-muted)]">
-              Diese Videos sind in der Plattform verlinkt, damit Ausfuehrung und
-              Qualitaet direkt vergleichbar bleiben.
-            </p>
-            <div className="mt-5 grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <a
-                className="fitcal-link-card"
+                className="fitcal-video-link"
                 href="https://www.youtube.com/watch?v=JvX0ilRCBrU"
                 rel="noreferrer"
                 target="_blank"
               >
-                Liegestuetz Referenzvideo ansehen
+                <PlayCircle className="size-5" />
+                <span>Liegestütze</span>
               </a>
               <a
-                className="fitcal-link-card"
+                className="fitcal-video-link"
                 href="https://www.youtube.com/watch?v=czKvGbo5zAo"
                 rel="noreferrer"
                 target="_blank"
               >
-                Situps Referenzvideo ansehen
+                <PlayCircle className="size-5" />
+                <span>Sit-ups</span>
               </a>
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="fitcal-mini-panel">
-                <p className="text-xs tracking-[0.1em] text-[var(--fc-muted)] uppercase">
-                  Joker Kontingent
-                </p>
-                <p className="mt-2 text-3xl font-semibold">
-                  {snapshot.monthlyJokerLimit} / Monat
-                </p>
-              </div>
-              <div className="fitcal-mini-panel">
-                <p className="text-xs tracking-[0.1em] text-[var(--fc-muted)] uppercase">
-                  Upload Deadline
-                </p>
-                <p className="mt-2 text-3xl font-semibold">
-                  {snapshot.uploadWindowHours}h
-                </p>
-              </div>
-            </div>
-          </article>
-
-          <article className="fitcal-panel fitcal-rise [animation-delay:180ms]">
-            <h3 className="text-2xl font-semibold tracking-tight">Dashboard Preview</h3>
-            <p className="mt-2 text-sm text-[var(--fc-muted)]">
-              Sicht fuer eingeloggte Nutzer: Tages-Uploads, Joker und Debt-Status.
-            </p>
-            <div className="mt-5 grid gap-3">
-              <div className="fitcal-mini-panel">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold">Heute: {snapshot.todayLabel}</p>
-                  <span className="fitcal-tag fitcal-tag-ok">Upload offen</span>
-                </div>
-                <p className="mt-2 text-sm text-[var(--fc-muted)]">
-                  Ziel: {snapshot.targetReps} Liegestuetz + {snapshot.targetReps}{" "}
-                  Situps, verteilt auf max. 2 Sets je Uebung.
-                </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <label className="fitcal-input-wrap">
-                    Extra Liegestuetz
-                    <input className="fitcal-input" defaultValue="8" />
-                  </label>
-                  <label className="fitcal-input-wrap">
-                    Extra Situps
-                    <input className="fitcal-input" defaultValue="18" />
-                  </label>
-                </div>
-                <p className="mt-3 text-xs text-[var(--fc-muted)]">
-                  Uploads: 1 bis 4 Videos, je Datei max 100 MB.
-                </p>
-              </div>
-
-              <div className="fitcal-mini-panel">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold">Gestern: {snapshot.yesterdayLabel}</p>
-                  <span className="fitcal-tag">Letzte Chance</span>
-                </div>
-                <p className="mt-2 text-sm text-[var(--fc-muted)]">
-                  Wenn der Tag nicht dokumentiert wird und kein Joker gesetzt ist,
-                  startet Debt bei 10 EUR und steigt danach pro weiterem Verstoss.
-                </p>
-              </div>
-
-              <div className="fitcal-mini-panel">
-                <p className="text-xs tracking-[0.1em] text-[var(--fc-muted)] uppercase">
-                  Debt Beispiel
-                </p>
-                <p className="mt-2 text-sm text-[var(--fc-muted)]">
-                  {missedDaysPreview} Regelverstoesse ergeben aktuell{" "}
-                  <strong>{debtPreview} EUR</strong> (10, 12, 14 ...).
-                </p>
-                <p className="mt-2 text-sm text-[var(--fc-muted)]">
-                  Reduktion: 0.05 EUR pro extra Liegestuetz, 0.02 EUR pro extra
-                  Situp.
-                </p>
-              </div>
             </div>
           </article>
         </section>
-
-        <footer className="fitcal-panel flex flex-col gap-3 text-sm text-[var(--fc-muted)] sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            Freiphase: Tag 1 bis {snapshot.freeStartDays}. Ab Tag 15 werden
-            Uploads erwartet.
-          </p>
-          <p>Mindestens 10 Upload-Tage sind notwendig, um teilzunehmen.</p>
-        </footer>
       </div>
     </div>
   );

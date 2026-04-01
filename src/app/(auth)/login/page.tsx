@@ -22,8 +22,8 @@ export default async function LoginPage({ searchParams }: PageProps) {
   return (
     <AuthShell
       eyebrow="Login"
-      title="Wieder rein in die Challenge."
-      description="Melde dich an, oeffne heutige oder gestrige Upload-Slots und halte Joker sowie Schulden im Blick."
+      title="Anmelden"
+      description="Mit E-Mail und Passwort zum Dashboard."
       footer={
         <p>
           Noch kein Zugang? <Link href="/register">Jetzt registrieren</Link>. Passwort
@@ -33,11 +33,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
     >
       <div className="space-y-3">
         <FlashMessage error={error} success={success} />
-        <form
-          action="/api/auth/login"
-          className="space-y-4"
-          method="post"
-        >
+        <form action="/api/auth/login" className="space-y-4" method="post">
           <label className="fitcal-input-wrap">
             E-Mail
             <input className="fitcal-input" name="email" required type="email" />
@@ -46,7 +42,10 @@ export default async function LoginPage({ searchParams }: PageProps) {
             Passwort
             <input className="fitcal-input" name="password" required type="password" />
           </label>
-          <button className="fitcal-btn fitcal-btn-main w-full" type="submit">
+          <button
+            className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"
+            type="submit"
+          >
             Einloggen
           </button>
         </form>

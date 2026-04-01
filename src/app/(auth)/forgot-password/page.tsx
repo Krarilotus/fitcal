@@ -22,26 +22,25 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps) {
   return (
     <AuthShell
       eyebrow="Reset"
-      title="Passwort-Link anfordern."
-      description="Wenn die Adresse existiert, senden wir einen Reset-Link, der 24 Stunden gueltig bleibt."
+      title="Passwort-Link anfordern"
+      description="Wir senden einen Reset-Link an die angegebene E-Mail-Adresse."
       footer={
         <p>
-          Zurueck zum <Link href="/login">Login</Link>.
+          Zurück zum <Link href="/login">Login</Link>.
         </p>
       }
     >
       <div className="space-y-3">
         <FlashMessage error={error} success={success} />
-        <form
-          action="/api/auth/forgot-password"
-          className="space-y-4"
-          method="post"
-        >
+        <form action="/api/auth/forgot-password" className="space-y-4" method="post">
           <label className="fitcal-input-wrap">
             E-Mail
             <input className="fitcal-input" name="email" required type="email" />
           </label>
-          <button className="fitcal-btn fitcal-btn-main w-full" type="submit">
+          <button
+            className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"
+            type="submit"
+          >
             Reset-Link senden
           </button>
         </form>

@@ -21,8 +21,8 @@ export default async function RegisterPage({ searchParams }: PageProps) {
   return (
     <AuthShell
       eyebrow="Registrierung"
-      title="Neuen Zugang fuer FitCal erstellen."
-      description="Nach der Registrierung kannst du direkt opt-in gehen und deine Trainingsdokumentation im eigenen Upload-Ordner sammeln."
+      title="Registrieren"
+      description="Account anlegen, Profil ergänzen und auf Wunsch erste Messwerte speichern."
       footer={
         <p>
           Bereits registriert? <Link href="/login">Zum Login</Link>.
@@ -32,19 +32,83 @@ export default async function RegisterPage({ searchParams }: PageProps) {
       <div className="space-y-3">
         <FlashMessage error={error} />
         <form action="/api/auth/register" className="space-y-4" method="post">
-          <label className="fitcal-input-wrap">
-            Name
-            <input className="fitcal-input" name="name" type="text" />
-          </label>
-          <label className="fitcal-input-wrap">
-            E-Mail
-            <input className="fitcal-input" name="email" required type="email" />
-          </label>
-          <label className="fitcal-input-wrap">
-            Passwort
-            <input className="fitcal-input" name="password" required type="password" />
-          </label>
-          <button className="fitcal-btn fitcal-btn-main w-full" type="submit">
+          <div className="fitcal-form-intro">
+            <p className="fitcal-section-kicker">Profil</p>
+            <p className="text-sm text-[var(--fc-muted)]">
+              Basisdaten und optionale Messwerte.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="fitcal-input-wrap">
+              Name
+              <input className="fitcal-input" name="name" type="text" />
+            </label>
+            <label className="fitcal-input-wrap">
+              Geburtsdatum
+              <input
+                className="fitcal-input"
+                inputMode="numeric"
+                name="birthDate"
+                pattern="\\d{2}\\.\\d{2}\\.\\d{4}"
+                placeholder="TT.MM.JJJJ"
+                type="text"
+              />
+            </label>
+            <label className="fitcal-input-wrap">
+              Körpergröße in cm
+              <input
+                className="fitcal-input"
+                inputMode="decimal"
+                name="heightCm"
+                placeholder="z. B. 178"
+                step="0.1"
+                type="number"
+              />
+            </label>
+            <label className="fitcal-input-wrap md:col-span-2">
+              E-Mail
+              <input className="fitcal-input" name="email" required type="email" />
+            </label>
+            <label className="fitcal-input-wrap md:col-span-2">
+              Passwort
+              <input className="fitcal-input" name="password" required type="password" />
+            </label>
+            <label className="fitcal-input-wrap">
+              Bauchumfang in cm
+              <input
+                className="fitcal-input"
+                inputMode="decimal"
+                name="waistCircumferenceCm"
+                placeholder="z. B. 92"
+                step="0.1"
+                type="number"
+              />
+            </label>
+            <label className="fitcal-input-wrap">
+              Gewicht in kg
+              <input
+                className="fitcal-input"
+                inputMode="decimal"
+                name="weightKg"
+                placeholder="z. B. 81.5"
+                step="0.1"
+                type="number"
+              />
+            </label>
+            <label className="fitcal-input-wrap md:col-span-2">
+              Warum machst du mit?
+              <textarea
+                className="fitcal-input min-h-24"
+                maxLength={240}
+                name="motivation"
+                placeholder="Optional."
+              />
+            </label>
+          </div>
+          <button
+            className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"
+            type="submit"
+          >
             Account erstellen
           </button>
         </form>

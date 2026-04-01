@@ -3,8 +3,8 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { CHALLENGE_START_DATE, canSubmitForDate } from "@/lib/challenge";
 import { buildStoredVideoFileName, ensureDailyUploadDirectory } from "@/lib/storage";
-import { canSubmitForDate } from "@/lib/challenge";
 import {
   assertSubmissionMatchesRules,
   getVideoFiles,
@@ -21,21 +21,12 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (!user.challengeEnrollment) {
-    return NextResponse.redirect(
-      new URL("/dashboard?error=Bitte%20zuerst%20die%20Challenge%20aktivieren", request.url),
-    );
-  }
-
   try {
     const formData = await request.formData();
     const parsed = parseSubmissionInput(formData);
 
-    if (
-      parsed.challengeDate < user.challengeEnrollment.joinedChallengeDate ||
-      !canSubmitForDate(parsed.challengeDate)
-    ) {
-      throw new Error("Uploads sind nur fuer heute und gestern erlaubt.");
+    if (parsed.challengeDate < CHALLENGE_START_DATE || !canSubmitForDate(parsed.challengeDate)) {
+      throw new Error("Uploads sind nur für heute und gestern erlaubt.");
     }
 
     assertSubmissionMatchesRules(parsed);

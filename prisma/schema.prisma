@@ -12,6 +12,9 @@ model User {
   email               String               @unique
   passwordHash        String
   name                String?
+  birthDate           DateTime?
+  heightCm            Float?
+  motivation          String?
   image               String?
   emailVerified       DateTime?
   createdAt           DateTime             @default(now())
@@ -20,6 +23,7 @@ model User {
   sessions            Session[]
   challengeEnrollment ChallengeEnrollment?
   dailySubmissions    DailySubmission[]
+  measurements        MeasurementEntry[]
   passwordResetTokens PasswordResetToken[]
 }
 
@@ -118,6 +122,21 @@ model DailyVideo {
   dailySubmission   DailySubmission @relation(fields: [dailySubmissionId], references: [id], onDelete: Cascade)
 
   @@index([dailySubmissionId])
+}
+
+model MeasurementEntry {
+  id                   String   @id @default(cuid())
+  userId               String
+  measuredAt           DateTime
+  weightKg             Float?
+  waistCircumferenceCm Float?
+  restingPulseBpm      Int?
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, measuredAt])
 }
 
 enum DailySubmissionStatus {

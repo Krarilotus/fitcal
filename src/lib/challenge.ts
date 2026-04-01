@@ -40,6 +40,7 @@ export interface ChallengeDaySummary {
   isPreviousDay: boolean;
   debtCents: number;
   debtReductionCents: number;
+  rawDebtReductionCents: number;
 }
 
 function parseDateKey(dateKey: string) {
@@ -124,9 +125,7 @@ export function getOpenUploadDateKeys(now = new Date()) {
   const todayKey = getBerlinDateKey(now);
   const yesterdayKey = addDaysToDateKey(todayKey, -1);
 
-  return [todayKey, yesterdayKey].filter(
-    (dateKey) => isWithinChallenge(dateKey) && !isFreeChallengeDay(dateKey),
-  );
+  return [todayKey, yesterdayKey].filter((dateKey) => isWithinChallenge(dateKey));
 }
 
 export function canSubmitForDate(dateKey: string, now = new Date()) {
@@ -169,6 +168,9 @@ export interface ChallengeOverview {
   previousDate: string | null;
   previousTarget: number | null;
   documentedDays: number;
+  qualificationUploads: number;
+  qualificationRequiredUploads: number;
+  qualificationWindowDays: number;
   totalDebtCents: number;
   totalDebtReductionCents: number;
   outstandingDebtCents: number;
@@ -198,6 +200,7 @@ export function getChallengeOverview({
   let slackCount = 0;
   let totalDebtCents = 0;
   let totalDebtReductionCents = 0;
+  let outstandingDebtCents = 0;
 
   for (
     let cursor = firstRelevantDate;
@@ -214,17 +217,20 @@ export function getChallengeOverview({
     const isPreviousDay = previousDate === cursor;
     const isPastClosedDay = differenceInDays(cursor, currentDate) >= 1;
     const monthlyJokersUsed = countJokersForMonth(records, getMonthKey(cursor));
-    const debtReductionCents = record ? getDebtReductionCents(record) : 0;
+    const rawDebtReductionCents = record ? getDebtReductionCents(record) : 0;
+    let debtReductionCents = 0;
     let status: DayCompletionState;
     let dayDebtCents = 0;
 
-    if (dayIndex < CHALLENGE_FREE_DAYS) {
-      status = "free";
-    } else if (record?.status === "COMPLETED") {
+    if (record?.status === "COMPLETED") {
       status = "completed";
+      debtReductionCents = Math.min(rawDebtReductionCents, outstandingDebtCents);
+      outstandingDebtCents -= debtReductionCents;
       totalDebtReductionCents += debtReductionCents;
     } else if (record?.status === "JOKER") {
       status = "joker";
+    } else if (dayIndex < CHALLENGE_FREE_DAYS) {
+      status = "free";
     } else if (isCurrentDay || isPreviousDay) {
       status = "open";
     } else if (isPastClosedDay) {
@@ -232,6 +238,7 @@ export function getChallengeOverview({
       dayDebtCents = getSlackDebtCents(slackCount);
       slackCount += 1;
       totalDebtCents += dayDebtCents;
+      outstandingDebtCents += dayDebtCents;
     } else {
       status = "upcoming";
     }
@@ -241,7 +248,8 @@ export function getChallengeOverview({
       dayIndex,
       repsTarget: getRequiredReps(cursor),
       status,
-      canUpload: status === "open" && canSubmitForDate(cursor, now),
+      canUpload:
+        (status === "open" || status === "free") && canSubmitForDate(cursor, now),
       canUseJoker:
         status === "open" &&
         monthlyJokersUsed < MONTHLY_JOKER_LIMIT &&
@@ -250,12 +258,20 @@ export function getChallengeOverview({
       isPreviousDay,
       debtCents: dayDebtCents,
       debtReductionCents,
+      rawDebtReductionCents,
     });
   }
 
   const currentMonthJokersUsed = countJokersForMonth(records, getMonthKey(currentDate));
   const documentedDays = records.filter((record) => record.status === "COMPLETED").length;
-  const outstandingDebtCents = Math.max(0, totalDebtCents - totalDebtReductionCents);
+  const qualificationUploads = records.filter((record) => {
+    if (record.status !== "COMPLETED") {
+      return false;
+    }
+
+    const dayIndex = getChallengeDayIndex(record.challengeDate);
+    return dayIndex >= 0 && dayIndex < CHALLENGE_FREE_DAYS;
+  }).length;
 
   return {
     currentDate,
@@ -263,9 +279,12 @@ export function getChallengeOverview({
     previousDate,
     previousTarget: previousDate ? getRequiredReps(previousDate) : null,
     documentedDays,
+    qualificationUploads,
+    qualificationRequiredUploads: MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION,
+    qualificationWindowDays: CHALLENGE_FREE_DAYS,
     totalDebtCents,
     totalDebtReductionCents,
-    outstandingDebtCents,
+    outstandingDebtCents: Math.max(0, outstandingDebtCents),
     monthJokersUsed: currentMonthJokersUsed,
     monthJokersRemaining: Math.max(0, MONTHLY_JOKER_LIMIT - currentMonthJokersUsed),
     days,

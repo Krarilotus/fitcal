@@ -82,6 +82,11 @@ export async function getCurrentUser() {
               challengeDate: "asc",
             },
           },
+          measurements: {
+            orderBy: {
+              measuredAt: "asc",
+            },
+          },
         },
       },
     },

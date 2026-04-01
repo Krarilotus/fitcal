@@ -1,0 +1,213 @@
+"use client";
+
+import type { CSSProperties } from "react";
+import { useState } from "react";
+
+type ChartSeries = {
+  key: string;
+  label: string;
+  color: string;
+  dashed?: boolean;
+  formatter?: (value: number) => string;
+};
+
+type ChartPoint = {
+  label: string;
+  values: Record<string, number | null>;
+};
+
+type MetaStatChartProps = {
+  title: string;
+  description: string;
+  points: ChartPoint[];
+  series: ChartSeries[];
+  emptyText: string;
+};
+
+function buildSeriesCoordinates(
+  points: ChartPoint[],
+  seriesKey: string,
+  width: number,
+  height: number,
+  maxValue: number,
+) {
+  return points.flatMap((point, index) => {
+    const value = point.values[seriesKey];
+
+    if (value == null) {
+      return [];
+    }
+
+    const x = points.length === 1 ? width / 2 : (index / (points.length - 1)) * width;
+    const y = height - (value / maxValue) * height;
+
+    return [{ x, y, value, label: point.label, index }];
+  });
+}
+
+export function MetaStatChart({
+  title,
+  description,
+  points,
+  series,
+  emptyText,
+}: MetaStatChartProps) {
+  const [activeIndex, setActiveIndex] = useState(points.length - 1);
+  const [hiddenSeries, setHiddenSeries] = useState<string[]>([]);
+
+  if (points.length === 0) {
+    return <div className="fitcal-stream-panel">{emptyText}</div>;
+  }
+
+  const width = 100;
+  const height = 52;
+  const visibleSeries = series.filter((item) => !hiddenSeries.includes(item.key));
+  const maxValue = Math.max(
+    1,
+    ...points.flatMap((point) =>
+      visibleSeries.flatMap((item) => point.values[item.key] ?? []),
+    ),
+  );
+  const safeActiveIndex = Math.min(Math.max(activeIndex, 0), points.length - 1);
+  const activePoint = points[safeActiveIndex];
+
+  return (
+    <section className="fitcal-stream-panel">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="fitcal-section-kicker">Metastats</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">{title}</h2>
+          <p className="mt-2 max-w-xl text-sm leading-7 text-[var(--fc-muted)]">
+            {description}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {series.map((item) => {
+            const isHidden = hiddenSeries.includes(item.key);
+
+            return (
+              <button
+                className={`fitcal-toggle-chip ${isHidden ? "is-off" : ""}`}
+                key={item.key}
+                onClick={() =>
+                  setHiddenSeries((current) =>
+                    current.includes(item.key)
+                      ? current.filter((entry) => entry !== item.key)
+                      : [...current, item.key],
+                  )
+                }
+                style={{ "--chip-color": item.color } as CSSProperties}
+                type="button"
+              >
+                <span className="fitcal-toggle-dot" />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_0.5fr]">
+        <div className="fitcal-chart-stage overflow-hidden">
+          <svg
+            aria-label={title}
+            className="h-64 w-full sm:h-72"
+            preserveAspectRatio="none"
+            viewBox={`0 0 ${width} ${height}`}
+          >
+            {[0, 1, 2, 3, 4].map((step) => {
+              const y = (height / 4) * step;
+              return (
+                <line
+                  key={step}
+                  stroke="rgba(54, 65, 58, 0.12)"
+                  strokeDasharray="1.4 1.8"
+                  strokeWidth="0.35"
+                  x1="0"
+                  x2={width}
+                  y1={y}
+                  y2={y}
+                />
+              );
+            })}
+
+            {visibleSeries.map((item) => {
+              const coordinates = buildSeriesCoordinates(
+                points,
+                item.key,
+                width,
+                height,
+                maxValue,
+              );
+
+              return (
+                <g key={item.key}>
+                  {coordinates.length > 1 ? (
+                    <polyline
+                      fill="none"
+                      points={coordinates
+                        .map((coordinate) => `${coordinate.x.toFixed(1)},${coordinate.y.toFixed(1)}`)
+                        .join(" ")}
+                      stroke={item.color}
+                      strokeDasharray={item.dashed ? "2 1.4" : undefined}
+                      strokeWidth={item.dashed ? "0.8" : "1.15"}
+                    />
+                  ) : null}
+                  {coordinates.map((coordinate) => (
+                    <circle
+                      cx={coordinate.x}
+                      cy={coordinate.y}
+                      fill={item.color}
+                      key={`${item.key}-${coordinate.index}`}
+                      onMouseEnter={() => setActiveIndex(coordinate.index)}
+                      onFocus={() => setActiveIndex(coordinate.index)}
+                      r={safeActiveIndex === coordinate.index ? 1.6 : 1.1}
+                      tabIndex={0}
+                    />
+                  ))}
+                </g>
+              );
+            })}
+          </svg>
+
+          <div className="mt-4 flex flex-wrap justify-between gap-3 text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+            <span>{points[0]?.label}</span>
+            <span>{activePoint.label}</span>
+            <span>{points[points.length - 1]?.label}</span>
+          </div>
+        </div>
+
+        <div className="fitcal-chart-readout">
+          <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+            Fokus
+          </p>
+          <p className="mt-2 text-lg font-semibold">{activePoint.label}</p>
+          <div className="mt-4 space-y-3">
+            {series.map((item) => {
+              const value = activePoint.values[item.key];
+              const formatted =
+                value == null
+                  ? "kein Wert"
+                  : item.formatter
+                    ? item.formatter(value)
+                    : String(value);
+
+              return (
+                <div className="fitcal-chart-readout-row" key={item.key}>
+                  <span className="fitcal-chart-readout-label">
+                    <span
+                      className="fitcal-toggle-dot"
+                      style={{ background: item.color }}
+                    />
+                    {item.label}
+                  </span>
+                  <strong>{formatted}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

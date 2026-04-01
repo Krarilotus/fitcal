@@ -43,3 +43,11 @@ next-env.d.ts
 # prisma sqlite local files
 prisma/dev.db
 prisma/dev.db-journal
+
+# local AI/tooling notes
+AGENTS.md
+CLAUDE.md
+
+# local runtime logs
+.dev-server.log
+.dev-server.err.log

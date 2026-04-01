@@ -22,11 +22,11 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
   return (
     <AuthShell
       eyebrow="Neues Passwort"
-      title="Reset-Link einloesen."
-      description="Setze ein neues Passwort, damit du wieder in dein Challenge-Dashboard kommst."
+      title="Neues Passwort setzen"
+      description="Hier legst du ein neues Passwort fest."
       footer={
         <p>
-          Kein gueltiger Token? <Link href="/forgot-password">Neuen Link anfordern</Link>.
+          Kein gültiger Token? <Link href="/forgot-password">Neuen Link anfordern</Link>.
         </p>
       }
     >
@@ -39,13 +39,16 @@ export default async function ResetPasswordPage({ searchParams }: PageProps) {
               Neues Passwort
               <input className="fitcal-input" name="password" required type="password" />
             </label>
-            <button className="fitcal-btn fitcal-btn-main w-full" type="submit">
+            <button
+              className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"
+              type="submit"
+            >
               Passwort speichern
             </button>
           </form>
         ) : (
           <p className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Es wurde kein Reset-Token uebergeben.
+            Es wurde kein Reset-Token übergeben.
           </p>
         )}
       </div>
