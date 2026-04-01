@@ -1,0 +1,273 @@
+export const CHALLENGE_TIME_ZONE = "Europe/Berlin";
+export const CHALLENGE_START_DATE = "2026-04-01";
+export const CHALLENGE_LENGTH_DAYS = 365;
+export const CHALLENGE_FREE_DAYS = 14;
+export const MAX_VIDEO_FILES_PER_DAY = 4;
+export const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
+export const MONTHLY_JOKER_LIMIT = 2;
+export const MISSED_DAY_BASE_DEBT_CENTS = 1000;
+export const MISSED_DAY_INCREMENT_CENTS = 200;
+export const EXTRA_PUSHUP_REDUCTION_CENTS = 5;
+export const EXTRA_SITUP_REDUCTION_CENTS = 2;
+export const MAX_SETS_PER_EXERCISE = 2;
+export const MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION = 10;
+
+export type DayCompletionState =
+  | "upcoming"
+  | "free"
+  | "open"
+  | "completed"
+  | "joker"
+  | "slack";
+
+export type PersistedDayStatus = "COMPLETED" | "JOKER";
+
+export interface DailyRecordLike {
+  challengeDate: string;
+  status: PersistedDayStatus;
+  extraPushups: number;
+  extraSitups: number;
+}
+
+export interface ChallengeDaySummary {
+  challengeDate: string;
+  dayIndex: number;
+  repsTarget: number;
+  status: DayCompletionState;
+  canUpload: boolean;
+  canUseJoker: boolean;
+  isCurrentDay: boolean;
+  isPreviousDay: boolean;
+  debtCents: number;
+  debtReductionCents: number;
+}
+
+function parseDateKey(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    throw new Error(`Invalid date key: ${dateKey}`);
+  }
+
+  return { year, month, day };
+}
+
+function dateKeyToUtcTime(dateKey: string) {
+  const { year, month, day } = parseDateKey(dateKey);
+  return Date.UTC(year, month - 1, day);
+}
+
+function pad(value: number) {
+  return value.toString().padStart(2, "0");
+}
+
+export function getBerlinDateKey(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: CHALLENGE_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return formatter.format(date);
+}
+
+export function addDaysToDateKey(dateKey: string, amount: number) {
+  const utcTime = dateKeyToUtcTime(dateKey);
+  const next = new Date(utcTime + amount * 24 * 60 * 60 * 1000);
+
+  return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(
+    next.getUTCDate(),
+  )}`;
+}
+
+export function differenceInDays(startDateKey: string, endDateKey: string) {
+  const diffMs = dateKeyToUtcTime(endDateKey) - dateKeyToUtcTime(startDateKey);
+  return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+}
+
+export function getChallengeDayIndex(dateKey: string) {
+  return differenceInDays(CHALLENGE_START_DATE, dateKey);
+}
+
+export function getChallengeEndDateKey() {
+  return addDaysToDateKey(CHALLENGE_START_DATE, CHALLENGE_LENGTH_DAYS - 1);
+}
+
+export const CHALLENGE_END_DATE = getChallengeEndDateKey();
+
+export function isWithinChallenge(dateKey: string) {
+  return (
+    getChallengeDayIndex(dateKey) >= 0 &&
+    getChallengeDayIndex(dateKey) < CHALLENGE_LENGTH_DAYS
+  );
+}
+
+export function isFreeChallengeDay(dateKey: string) {
+  const dayIndex = getChallengeDayIndex(dateKey);
+  return dayIndex >= 0 && dayIndex < CHALLENGE_FREE_DAYS;
+}
+
+export function getRequiredReps(dateKey: string) {
+  const dayIndex = Math.max(0, getChallengeDayIndex(dateKey));
+  return Math.ceil(1 + 2.5 * Math.sqrt(dayIndex));
+}
+
+export function formatCurrencyFromCents(cents: number) {
+  return new Intl.NumberFormat("de-DE", {
+    style: "currency",
+    currency: "EUR",
+  }).format(cents / 100);
+}
+
+export function getOpenUploadDateKeys(now = new Date()) {
+  const todayKey = getBerlinDateKey(now);
+  const yesterdayKey = addDaysToDateKey(todayKey, -1);
+
+  return [todayKey, yesterdayKey].filter(
+    (dateKey) => isWithinChallenge(dateKey) && !isFreeChallengeDay(dateKey),
+  );
+}
+
+export function canSubmitForDate(dateKey: string, now = new Date()) {
+  return getOpenUploadDateKeys(now).includes(dateKey);
+}
+
+export function getMonthKey(dateKey: string) {
+  return dateKey.slice(0, 7);
+}
+
+export function countJokersForMonth(
+  records: DailyRecordLike[],
+  monthKey: string,
+) {
+  return records.filter(
+    (record) => record.status === "JOKER" && getMonthKey(record.challengeDate) === monthKey,
+  ).length;
+}
+
+export function getDebtReductionCents(record: Pick<DailyRecordLike, "extraPushups" | "extraSitups">) {
+  return (
+    record.extraPushups * EXTRA_PUSHUP_REDUCTION_CENTS +
+    record.extraSitups * EXTRA_SITUP_REDUCTION_CENTS
+  );
+}
+
+export function getSlackDebtCents(slackIndex: number) {
+  return MISSED_DAY_BASE_DEBT_CENTS + slackIndex * MISSED_DAY_INCREMENT_CENTS;
+}
+
+export interface ChallengeOverviewInput {
+  joinedChallengeDate: string;
+  records: DailyRecordLike[];
+  now?: Date;
+}
+
+export interface ChallengeOverview {
+  currentDate: string;
+  currentTarget: number;
+  previousDate: string | null;
+  previousTarget: number | null;
+  documentedDays: number;
+  totalDebtCents: number;
+  totalDebtReductionCents: number;
+  outstandingDebtCents: number;
+  monthJokersUsed: number;
+  monthJokersRemaining: number;
+  days: ChallengeDaySummary[];
+}
+
+export function getChallengeOverview({
+  joinedChallengeDate,
+  records,
+  now = new Date(),
+}: ChallengeOverviewInput): ChallengeOverview {
+  const currentDate = getBerlinDateKey(now);
+  const previousDate = isWithinChallenge(addDaysToDateKey(currentDate, -1))
+    ? addDaysToDateKey(currentDate, -1)
+    : null;
+  const recordMap = new Map(records.map((record) => [record.challengeDate, record]));
+  const days: ChallengeDaySummary[] = [];
+  const firstRelevantDate =
+    getChallengeDayIndex(joinedChallengeDate) < 0
+      ? CHALLENGE_START_DATE
+      : joinedChallengeDate;
+  const lastEvaluatedDate = isWithinChallenge(currentDate)
+    ? currentDate
+    : getChallengeEndDateKey();
+  let slackCount = 0;
+  let totalDebtCents = 0;
+  let totalDebtReductionCents = 0;
+
+  for (
+    let cursor = firstRelevantDate;
+    differenceInDays(cursor, lastEvaluatedDate) >= 0;
+    cursor = addDaysToDateKey(cursor, 1)
+  ) {
+    if (!isWithinChallenge(cursor)) {
+      continue;
+    }
+
+    const dayIndex = getChallengeDayIndex(cursor);
+    const record = recordMap.get(cursor);
+    const isCurrentDay = cursor === currentDate;
+    const isPreviousDay = previousDate === cursor;
+    const isPastClosedDay = differenceInDays(cursor, currentDate) >= 1;
+    const monthlyJokersUsed = countJokersForMonth(records, getMonthKey(cursor));
+    const debtReductionCents = record ? getDebtReductionCents(record) : 0;
+    let status: DayCompletionState;
+    let dayDebtCents = 0;
+
+    if (dayIndex < CHALLENGE_FREE_DAYS) {
+      status = "free";
+    } else if (record?.status === "COMPLETED") {
+      status = "completed";
+      totalDebtReductionCents += debtReductionCents;
+    } else if (record?.status === "JOKER") {
+      status = "joker";
+    } else if (isCurrentDay || isPreviousDay) {
+      status = "open";
+    } else if (isPastClosedDay) {
+      status = "slack";
+      dayDebtCents = getSlackDebtCents(slackCount);
+      slackCount += 1;
+      totalDebtCents += dayDebtCents;
+    } else {
+      status = "upcoming";
+    }
+
+    days.push({
+      challengeDate: cursor,
+      dayIndex,
+      repsTarget: getRequiredReps(cursor),
+      status,
+      canUpload: status === "open" && canSubmitForDate(cursor, now),
+      canUseJoker:
+        status === "open" &&
+        monthlyJokersUsed < MONTHLY_JOKER_LIMIT &&
+        canSubmitForDate(cursor, now),
+      isCurrentDay,
+      isPreviousDay,
+      debtCents: dayDebtCents,
+      debtReductionCents,
+    });
+  }
+
+  const currentMonthJokersUsed = countJokersForMonth(records, getMonthKey(currentDate));
+  const documentedDays = records.filter((record) => record.status === "COMPLETED").length;
+  const outstandingDebtCents = Math.max(0, totalDebtCents - totalDebtReductionCents);
+
+  return {
+    currentDate,
+    currentTarget: isWithinChallenge(currentDate) ? getRequiredReps(currentDate) : 0,
+    previousDate,
+    previousTarget: previousDate ? getRequiredReps(previousDate) : null,
+    documentedDays,
+    totalDebtCents,
+    totalDebtReductionCents,
+    outstandingDebtCents,
+    monthJokersUsed: currentMonthJokersUsed,
+    monthJokersRemaining: Math.max(0, MONTHLY_JOKER_LIMIT - currentMonthJokersUsed),
+    days,
+  };
+}

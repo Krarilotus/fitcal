@@ -1,0 +1,26 @@
+services:
+  fitcal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fitcal:latest
+    container_name: fitcal
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:-file:/app/data/fitcal.db}
+      UPLOAD_BASE_DIR: ${UPLOAD_BASE_DIR:-/app/uploads}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Berlin}
+    ports:
+      - "${FITCAL_BIND_IP:-127.0.0.1}:${FITCAL_HOST_PORT:-3107}:3000"
+    volumes:
+      - ${FITCAL_DATA_DIR:-/opt/fitcal/data}:/app/data
+      - ${FITCAL_UPLOAD_DIR:-/opt/fitcal/uploads}:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
