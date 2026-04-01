@@ -13,6 +13,11 @@ model User {
   passwordHash        String
   name                String?
   isStudentDiscount   Boolean              @default(false)
+  isLightParticipant  Boolean              @default(false)
+  reviewCreditCents   Int                  @default(0)
+  registrationStatus  RegistrationStatus   @default(APPROVED)
+  registrationApprovedAt DateTime?
+  registrationRejectedAt DateTime?
   birthDate           DateTime?
   heightCm            Float?
   motivation          String?
@@ -26,6 +31,11 @@ model User {
   dailySubmissions    DailySubmission[]
   measurements        MeasurementEntry[]
   passwordResetTokens PasswordResetToken[]
+  approvalsToReview   RegistrationApproval[] @relation("RegistrationApprovalReviewer")
+  registrationApprovals RegistrationApproval[] @relation("RegistrationApprovalApplicant")
+  sicknessReviewsToReview SicknessVerification[] @relation("SicknessVerificationReviewer")
+  invitesSent         AppInvite[]            @relation("AppInviteSender")
+  acceptedInvite      AppInvite?             @relation("AppInviteAcceptedUser")
 }
 
 model Account {
@@ -103,6 +113,7 @@ model DailySubmission {
   updatedAt     DateTime              @updatedAt
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   videos        DailyVideo[]
+  sicknessVerification SicknessVerification?
 
   @@unique([userId, challengeDate])
   @@index([challengeDate])
@@ -138,7 +149,66 @@ model MeasurementEntry {
   @@index([userId, measuredAt])
 }
 
+model AppInvite {
+  id             String    @id @default(cuid())
+  email          String
+  tokenHash      String    @unique
+  invitedByUserId String
+  acceptedUserId String?   @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  invitedBy      User      @relation("AppInviteSender", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+  acceptedUser   User?     @relation("AppInviteAcceptedUser", fields: [acceptedUserId], references: [id], onDelete: SetNull)
+
+  @@index([email, expiresAt])
+  @@index([invitedByUserId, createdAt])
+}
+
+model RegistrationApproval {
+  id              String                     @id @default(cuid())
+  applicantUserId String
+  reviewerUserId  String
+  decision        RegistrationApprovalDecision @default(PENDING)
+  decidedAt       DateTime?
+  createdAt       DateTime                   @default(now())
+  applicant       User                       @relation("RegistrationApprovalApplicant", fields: [applicantUserId], references: [id], onDelete: Cascade)
+  reviewer        User                       @relation("RegistrationApprovalReviewer", fields: [reviewerUserId], references: [id], onDelete: Cascade)
+
+  @@unique([applicantUserId, reviewerUserId])
+  @@index([reviewerUserId, decision])
+  @@index([applicantUserId, decision])
+}
+
+model SicknessVerification {
+  id                String                        @id @default(cuid())
+  dailySubmissionId String                        @unique
+  reviewerUserId    String
+  decision          RegistrationApprovalDecision  @default(PENDING)
+  notes             String?
+  decidedAt         DateTime?
+  createdAt         DateTime                      @default(now())
+  dailySubmission   DailySubmission               @relation(fields: [dailySubmissionId], references: [id], onDelete: Cascade)
+  reviewer          User                          @relation("SicknessVerificationReviewer", fields: [reviewerUserId], references: [id], onDelete: Cascade)
+
+  @@index([reviewerUserId, decision])
+}
+
+enum RegistrationStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+enum RegistrationApprovalDecision {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum DailySubmissionStatus {
   COMPLETED
   JOKER
+  SICK_PENDING
+  SICK_VERIFIED
 }

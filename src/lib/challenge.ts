@@ -7,8 +7,8 @@ export const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
 export const MONTHLY_JOKER_LIMIT = 2;
 export const MISSED_DAY_BASE_DEBT_CENTS = 1000;
 export const MISSED_DAY_INCREMENT_CENTS = 200;
-export const EXTRA_PUSHUP_REDUCTION_CENTS = 5;
-export const EXTRA_SITUP_REDUCTION_CENTS = 2;
+export const EXTRA_PUSHUP_REDUCTION_CENTS = 10;
+export const EXTRA_SITUP_REDUCTION_CENTS = 5;
 export const MAX_SETS_PER_EXERCISE = 2;
 export const MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION = 10;
 
@@ -18,9 +18,15 @@ export type DayCompletionState =
   | "open"
   | "completed"
   | "joker"
+  | "sickPending"
+  | "sick"
   | "slack";
 
-export type PersistedDayStatus = "COMPLETED" | "JOKER";
+export type PersistedDayStatus =
+  | "COMPLETED"
+  | "JOKER"
+  | "SICK_PENDING"
+  | "SICK_VERIFIED";
 
 export interface DailyRecordLike {
   challengeDate: string;
@@ -137,6 +143,11 @@ export function getMonthKey(dateKey: string) {
   return dateKey.slice(0, 7);
 }
 
+function getMonthIndex(dateKey: string) {
+  const { year, month } = parseDateKey(dateKey);
+  return year * 12 + (month - 1);
+}
+
 export function countJokersForMonth(
   records: Pick<DailyRecordLike, "challengeDate" | "status">[],
   monthKey: string,
@@ -144,6 +155,32 @@ export function countJokersForMonth(
   return records.filter(
     (record) => record.status === "JOKER" && getMonthKey(record.challengeDate) === monthKey,
   ).length;
+}
+
+export function countUsedJokers(
+  records: Pick<DailyRecordLike, "challengeDate" | "status">[],
+  upToDateKey?: string,
+) {
+  return records.filter(
+    (record) =>
+      record.status === "JOKER" &&
+      (upToDateKey == null || differenceInDays(record.challengeDate, upToDateKey) >= 0),
+  ).length;
+}
+
+export function getAccruedJokerAllowance(
+  joinedChallengeDate: string,
+  currentDate: string,
+) {
+  const effectiveStart =
+    getChallengeDayIndex(joinedChallengeDate) < 0 ? CHALLENGE_START_DATE : joinedChallengeDate;
+
+  if (differenceInDays(effectiveStart, currentDate) < 0) {
+    return 0;
+  }
+
+  const monthSpan = getMonthIndex(currentDate) - getMonthIndex(effectiveStart) + 1;
+  return Math.max(0, monthSpan) * MONTHLY_JOKER_LIMIT;
 }
 
 export function getDebtReductionCents(
@@ -168,6 +205,7 @@ export interface ChallengeOverviewInput {
   joinedChallengeDate: string;
   records: DailyRecordLike[];
   hasStudentDiscount?: boolean;
+  isLightParticipant?: boolean;
   now?: Date;
 }
 
@@ -185,6 +223,9 @@ export interface ChallengeOverview {
   outstandingDebtCents: number;
   monthJokersUsed: number;
   monthJokersRemaining: number;
+  jokerAllowance: number;
+  jokerUsed: number;
+  jokerBalance: number;
   days: ChallengeDaySummary[];
 }
 
@@ -192,6 +233,7 @@ export function getChallengeOverview({
   joinedChallengeDate,
   records,
   hasStudentDiscount = false,
+  isLightParticipant = false,
   now = new Date(),
 }: ChallengeOverviewInput): ChallengeOverview {
   const currentDate = getBerlinDateKey(now);
@@ -211,6 +253,11 @@ export function getChallengeOverview({
   let totalDebtCents = 0;
   let totalDebtReductionCents = 0;
   let outstandingDebtCents = 0;
+  const jokerAllowance = isLightParticipant
+    ? 0
+    : getAccruedJokerAllowance(firstRelevantDate, lastEvaluatedDate);
+  const jokerUsed = isLightParticipant ? 0 : countUsedJokers(records, lastEvaluatedDate);
+  const jokerBalance = Math.max(0, jokerAllowance - jokerUsed);
 
   for (
     let cursor = firstRelevantDate;
@@ -226,7 +273,6 @@ export function getChallengeOverview({
     const isCurrentDay = cursor === currentDate;
     const isPreviousDay = previousDate === cursor;
     const isPastClosedDay = differenceInDays(cursor, currentDate) >= 1;
-    const monthlyJokersUsed = countJokersForMonth(records, getMonthKey(cursor));
     const rawDebtReductionCents = record ? getDebtReductionCents(record) : 0;
     let debtReductionCents = 0;
     let status: DayCompletionState;
@@ -234,14 +280,20 @@ export function getChallengeOverview({
 
     if (record?.status === "COMPLETED") {
       status = "completed";
-      debtReductionCents = Math.min(rawDebtReductionCents, outstandingDebtCents);
-      outstandingDebtCents -= debtReductionCents;
-      totalDebtReductionCents += debtReductionCents;
+      if (!isLightParticipant) {
+        debtReductionCents = Math.min(rawDebtReductionCents, outstandingDebtCents);
+        outstandingDebtCents -= debtReductionCents;
+        totalDebtReductionCents += debtReductionCents;
+      }
     } else if (record?.status === "JOKER") {
       status = "joker";
+    } else if (record?.status === "SICK_VERIFIED") {
+      status = "sick";
+    } else if (record?.status === "SICK_PENDING") {
+      status = "sickPending";
     } else if (dayIndex < CHALLENGE_FREE_DAYS) {
       status = "free";
-    } else if (isCurrentDay || isPreviousDay) {
+    } else if (isCurrentDay || isPreviousDay || (isLightParticipant && isPastClosedDay)) {
       status = "open";
     } else if (isPastClosedDay) {
       status = "slack";
@@ -259,10 +311,13 @@ export function getChallengeOverview({
       repsTarget: getRequiredReps(cursor),
       status,
       canUpload:
-        (status === "open" || status === "free") && canSubmitForDate(cursor, now),
+        !isLightParticipant &&
+        (status === "open" || status === "free" || status === "sickPending") &&
+        canSubmitForDate(cursor, now),
       canUseJoker:
-        status === "open" &&
-        monthlyJokersUsed < MONTHLY_JOKER_LIMIT &&
+        !isLightParticipant &&
+        (status === "open" || status === "sickPending") &&
+        jokerBalance > 0 &&
         canSubmitForDate(cursor, now),
       isCurrentDay,
       isPreviousDay,
@@ -296,7 +351,10 @@ export function getChallengeOverview({
     totalDebtReductionCents,
     outstandingDebtCents: Math.max(0, outstandingDebtCents),
     monthJokersUsed: currentMonthJokersUsed,
-    monthJokersRemaining: Math.max(0, MONTHLY_JOKER_LIMIT - currentMonthJokersUsed),
+    monthJokersRemaining: jokerBalance,
+    jokerAllowance,
+    jokerUsed,
+    jokerBalance,
     days,
   };
 }

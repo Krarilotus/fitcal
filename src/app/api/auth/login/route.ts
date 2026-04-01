@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { RegistrationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { createUserSession } from "@/lib/auth/session";
 import { verifyPassword } from "@/lib/auth/password";
@@ -27,6 +28,14 @@ export async function POST(request: Request) {
 
     if (!passwordMatches) {
       throw new Error("Login fehlgeschlagen.");
+    }
+
+    if (user.registrationStatus === RegistrationStatus.PENDING) {
+      throw new Error("Dein Account wartet noch auf Freigabe.");
+    }
+
+    if (user.registrationStatus === RegistrationStatus.REJECTED) {
+      throw new Error("Dein Account wurde nicht freigegeben.");
     }
 
     await createUserSession(user.id);

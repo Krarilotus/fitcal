@@ -11,18 +11,24 @@ interface PageProps {
 export default async function RegisterPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
 
-  if (user) {
+  if (user?.registrationStatus === "APPROVED") {
     redirect("/dashboard");
   }
 
   const params = await searchParams;
   const error = typeof params.error === "string" ? params.error : undefined;
+  const inviteToken = typeof params.invite === "string" ? params.invite : "";
+  const hasInvite = inviteToken.length > 0;
 
   return (
     <AuthShell
       eyebrow="Registrierung"
       title="Registrieren"
-      description="Account anlegen, Profil ergänzen und auf Wunsch erste Messwerte speichern."
+      description={
+        hasInvite
+          ? "Account anlegen und mit Einladung direkt freigeschaltet werden."
+          : "Account anlegen, Profil ergänzen und danach von bestehenden Nutzern freigeben lassen."
+      }
       footer={
         <p>
           Bereits registriert? <Link href="/login">Zum Login</Link>.
@@ -32,10 +38,13 @@ export default async function RegisterPage({ searchParams }: PageProps) {
       <div className="space-y-3">
         <FlashMessage error={error} />
         <form action="/api/auth/register" className="space-y-4" method="post">
+          <input name="invitationToken" type="hidden" value={inviteToken} />
           <div className="fitcal-form-intro">
             <p className="fitcal-section-kicker">Profil</p>
             <p className="text-sm text-[var(--fc-muted)]">
-              Basisdaten und optionale Messwerte.
+              {hasInvite
+                ? "Basisdaten, optionale Messwerte und dann direkt los."
+                : "Basisdaten, optionale Messwerte und danach Freigabe durch bestehende Nutzer."}
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -49,7 +58,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
                 className="fitcal-input"
                 inputMode="numeric"
                 name="birthDate"
-                pattern="\\d{2}\\.\\d{2}\\.\\d{4}"
+                pattern="\d{2}\.\d{2}\.\d{4}"
                 placeholder="TT.MM.JJJJ"
                 type="text"
               />
@@ -105,15 +114,27 @@ export default async function RegisterPage({ searchParams }: PageProps) {
               />
             </label>
             <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] md:col-span-2">
-              <input className="h-4 w-4 accent-[var(--fc-accent)]" name="isStudentDiscount" type="checkbox" />
+              <input
+                className="h-4 w-4 accent-[var(--fc-accent)]"
+                name="isStudentDiscount"
+                type="checkbox"
+              />
               <span>Armer Student</span>
+            </label>
+            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] md:col-span-2">
+              <input
+                className="h-4 w-4 accent-[var(--fc-accent)]"
+                name="isLightParticipant"
+                type="checkbox"
+              />
+              <span>Light-Variante</span>
             </label>
           </div>
           <button
             className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"
             type="submit"
           >
-            Account erstellen
+            {hasInvite ? "Account anlegen" : "Registrierungsanfrage senden"}
           </button>
         </form>
       </div>

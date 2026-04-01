@@ -4,8 +4,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import {
   CHALLENGE_START_DATE,
   canSubmitForDate,
-  countJokersForMonth,
-  getMonthKey,
+  countUsedJokers,
+  getAccruedJokerAllowance,
   isFreeChallengeDay,
 } from "@/lib/challenge";
 
@@ -14,6 +14,12 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (user.isLightParticipant) {
+    return NextResponse.redirect(
+      new URL("/dashboard?error=Die%20Light-Variante%20nutzt%20keine%20Joker", request.url),
+    );
   }
 
   const formData = await request.formData();
@@ -30,12 +36,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const monthKey = getMonthKey(challengeDate);
   const existingEntries = await prisma.dailySubmission.findMany({
     where: {
       userId: user.id,
       challengeDate: {
-        startsWith: monthKey,
+        lte: challengeDate,
       },
     },
     select: {
@@ -44,13 +49,38 @@ export async function POST(request: Request) {
     },
   });
 
-  if (countJokersForMonth(existingEntries, monthKey) >= 2) {
+  const jokerAllowance = getAccruedJokerAllowance(
+    user.challengeEnrollment?.joinedChallengeDate ?? CHALLENGE_START_DATE,
+    challengeDate,
+  );
+
+  if (countUsedJokers(existingEntries, challengeDate) >= jokerAllowance) {
     return NextResponse.redirect(
       new URL(
-        "/dashboard?error=Monatliches%20Joker-Kontingent%20ist%20bereits%20aufgebraucht",
+        "/dashboard?error=Kein%20angesparter%20Joker%20mehr%20frei",
         request.url,
       ),
     );
+  }
+
+  const existingSubmission = await prisma.dailySubmission.findUnique({
+    where: {
+      userId_challengeDate: {
+        userId: user.id,
+        challengeDate,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingSubmission) {
+    await prisma.sicknessVerification.deleteMany({
+      where: {
+        dailySubmissionId: existingSubmission.id,
+      },
+    });
   }
 
   await prisma.dailySubmission.upsert({
@@ -64,8 +94,6 @@ export async function POST(request: Request) {
       status: "JOKER",
       pushupSets: "[0,0]",
       situpSets: "[0,0]",
-      extraPushups: 0,
-      extraSitups: 0,
       notes: "Joker genutzt",
       submittedAt: new Date(),
     },
@@ -75,8 +103,6 @@ export async function POST(request: Request) {
       status: "JOKER",
       pushupSets: "[0,0]",
       situpSets: "[0,0]",
-      extraPushups: 0,
-      extraSitups: 0,
       notes: "Joker genutzt",
       submittedAt: new Date(),
     },

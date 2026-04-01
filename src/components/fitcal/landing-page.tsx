@@ -11,7 +11,7 @@ const rules = [
   "Maximal 2 Sets pro Sportart.",
   "Videos bis zu 24 Stunden später hochladen.",
   "Qualifikation durch 10 Uploads in den ersten 14 Tagen.",
-  "2 Slack-Day-Joker pro Monat.",
+  "2 neue Slack-Day-Joker pro Monat. Ungenutzte Joker bleiben erhalten.",
   "Slacken kostet 10 € plus 2 € für jeden weiteren Tag.",
   "Maximal 4 Videos, weil maximal 4 Sets dokumentiert werden.",
   "Max. 100 MB pro Datei.",

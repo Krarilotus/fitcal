@@ -78,6 +78,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: emailSchema,
+  invitationToken: z.string().trim().optional().or(z.literal("")),
   name: z
     .string()
     .trim()
@@ -92,6 +93,11 @@ export const registerSchema = z.object({
   weightKg: optionalNumberSchema("das Gewicht", 25, 400),
   motivation: optionalTrimmedString(240),
   isStudentDiscount: checkboxSchema.default(false),
+  isLightParticipant: checkboxSchema.default(false),
+});
+
+export const inviteSchema = z.object({
+  email: emailSchema,
 });
 
 export const measurementSchema = z

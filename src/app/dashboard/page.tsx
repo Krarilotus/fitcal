@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { RegistrationApprovalDecision, RegistrationStatus } from "@prisma/client";
 import { DashboardTabs } from "@/components/fitcal/dashboard-tabs";
 import { FlashMessage } from "@/components/fitcal/flash-message";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
   isFreeChallengeDay,
 } from "@/lib/challenge";
 import { getCurrentUser } from "@/lib/auth/session";
+import { prisma } from "@/lib/db";
 import { formatMeasurementDate } from "@/lib/measurements";
 import { getDailyMessage } from "@/lib/special-day";
 import { deserializeSets } from "@/lib/submission";
@@ -94,6 +96,17 @@ function formatFileSize(sizeBytes: number) {
   return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
 }
 
+function getDayStatusLabel(status: string) {
+  switch (status) {
+    case "sickPending":
+      return "Krank · offen";
+    case "sick":
+      return "Krank bestätigt";
+    default:
+      return statusLabel(status);
+  }
+}
+
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await getCurrentUser();
 
@@ -101,9 +114,56 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     redirect("/login");
   }
 
+  if (user.registrationStatus !== RegistrationStatus.APPROVED) {
+    redirect("/login?error=Dein%20Account%20ist%20noch%20nicht%20freigegeben.");
+  }
+
   const params = await searchParams;
   const error = typeof params.error === "string" ? params.error : undefined;
   const success = typeof params.success === "string" ? params.success : undefined;
+  const canReview = !user.isLightParticipant;
+  const pendingApprovals =
+    user.registrationStatus === RegistrationStatus.APPROVED && canReview
+      ? await prisma.registrationApproval.findMany({
+          where: {
+            reviewerUserId: user.id,
+            decision: RegistrationApprovalDecision.PENDING,
+            applicant: {
+              registrationStatus: RegistrationStatus.PENDING,
+            },
+          },
+          include: {
+            applicant: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                motivation: true,
+                createdAt: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        })
+      : [];
+  const activeInvites =
+    user.registrationStatus === RegistrationStatus.APPROVED && canReview
+      ? await prisma.appInvite.findMany({
+          where: {
+            invitedByUserId: user.id,
+            acceptedAt: null,
+            expiresAt: {
+              gt: new Date(),
+            },
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 6,
+        })
+      : [];
 
   const challengeRecords = user.dailySubmissions.map((submission) => {
     const pushupTotal = deserializeSets(submission.pushupSets).reduce(
@@ -127,7 +187,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     joinedChallengeDate: user.challengeEnrollment?.joinedChallengeDate ?? CHALLENGE_START_DATE,
     records: challengeRecords,
     hasStudentDiscount: user.isStudentDiscount,
+    isLightParticipant: user.isLightParticipant,
   });
+  const reviewCreditCents = user.reviewCreditCents ?? 0;
+  const effectiveOutstandingDebtCents = Math.max(
+    0,
+    overview.outstandingDebtCents - reviewCreditCents,
+  );
+  const availableReviewBudgetCents = Math.max(
+    0,
+    reviewCreditCents - overview.outstandingDebtCents,
+  );
 
   const openDays = overview.days
     .filter((day) => day.canUpload)
@@ -153,7 +223,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       challengeDate: day.challengeDate,
       dateLabel: formatChallengeDate(day.challengeDate),
       repsTarget: day.repsTarget,
-      statusLabel: statusLabel(day.status),
+      statusLabel: getDayStatusLabel(day.status),
       debtLabel: day.debtCents > 0 ? formatCurrencyFromCents(day.debtCents) : null,
       pushupTotal: submission ? pushupTotal : null,
       situpTotal: submission ? situpTotal : null,
@@ -240,6 +310,97 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <FlashMessage error={error} success={success} />
 
+        {canReview ? (
+          <section className="rounded-[28px] border border-[rgba(34,96,86,0.16)] bg-[rgba(255,252,245,0.82)] px-5 py-4 shadow-[0_18px_50px_rgba(20,33,28,0.08)] backdrop-blur sm:px-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="fitcal-section-kicker">Einladungen</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.03em]">
+                Jemanden direkt freischalten
+              </h2>
+            </div>
+            {activeInvites.length > 0 ? (
+              <p className="text-sm text-[var(--fc-muted)]">{activeInvites.length} offen</p>
+            ) : null}
+          </div>
+
+          <form action="/api/invitations" className="mt-4 flex flex-col gap-3 sm:flex-row" method="post">
+            <label className="fitcal-input-wrap flex-1">
+              E-Mail
+              <input className="fitcal-input" name="email" required type="email" />
+            </label>
+            <div className="flex items-end">
+              <Button type="submit">Einladung senden</Button>
+            </div>
+          </form>
+
+          {activeInvites.length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {activeInvites.map((invite) => (
+                <span
+                  className="inline-flex items-center rounded-full border border-[rgba(34,96,86,0.14)] bg-white/80 px-3 py-2 text-sm text-[var(--fc-muted)]"
+                  key={invite.id}
+                >
+                  {invite.email}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          </section>
+        ) : null}
+
+        {canReview && pendingApprovals.length > 0 ? (
+          <section className="rounded-[28px] border border-[rgba(34,96,86,0.16)] bg-[rgba(255,252,245,0.82)] px-5 py-4 shadow-[0_18px_50px_rgba(20,33,28,0.08)] backdrop-blur sm:px-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="fitcal-section-kicker">Freigaben</p>
+                <h2 className="text-2xl font-semibold tracking-[-0.03em]">
+                  Neue Registrierungen warten auf dein Ja oder Nein.
+                </h2>
+              </div>
+              <p className="text-sm text-[var(--fc-muted)]">
+                {pendingApprovals.length} offen
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {pendingApprovals.map((approval) => (
+                <div
+                  className="flex flex-col gap-3 rounded-[24px] border border-[rgba(34,96,86,0.12)] bg-white/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  key={approval.id}
+                >
+                  <div className="space-y-1">
+                    <p className="font-semibold">
+                      {approval.applicant.name || approval.applicant.email}
+                    </p>
+                    <p className="text-sm text-[var(--fc-muted)]">{approval.applicant.email}</p>
+                    {approval.applicant.motivation ? (
+                      <p className="text-sm text-[var(--fc-muted)]">
+                        „{approval.applicant.motivation}“
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <form action="/api/registration-approvals" method="post">
+                      <input name="approvalId" type="hidden" value={approval.id} />
+                      <input name="decision" type="hidden" value="approve" />
+                      <Button type="submit">Ja</Button>
+                    </form>
+                    <form action="/api/registration-approvals" method="post">
+                      <input name="approvalId" type="hidden" value={approval.id} />
+                      <input name="decision" type="hidden" value="reject" />
+                      <Button type="submit" variant="secondary">
+                        Nein
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <DashboardTabs
           measurementPoints={measurementPoints}
           openDays={openDays}
@@ -252,9 +413,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             qualificationWindowDays: CHALLENGE_FREE_DAYS,
             qualificationUploads: overview.qualificationUploads,
             qualificationRequiredUploads: overview.qualificationRequiredUploads,
-            outstandingDebtLabel: formatCurrencyFromCents(overview.outstandingDebtCents),
-            outstandingDebtCents: overview.outstandingDebtCents,
+            outstandingDebtLabel: formatCurrencyFromCents(effectiveOutstandingDebtCents),
+            outstandingDebtCents: effectiveOutstandingDebtCents,
+            reviewBudgetLabel: formatCurrencyFromCents(availableReviewBudgetCents),
+            reviewBudgetCents: availableReviewBudgetCents,
             hasStudentDiscount: user.isStudentDiscount,
+            isLightParticipant: user.isLightParticipant,
             monthJokersRemaining: overview.monthJokersRemaining,
             documentedDays: overview.documentedDays,
             dailyMessage,

@@ -21,6 +21,12 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  if (user.isLightParticipant) {
+    return NextResponse.redirect(
+      new URL("/dashboard?error=Die%20Light-Variante%20hat%20keinen%20Upload-Zugang", request.url),
+    );
+  }
+
   try {
     const formData = await request.formData();
     const parsed = parseSubmissionInput(formData);
@@ -80,6 +86,11 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
+      await prisma.sicknessVerification.deleteMany({
+        where: {
+          dailySubmissionId: existing.id,
+        },
+      });
       await prisma.dailyVideo.deleteMany({
         where: {
           dailySubmissionId: existing.id,
@@ -98,8 +109,6 @@ export async function POST(request: Request) {
         status: "COMPLETED",
         pushupSets: serializeSets(parsed.pushupSets),
         situpSets: serializeSets(parsed.situpSets),
-        extraPushups: 0,
-        extraSitups: 0,
         notes: parsed.notes || null,
         submittedAt: new Date(),
         videos: {
@@ -114,8 +123,6 @@ export async function POST(request: Request) {
         status: "COMPLETED",
         pushupSets: serializeSets(parsed.pushupSets),
         situpSets: serializeSets(parsed.situpSets),
-        extraPushups: 0,
-        extraSitups: 0,
         notes: parsed.notes || null,
         submittedAt: new Date(),
         videos: {

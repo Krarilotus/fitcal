@@ -78,7 +78,10 @@ type OverviewSummary = {
   qualificationRequiredUploads: number;
   outstandingDebtLabel: string;
   outstandingDebtCents: number;
+  reviewBudgetLabel: string;
+  reviewBudgetCents: number;
   hasStudentDiscount: boolean;
+  isLightParticipant: boolean;
   monthJokersRemaining: number;
   documentedDays: number;
   dailyMessage: string | null;
@@ -97,7 +100,7 @@ const rules = [
   "Maximal 2 Sets pro Sportart.",
   "Videos bis zu 24 Stunden später hochladen.",
   "Qualifikation durch 10 Uploads in den ersten 14 Tagen.",
-  "2 Slack-Day-Joker pro Monat.",
+  "2 neue Slack-Day-Joker pro Monat. Ungenutzte Joker bleiben erhalten.",
   "Slacken kostet 10 €, dann 12 €, 14 €, 16 € und so weiter.",
   "Maximal 4 Videos, weil maximal 4 Sets dokumentiert werden.",
   "Max. 100 MB pro Datei.",
@@ -149,10 +152,10 @@ export function DashboardTabs({
     formatCurrency(overview.hasStudentDiscount ? Math.round((1000 + index * 200) / 2) : 1000 + index * 200),
   );
   const debtCents = Math.max(0, Math.round(parseNumberInput(debtInput) * 100));
-  const pushupsForDebt = Math.ceil(debtCents / 5);
-  const situpsForDebt = Math.ceil(debtCents / 2);
-  const mixedPushups = Math.ceil(debtCents / 14);
-  const mixedSitups = Math.max(0, Math.ceil((debtCents - mixedPushups * 5) / 2));
+  const pushupsForDebt = Math.ceil(debtCents / 10);
+  const situpsForDebt = Math.ceil(debtCents / 5);
+  const mixedPushups = Math.ceil(debtCents / 25);
+  const mixedSitups = Math.max(0, Math.ceil((debtCents - mixedPushups * 10) / 5));
   const pushups = Math.max(0, Math.floor(parseNumberInput(pushupInput)));
   const situps = Math.max(0, Math.floor(parseNumberInput(situpInput)));
   const weightKg = Math.max(1, parseNumberInput(weightInput, profile.latestWeightKg ?? 75));
@@ -239,16 +242,20 @@ export function DashboardTabs({
               </strong>
             </div>
             <div className="fitcal-status-chip">
-              <span>Schulden offen</span>
-              <strong>{overview.outstandingDebtLabel}</strong>
+              <span>{overview.isLightParticipant ? "Modus" : "Schulden offen"}</span>
+              <strong>{overview.isLightParticipant ? "Light" : overview.outstandingDebtLabel}</strong>
             </div>
             <div className="fitcal-status-chip">
-              <span>Joker frei</span>
-              <strong>{overview.monthJokersRemaining}</strong>
+              <span>{overview.isLightParticipant ? "Pool" : "Review-Guthaben"}</span>
+              <strong>{overview.isLightParticipant ? "Aus" : overview.reviewBudgetLabel}</strong>
             </div>
             <div className="fitcal-status-chip">
-              <span>Tage gesamt</span>
-              <strong>{overview.documentedDays}</strong>
+              <span>{overview.isLightParticipant ? "Pool" : "Joker frei gesamt"}</span>
+              <strong>{overview.isLightParticipant ? "Aus" : overview.monthJokersRemaining}</strong>
+            </div>
+            <div className="fitcal-status-chip">
+              <span>{overview.isLightParticipant ? "Review" : "Tage gesamt"}</span>
+              <strong>{overview.isLightParticipant ? "Aus" : overview.documentedDays}</strong>
             </div>
           </div>
 
@@ -268,7 +275,11 @@ export function DashboardTabs({
         </div>
 
         <div className="fitcal-section-stack">
-          {openDays.length > 0 ? (
+          {overview.isLightParticipant ? (
+            <div className="fitcal-empty-state">
+              In der Light-Variante sind Uploads und Joker ausgeblendet.
+            </div>
+          ) : openDays.length > 0 ? (
             openDays.map((day) => (
               <article className="fitcal-upload-slab" key={day.challengeDate}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -684,7 +695,7 @@ export function DashboardTabs({
               </div>
             </div>
             <p className="mt-4 text-sm text-[var(--fc-muted)]">
-              Rechnet mit 5 ct pro extra Liegestütz und 2 ct pro extra Sit-up. Angerechnet wird nur auf offene Schulden.
+              Rechnet mit 10 ct pro extra Liegestütz und 5 ct pro extra Sit-up. Angerechnet wird nur auf offene Schulden.
             </p>
           </section>
 

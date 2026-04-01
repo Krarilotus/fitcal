@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { RegistrationStatus } from "@prisma/client";
 import { AuthShell } from "@/components/fitcal/auth-shell";
 import { FlashMessage } from "@/components/fitcal/flash-message";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -11,7 +12,7 @@ interface PageProps {
 export default async function LoginPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
 
-  if (user) {
+  if (user?.registrationStatus === RegistrationStatus.APPROVED) {
     redirect("/dashboard");
   }
 
