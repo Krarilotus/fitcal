@@ -12,6 +12,7 @@ model User {
   email               String               @unique
   passwordHash        String
   name                String?
+  isStudentDiscount   Boolean              @default(false)
   birthDate           DateTime?
   heightCm            Float?
   motivation          String?
@@ -96,8 +97,6 @@ model DailySubmission {
   status        DailySubmissionStatus
   pushupSets    String
   situpSets     String
-  extraPushups  Int                   @default(0)
-  extraSitups   Int                   @default(0)
   notes         String?
   submittedAt   DateTime?
   createdAt     DateTime              @default(now())

@@ -104,6 +104,10 @@ export default async function RegisterPage({ searchParams }: PageProps) {
                 placeholder="Optional."
               />
             </label>
+            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] md:col-span-2">
+              <input className="h-4 w-4 accent-[var(--fc-accent)]" name="isStudentDiscount" type="checkbox" />
+              <span>Armer Student</span>
+            </label>
           </div>
           <button
             className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"

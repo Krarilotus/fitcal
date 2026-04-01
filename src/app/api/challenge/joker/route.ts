@@ -41,8 +41,6 @@ export async function POST(request: Request) {
     select: {
       challengeDate: true,
       status: true,
-      extraPushups: true,
-      extraSitups: true,
     },
   });
 

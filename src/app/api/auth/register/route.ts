@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       waistCircumferenceCm: formData.get("waistCircumferenceCm"),
       weightKg: formData.get("weightKg"),
       motivation: formData.get("motivation"),
+      isStudentDiscount: formData.get("isStudentDiscount"),
     });
 
     const existingUser = await prisma.user.findUnique({
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
           email: parsed.email,
           name: parsed.name || null,
           passwordHash,
+          isStudentDiscount: parsed.isStudentDiscount,
           birthDate: parsed.birthDate ?? null,
           heightCm: parsed.heightCm ?? null,
           motivation: parsed.motivation || null,

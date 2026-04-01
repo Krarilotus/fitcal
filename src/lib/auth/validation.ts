@@ -19,6 +19,14 @@ const optionalTrimmedString = (maxLength: number) =>
     .optional()
     .or(z.literal(""));
 
+const checkboxSchema = z.preprocess((value) => {
+  if (typeof value === "string") {
+    return value === "on" || value === "true" || value === "1";
+  }
+
+  return Boolean(value);
+}, z.boolean());
+
 const optionalDateSchema = z.preprocess((value) => {
   if (value === "" || value == null) {
     return undefined;
@@ -83,6 +91,7 @@ export const registerSchema = z.object({
   waistCircumferenceCm: optionalNumberSchema("den Bauchumfang", 40, 300),
   weightKg: optionalNumberSchema("das Gewicht", 25, 400),
   motivation: optionalTrimmedString(240),
+  isStudentDiscount: checkboxSchema.default(false),
 });
 
 export const measurementSchema = z
@@ -103,6 +112,19 @@ export const measurementSchema = z
       path: ["weightKg"],
     },
   );
+
+export const profileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Bitte gib mindestens 2 Zeichen ein.")
+    .max(80, "Name darf maximal 80 Zeichen haben.")
+    .optional()
+    .or(z.literal("")),
+  birthDate: optionalDateSchema,
+  heightCm: optionalNumberSchema("die Körpergröße", 100, 260),
+  motivation: optionalTrimmedString(240),
+});
 
 export const forgotPasswordSchema = z.object({
   email: emailSchema,

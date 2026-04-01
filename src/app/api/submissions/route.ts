@@ -98,8 +98,8 @@ export async function POST(request: Request) {
         status: "COMPLETED",
         pushupSets: serializeSets(parsed.pushupSets),
         situpSets: serializeSets(parsed.situpSets),
-        extraPushups: parsed.extraPushups,
-        extraSitups: parsed.extraSitups,
+        extraPushups: 0,
+        extraSitups: 0,
         notes: parsed.notes || null,
         submittedAt: new Date(),
         videos: {
@@ -114,8 +114,8 @@ export async function POST(request: Request) {
         status: "COMPLETED",
         pushupSets: serializeSets(parsed.pushupSets),
         situpSets: serializeSets(parsed.situpSets),
-        extraPushups: parsed.extraPushups,
-        extraSitups: parsed.extraSitups,
+        extraPushups: 0,
+        extraSitups: 0,
         notes: parsed.notes || null,
         submittedAt: new Date(),
         videos: {

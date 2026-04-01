@@ -25,8 +25,9 @@ export type PersistedDayStatus = "COMPLETED" | "JOKER";
 export interface DailyRecordLike {
   challengeDate: string;
   status: PersistedDayStatus;
-  extraPushups: number;
-  extraSitups: number;
+  pushupTotal: number;
+  situpTotal: number;
+  hasStudentDiscount?: boolean;
 }
 
 export interface ChallengeDaySummary {
@@ -137,7 +138,7 @@ export function getMonthKey(dateKey: string) {
 }
 
 export function countJokersForMonth(
-  records: DailyRecordLike[],
+  records: Pick<DailyRecordLike, "challengeDate" | "status">[],
   monthKey: string,
 ) {
   return records.filter(
@@ -145,20 +146,28 @@ export function countJokersForMonth(
   ).length;
 }
 
-export function getDebtReductionCents(record: Pick<DailyRecordLike, "extraPushups" | "extraSitups">) {
+export function getDebtReductionCents(
+  record: Pick<DailyRecordLike, "challengeDate" | "pushupTotal" | "situpTotal">,
+) {
+  const target = getRequiredReps(record.challengeDate);
+  const extraPushups = Math.max(0, record.pushupTotal - target);
+  const extraSitups = Math.max(0, record.situpTotal - target);
+
   return (
-    record.extraPushups * EXTRA_PUSHUP_REDUCTION_CENTS +
-    record.extraSitups * EXTRA_SITUP_REDUCTION_CENTS
+    extraPushups * EXTRA_PUSHUP_REDUCTION_CENTS +
+    extraSitups * EXTRA_SITUP_REDUCTION_CENTS
   );
 }
 
-export function getSlackDebtCents(slackIndex: number) {
-  return MISSED_DAY_BASE_DEBT_CENTS + slackIndex * MISSED_DAY_INCREMENT_CENTS;
+export function getSlackDebtCents(slackIndex: number, hasStudentDiscount = false) {
+  const fullDebt = MISSED_DAY_BASE_DEBT_CENTS + slackIndex * MISSED_DAY_INCREMENT_CENTS;
+  return hasStudentDiscount ? Math.round(fullDebt / 2) : fullDebt;
 }
 
 export interface ChallengeOverviewInput {
   joinedChallengeDate: string;
   records: DailyRecordLike[];
+  hasStudentDiscount?: boolean;
   now?: Date;
 }
 
@@ -182,6 +191,7 @@ export interface ChallengeOverview {
 export function getChallengeOverview({
   joinedChallengeDate,
   records,
+  hasStudentDiscount = false,
   now = new Date(),
 }: ChallengeOverviewInput): ChallengeOverview {
   const currentDate = getBerlinDateKey(now);
@@ -235,7 +245,7 @@ export function getChallengeOverview({
       status = "open";
     } else if (isPastClosedDay) {
       status = "slack";
-      dayDebtCents = getSlackDebtCents(slackCount);
+      dayDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
       slackCount += 1;
       totalDebtCents += dayDebtCents;
       outstandingDebtCents += dayDebtCents;

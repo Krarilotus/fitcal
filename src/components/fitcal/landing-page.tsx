@@ -205,7 +205,7 @@ export function FitcalLandingPage({
                 target="_blank"
               >
                 <PlayCircle className="size-5" />
-                <span>Liegestütze</span>
+                <span>Referenzvideo Liegestütze</span>
               </a>
               <a
                 className="fitcal-video-link"
@@ -214,7 +214,7 @@ export function FitcalLandingPage({
                 target="_blank"
               >
                 <PlayCircle className="size-5" />
-                <span>Sit-ups</span>
+                <span>Referenzvideo Sit-Ups</span>
               </a>
             </div>
           </article>

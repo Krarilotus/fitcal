@@ -341,25 +341,133 @@ textarea {
   gap: 1rem;
 }
 
-.fitcal-special-day {
-  border: 1px solid rgba(13, 122, 105, 0.18);
-  border-radius: 1.8rem;
-  padding: 1.2rem;
-  background:
-    radial-gradient(circle at 85% 18%, rgba(212, 111, 59, 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 251, 245, 0.92), rgba(248, 242, 231, 0.84));
-  box-shadow:
-    0 20px 40px rgba(43, 39, 31, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
-}
-
-.fitcal-stat-ribbon {
+.fitcal-tab-shell {
   display: grid;
-  gap: 0.85rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2rem;
 }
 
-.fitcal-stat-ribbon > div,
+.fitcal-tab-bar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 30;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+  border: 1px solid var(--fc-line);
+  border-radius: 1.4rem;
+  background: rgba(248, 243, 235, 0.88);
+  box-shadow:
+    0 12px 32px rgba(43, 39, 31, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.fitcal-tab-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.6rem;
+  flex: 0 0 auto;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fc-muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.fitcal-tab-trigger:hover {
+  transform: translateY(-1px);
+  color: var(--fc-ink);
+}
+
+.fitcal-tab-trigger.is-active {
+  border-color: rgba(13, 122, 105, 0.18);
+  background: rgba(13, 122, 105, 0.1);
+  color: var(--fc-accent);
+}
+
+.fitcal-scroll-section {
+  display: grid;
+  gap: 1.25rem;
+  scroll-margin-top: 6rem;
+}
+
+.fitcal-scroll-section + .fitcal-scroll-section {
+  padding-top: 1.4rem;
+  border-top: 1px solid rgba(33, 31, 24, 0.08);
+}
+
+.fitcal-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.fitcal-section-title {
+  margin-top: 0.35rem;
+  font-size: clamp(1.7rem, 2vw, 2.35rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+
+.fitcal-section-stack {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem 0 0;
+}
+
+.fitcal-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--fc-line);
+}
+
+.fitcal-status-chip {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid var(--fc-line);
+  background: rgba(255, 255, 255, 0.7);
+  min-width: 8.5rem;
+}
+
+.fitcal-status-chip span {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fc-muted);
+}
+
+.fitcal-status-chip strong {
+  font-size: 1.1rem;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.fitcal-status-message {
+  max-width: 72ch;
+  margin-top: 1rem;
+  font-size: 0.98rem;
+  line-height: 1.7;
+  color: var(--fc-muted);
+}
+
 .fitcal-profile-grid > div,
 .fitcal-glance-stack > div {
   padding: 1rem;
@@ -368,20 +476,12 @@ textarea {
   background: rgba(255, 255, 255, 0.64);
 }
 
-.fitcal-stat-ribbon span,
 .fitcal-glance-stack span {
   display: block;
   font-size: 0.72rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--fc-muted);
-}
-
-.fitcal-stat-ribbon strong {
-  display: block;
-  margin-top: 0.42rem;
-  font-size: clamp(1.5rem, 2.8vw, 2.25rem);
-  line-height: 1;
 }
 
 .fitcal-onboarding-grid,
@@ -644,9 +744,6 @@ textarea {
 }
 
 @media (max-width: 1024px) {
-  .fitcal-stat-ribbon {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 768px) {
@@ -660,9 +757,22 @@ textarea {
 
   .fitcal-field-grid,
   .fitcal-upload-grid,
-  .fitcal-proof-grid,
-  .fitcal-stat-ribbon {
+  .fitcal-proof-grid {
     grid-template-columns: 1fr;
+  }
+
+  .fitcal-status-chip {
+    min-width: 0;
+    flex: 1 1 12rem;
+  }
+
+  .fitcal-tab-bar {
+    top: 0.5rem;
+    padding: 0.6rem;
+  }
+
+  .fitcal-tab-trigger {
+    min-height: 2.45rem;
   }
 
   .fitcal-timeline-row {

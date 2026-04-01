@@ -12,8 +12,6 @@ export const dailySubmissionSchema = z.object({
   pushupSet2: z.coerce.number().int().min(0).max(10000),
   situpSet1: z.coerce.number().int().min(0).max(10000),
   situpSet2: z.coerce.number().int().min(0).max(10000),
-  extraPushups: z.coerce.number().int().min(0).max(10000),
-  extraSitups: z.coerce.number().int().min(0).max(10000),
   notes: z.string().trim().max(1000).optional().default(""),
 });
 
@@ -21,8 +19,6 @@ export interface ParsedSubmissionInput {
   challengeDate: string;
   pushupSets: [number, number];
   situpSets: [number, number];
-  extraPushups: number;
-  extraSitups: number;
   notes: string;
 }
 
@@ -33,8 +29,6 @@ export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput 
     pushupSet2: formData.get("pushupSet2"),
     situpSet1: formData.get("situpSet1"),
     situpSet2: formData.get("situpSet2"),
-    extraPushups: formData.get("extraPushups"),
-    extraSitups: formData.get("extraSitups"),
     notes: formData.get("notes"),
   });
 
@@ -42,14 +36,15 @@ export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput 
     challengeDate: parsed.challengeDate,
     pushupSets: [parsed.pushupSet1, parsed.pushupSet2],
     situpSets: [parsed.situpSet1, parsed.situpSet2],
-    extraPushups: parsed.extraPushups,
-    extraSitups: parsed.extraSitups,
     notes: parsed.notes || "",
   };
 }
 
 export function assertSubmissionMatchesRules(input: ParsedSubmissionInput) {
-  if (input.pushupSets.length > MAX_SETS_PER_EXERCISE || input.situpSets.length > MAX_SETS_PER_EXERCISE) {
+  if (
+    input.pushupSets.length > MAX_SETS_PER_EXERCISE ||
+    input.situpSets.length > MAX_SETS_PER_EXERCISE
+  ) {
     throw new Error("Es sind maximal zwei Sets pro Übung erlaubt.");
   }
 
@@ -57,12 +52,12 @@ export function assertSubmissionMatchesRules(input: ParsedSubmissionInput) {
   const pushupTotal = input.pushupSets.reduce((sum, current) => sum + current, 0);
   const situpTotal = input.situpSets.reduce((sum, current) => sum + current, 0);
 
-  if (pushupTotal < target + input.extraPushups) {
-    throw new Error("Die Liegestütz-Sets decken Ziel und Extras noch nicht ab.");
+  if (pushupTotal < target) {
+    throw new Error("Die Liegestütz-Sets decken das Tagesziel noch nicht ab.");
   }
 
-  if (situpTotal < target + input.extraSitups) {
-    throw new Error("Die Situp-Sets decken Ziel und Extras noch nicht ab.");
+  if (situpTotal < target) {
+    throw new Error("Die Sit-up-Sets decken das Tagesziel noch nicht ab.");
   }
 }
 
