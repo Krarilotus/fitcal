@@ -75,9 +75,8 @@ export function MetaStatChart({
     <section className="fc-card">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="fc-kicker">Metastats</p>
-          <h2 className="fc-heading mt-1 text-xl">{title}</h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--fc-muted)]">
+          <h2 className="fc-heading text-lg">{title}</h2>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--fc-muted)]">
             {description}
           </p>
         </div>
@@ -120,7 +119,7 @@ export function MetaStatChart({
               return (
                 <line
                   key={step}
-                  stroke="rgba(255, 255, 255, 0.08)"
+                  stroke="var(--fc-border)"
                   strokeDasharray="1.4 1.8"
                   strokeWidth="0.35"
                   x1="0"

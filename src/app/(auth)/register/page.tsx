@@ -27,8 +27,8 @@ export default async function RegisterPage({ searchParams }: PageProps) {
       title="Registrieren"
       description={
         hasInvite
-          ? "Account anlegen und mit Einladung direkt freigeschaltet werden."
-          : "Account anlegen, Profil ergänzen und danach von bestehenden Nutzern freigeben lassen."
+          ? "Du hast eine Einladung. Dein Account wird nach der Registrierung direkt aktiviert."
+          : "Nach der Registrierung muss dein Account von einem bestehenden Teilnehmer freigegeben werden."
       }
       footer={
         <p>
@@ -41,12 +41,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
         <form action="/api/auth/register" className="space-y-4" method="post">
           <input name="invitationToken" type="hidden" value={inviteToken} />
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <p className="fc-kicker">Profil</p>
-            <p className="text-sm text-[var(--fc-muted)]">
-              {hasInvite
-                ? "Basisdaten, optionale Messwerte und dann direkt los."
-                : "Basisdaten, optionale Messwerte und danach Freigabe durch bestehende Nutzer."}
-            </p>
+            <p className="text-sm font-medium">Profil</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="fc-input-group">

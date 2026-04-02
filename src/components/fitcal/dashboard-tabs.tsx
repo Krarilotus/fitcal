@@ -210,15 +210,6 @@ export function DashboardTabs({
           OVERVIEW
          ══════════════════════════════════════════════ */}
       <section className="fc-section fc-rise" data-fitcal-section id="overview">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="fc-kicker">Übersicht</p>
-            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">
-              Heute zählt nur, was wirklich drinsteht.
-            </h2>
-          </div>
-        </div>
-
         <div className="fc-card-lg">
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="warm">Tag {overview.dayNumber}</Badge>
@@ -227,15 +218,14 @@ export function DashboardTabs({
 
           <div className="mt-5 flex flex-wrap items-end gap-5">
             <div>
-              <p className="fc-kicker">Heute pro Übung</p>
-              <p className="fc-display fc-count-animated mt-2 text-[clamp(3.5rem,8vw,5.5rem)] text-[var(--fc-accent)]">
+              <p className="text-sm text-[var(--fc-muted)]">Heute pro Übung</p>
+              <p className="fc-display fc-count-animated mt-1 text-[clamp(3.5rem,8vw,5.5rem)] text-[var(--fc-accent)]">
                 {overview.currentTarget}
               </p>
             </div>
           </div>
 
-          {/* Status chips grid */}
-          <div className="mt-5 grid grid-cols-2 gap-2.5 border-t border-[rgba(255,255,255,0.06)] pt-5 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-5 grid grid-cols-2 gap-2.5 border-t border-[var(--fc-border)] pt-5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="fc-stat">
               <span className="fc-stat-label">
                 {overview.isQualificationPhase ? "Quali-Tag" : "Qualifiziert"}
@@ -281,11 +271,8 @@ export function DashboardTabs({
          ══════════════════════════════════════════════ */}
       <section className="fc-section fc-rise" data-fitcal-section id="uploads">
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="fc-kicker">Uploads</p>
-            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Offene Tage</h2>
-          </div>
-          <p className="text-sm text-[var(--fc-muted)]">Maximal 4 Videos · Max. 100 MB</p>
+          <h2 className="fc-heading text-xl">Offene Tage</h2>
+          <p className="text-sm text-[var(--fc-muted)]">Max. 4 Videos · 100 MB</p>
         </div>
 
         <div className="grid gap-4">
@@ -298,10 +285,10 @@ export function DashboardTabs({
               <article className="fc-card" key={day.challengeDate}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="fc-kicker">{day.dateLabel}</p>
-                    <h3 className="fc-heading mt-1.5 text-xl">
+                    <h3 className="fc-heading text-lg">{day.dateLabel}</h3>
+                    <p className="mt-1 text-sm text-[var(--fc-muted)]">
                       {day.targetReps} Liegestütze / {day.targetReps} Sit-ups
-                    </h3>
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <span className="fc-chip fc-chip-accent">
@@ -386,14 +373,9 @@ export function DashboardTabs({
           TIMELINE
          ══════════════════════════════════════════════ */}
       <section className="fc-section fc-rise" data-fitcal-section id="timeline">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="fc-kicker">Timeline</p>
-            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Letzte Tage</h2>
-          </div>
-        </div>
+        <h2 className="fc-heading text-xl mb-4">Letzte Tage</h2>
 
-        <div className="fc-card">
+        <div className="space-y-0">
           {timelineEntries.map((day) => (
             <div className="fc-timeline-row" key={day.challengeDate}>
               <div className="space-y-2">
@@ -454,24 +436,12 @@ export function DashboardTabs({
           METASTATS
          ══════════════════════════════════════════════ */}
       <section className="fc-section fc-rise" data-fitcal-section id="metastats">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="fc-kicker">Metastats</p>
-            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Profil, Messdaten und Verlauf</h2>
-          </div>
-        </div>
-
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-6">
             {/* Profile */}
             <section className="fc-card">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="fc-kicker">Profil</p>
-                  <h3 className="fc-heading mt-1 text-xl">Basisdaten</h3>
-                </div>
-                {profile.motivation ? <Badge>{profile.motivation}</Badge> : null}
-              </div>
+              <h3 className="fc-heading text-lg">Profil</h3>
+              {profile.motivation ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{profile.motivation}</p> : null}
 
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {profile.birthDateLabel ? (
@@ -538,12 +508,7 @@ export function DashboardTabs({
           <div className="space-y-6">
             {/* Measurements */}
             <section className="fc-card">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="fc-kicker">Messdaten</p>
-                  <h3 className="fc-heading mt-1 text-xl">Verlauf und Einträge</h3>
-                </div>
-              </div>
+              <h3 className="fc-heading text-lg">Messdaten</h3>
 
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {profile.weightLabel ? (
@@ -600,35 +565,20 @@ export function DashboardTabs({
           REGELN
          ══════════════════════════════════════════════ */}
       <section className="fc-section fc-rise" data-fitcal-section id="regeln">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="fc-kicker">Regeln</p>
-            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Der Rahmen</h2>
-          </div>
-        </div>
+        <h2 className="fc-heading text-xl mb-4">Regeln</h2>
 
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="fc-card">
-            <ol className="fc-rule-list">
-              {rules.map((rule) => (
-                <li key={rule}>{rule}</li>
-              ))}
-            </ol>
-          </div>
+          <ol className="fc-rule-list">
+            {rules.map((rule) => (
+              <li key={rule}>{rule}</li>
+            ))}
+          </ol>
 
-          <div className="fc-card-dark">
-            <div>
-              <span className="fc-kicker">Referenz</span>
-              <p className="fc-heading mt-2 text-2xl">
-                Technik und Vergleichsvideos.
-              </p>
-            </div>
-
-            <p className="mt-3 text-sm leading-relaxed text-[var(--fc-muted)]">
+          <div>
+            <p className="text-sm leading-relaxed text-[var(--fc-muted)]">
               Die Referenzvideos helfen nur bei der Einordnung. Für die Challenge zählen deine dokumentierten Sets.
             </p>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <a
                 className="fc-video-link"
                 href="https://www.youtube.com/watch?v=JvX0ilRCBrU"
@@ -654,18 +604,12 @@ export function DashboardTabs({
           RECHNER
          ══════════════════════════════════════════════ */}
       <section className="fc-section fc-rise" data-fitcal-section id="rechner">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="fc-kicker">Rechner</p>
-            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Schnell überschlagen statt raten.</h2>
-          </div>
-        </div>
+        <h2 className="fc-heading text-xl mb-4">Rechner</h2>
 
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Slack costs */}
           <section className="fc-card">
-            <p className="fc-kicker">Slack-Kosten</p>
-            <h3 className="fc-heading mt-1 text-lg">Wie teuer werden weitere Slack-Tage?</h3>
+            <h3 className="fc-heading text-base">Slack-Kosten</h3>
             <label className="fc-input-group mt-4">
               <span className="fc-input-label">Anzahl Slack-Tage</span>
               <input
@@ -683,7 +627,7 @@ export function DashboardTabs({
               </div>
               <div className="fc-stat">
                 <span className="fc-stat-label">Staffelung</span>
-                <span className="fc-stat-value text-sm">{slackPreview.length ? slackPreview.join(" · ") : "—"}</span>
+                <span className="fc-stat-value text-sm">{slackPreview.length ? slackPreview.join(" · ") : "-"}</span>
               </div>
             </div>
             {slackDays > 6 ? (
@@ -695,8 +639,7 @@ export function DashboardTabs({
 
           {/* Debt reduction */}
           <section className="fc-card">
-            <p className="fc-kicker">Schuldabbau</p>
-            <h3 className="fc-heading mt-1 text-lg">Wie viele Extras gleichen Schulden aus?</h3>
+            <h3 className="fc-heading text-base">Schuldabbau</h3>
             <label className="fc-input-group mt-4">
               <span className="fc-input-label">Schulden in €</span>
               <input
@@ -728,8 +671,7 @@ export function DashboardTabs({
 
           {/* Calories */}
           <section className="fc-card">
-            <p className="fc-kicker">Kalorien</p>
-            <h3 className="fc-heading mt-1 text-lg">Was verbrennt ein Satz ungefähr?</h3>
+            <h3 className="fc-heading text-base">Kalorien</h3>
             <div className="mt-4 fc-grid-2">
               <label className="fc-input-group">
                 <span className="fc-input-label">Liegestütze gesamt</span>
