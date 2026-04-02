@@ -1,4 +1,4 @@
-export const DAILY_FACTS: Record<string, string> = {
+export const deSpecialDayFacts: Record<string, string> = {
   "01-01":
     "Neujahr ist das einzige Datum, an dem selbst ein nüchterner Trainingsplan kurz wie große Symbolik aussehen darf.",
   "01-02":

@@ -117,6 +117,9 @@ export default async function RegisterPage({ searchParams }: PageProps) {
               />
               <span>Armer Student</span>
             </label>
+            <p className="-mt-2 text-sm text-[var(--fc-muted)] sm:col-span-2">
+              Halber Preis bei Slack-Tagen. Nicht mit der Light-Variante kombinierbar.
+            </p>
             <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] sm:col-span-2">
               <input
                 className="h-4 w-4 rounded accent-[var(--fc-accent)]"
@@ -125,6 +128,10 @@ export default async function RegisterPage({ searchParams }: PageProps) {
               />
               <span>Light-Variante</span>
             </label>
+            <p className="-mt-2 text-sm text-[var(--fc-muted)] sm:col-span-2">
+              Kein Pool, kein Review, keine Kosten. Du kannst trotzdem deine Wiederholungen
+              eintragen, aber ohne Video-Upload.
+            </p>
           </div>
           <Button className="w-full" type="submit">
             {hasInvite ? "Account anlegen" : "Registrierungsanfrage senden"}

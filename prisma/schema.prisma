@@ -34,6 +34,7 @@ model User {
   approvalsToReview   RegistrationApproval[] @relation("RegistrationApprovalReviewer")
   registrationApprovals RegistrationApproval[] @relation("RegistrationApprovalApplicant")
   sicknessReviewsToReview SicknessVerification[] @relation("SicknessVerificationReviewer")
+  workoutReviewsToReview WorkoutReview[]   @relation("WorkoutReviewReviewer")
   invitesSent         AppInvite[]            @relation("AppInviteSender")
   acceptedInvite      AppInvite?             @relation("AppInviteAcceptedUser")
 }
@@ -105,6 +106,10 @@ model DailySubmission {
   userId        String
   challengeDate String
   status        DailySubmissionStatus
+  reviewStatus  WorkoutReviewStatus   @default(NOT_REQUIRED)
+  verifiedPushupTotal Int?
+  verifiedSitupTotal  Int?
+  reviewedAt    DateTime?
   pushupSets    String
   situpSets     String
   notes         String?
@@ -113,10 +118,12 @@ model DailySubmission {
   updatedAt     DateTime              @updatedAt
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   videos        DailyVideo[]
-  sicknessVerification SicknessVerification?
+  sicknessVerifications SicknessVerification[]
+  workoutReviews WorkoutReview[]
 
   @@unique([userId, challengeDate])
   @@index([challengeDate])
+  @@index([reviewStatus, challengeDate])
 }
 
 model DailyVideo {
@@ -182,7 +189,7 @@ model RegistrationApproval {
 
 model SicknessVerification {
   id                String                        @id @default(cuid())
-  dailySubmissionId String                        @unique
+  dailySubmissionId String
   reviewerUserId    String
   decision          RegistrationApprovalDecision  @default(PENDING)
   notes             String?
@@ -191,7 +198,30 @@ model SicknessVerification {
   dailySubmission   DailySubmission               @relation(fields: [dailySubmissionId], references: [id], onDelete: Cascade)
   reviewer          User                          @relation("SicknessVerificationReviewer", fields: [reviewerUserId], references: [id], onDelete: Cascade)
 
+  @@unique([dailySubmissionId, reviewerUserId])
+  @@index([dailySubmissionId, decision])
   @@index([reviewerUserId, decision])
+}
+
+model WorkoutReview {
+  id                String              @id @default(cuid())
+  dailySubmissionId String
+  reviewerUserId    String
+  stage             WorkoutReviewStage
+  decision          WorkoutReviewDecision
+  countedPushups    Int
+  countedSitups     Int
+  notes             String?
+  basedOnReviewId   String?             @unique
+  createdAt         DateTime            @default(now())
+  decidedAt         DateTime            @default(now())
+  dailySubmission   DailySubmission     @relation(fields: [dailySubmissionId], references: [id], onDelete: Cascade)
+  reviewer          User                @relation("WorkoutReviewReviewer", fields: [reviewerUserId], references: [id], onDelete: Cascade)
+  basedOnReview     WorkoutReview?      @relation("WorkoutReviewEscalation", fields: [basedOnReviewId], references: [id], onDelete: SetNull)
+  escalationReview  WorkoutReview?      @relation("WorkoutReviewEscalation")
+
+  @@index([dailySubmissionId, stage, createdAt])
+  @@index([reviewerUserId, stage, createdAt])
 }
 
 enum RegistrationStatus {
@@ -209,6 +239,28 @@ enum RegistrationApprovalDecision {
 enum DailySubmissionStatus {
   COMPLETED
   JOKER
+  SLACK
   SICK_PENDING
   SICK_VERIFIED
+}
+
+enum WorkoutReviewStatus {
+  NOT_REQUIRED
+  PENDING
+  ESCALATED
+  APPROVED
+  REVISION_REQUESTED
+}
+
+enum WorkoutReviewStage {
+  PRIMARY
+  ARBITRATION
+}
+
+enum WorkoutReviewDecision {
+  APPROVE
+  REDUCE
+  REJECT
+  ACCEPT_REVIEW
+  REJECT_REVIEW
 }

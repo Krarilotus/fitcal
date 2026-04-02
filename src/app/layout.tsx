@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, Figtree } from "next/font/google";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { buildThemeCss } from "@/config/themes";
+import { getPreferredLocale, getPreferredTheme } from "@/lib/preferences";
 import "./globals.css";
 
 const syne = Syne({
@@ -39,17 +42,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeCss = buildThemeCss();
+  const locale = await getPreferredLocale();
+  const theme = await getPreferredTheme();
+
   return (
     <html
-      lang="de"
+      lang={locale}
       className={`${syne.variable} ${figtree.variable} h-full antialiased`}
+      data-theme={theme}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <style>{themeCss}</style>
+        <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

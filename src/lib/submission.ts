@@ -94,3 +94,24 @@ export function deserializeSets(value: string) {
     .map((item) => Number(item) || 0)
     .slice(0, MAX_SETS_PER_EXERCISE) as number[];
 }
+
+export function getSetsTotal(value: string) {
+  return deserializeSets(value).reduce((sum, item) => sum + item, 0);
+}
+
+export function getSubmissionTotals(submission: {
+  pushupSets: string;
+  situpSets: string;
+  verifiedPushupTotal?: number | null;
+  verifiedSitupTotal?: number | null;
+}) {
+  const pushupTotal = getSetsTotal(submission.pushupSets);
+  const situpTotal = getSetsTotal(submission.situpSets);
+
+  return {
+    pushupTotal,
+    situpTotal,
+    effectivePushupTotal: submission.verifiedPushupTotal ?? pushupTotal,
+    effectiveSitupTotal: submission.verifiedSitupTotal ?? situpTotal,
+  };
+}

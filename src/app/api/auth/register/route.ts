@@ -43,6 +43,8 @@ export async function POST(request: Request) {
     }
 
     const passwordHash = await hashPassword(parsed.password);
+    const isLightParticipant = parsed.isLightParticipant;
+    const isStudentDiscount = isLightParticipant ? false : parsed.isStudentDiscount;
     const shouldCreateMeasurement =
       parsed.waistCircumferenceCm !== undefined || parsed.weightKg !== undefined;
     const inviteToken = parsed.invitationToken?.trim() || "";
@@ -85,8 +87,8 @@ export async function POST(request: Request) {
           email: parsed.email,
           name: parsed.name || null,
           passwordHash,
-          isStudentDiscount: parsed.isStudentDiscount,
-          isLightParticipant: parsed.isLightParticipant,
+          isStudentDiscount,
+          isLightParticipant,
           registrationStatus: autoApprove
             ? RegistrationStatus.APPROVED
             : RegistrationStatus.PENDING,
