@@ -222,9 +222,15 @@
       fullHint:
         "Alles \u00fcber dem Tagesziel wird automatisch aus deinen Sets berechnet und nur auf offene Schulden angerechnet.",
       videos: "Videos",
+      videoNames: "Videonamen",
+      videoNameLabel: "Videoname {index}",
       notes: "Notiz",
       saveEntry: "Eintrag speichern",
       saveWorkout: "Workout speichern",
+      uploadingEntry: "Eintrag wird gesendet ...",
+      uploadingWorkout: "Upload läuft ...",
+      uploadPendingHint:
+        "Upload läuft. Gerade bei Handy-Videos kann das etwas dauern, also die Seite am besten offen lassen.",
       sicknessToggle: "M\u00e4nnergrippe?",
       sicknessConsent:
         "Ich willige ein und lasse reviewen, dass ich heute leider krank war und deshalb kein Workout machen konnte. Ich beantrage daher, dass heute kein Slack Day war.",

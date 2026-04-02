@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { buildStoredVideoFileName, ensureDailyUploadDirectory } from "@/lib/storage";
 import {
   assertSubmissionMatchesRules,
+  getVideoDisplayNames,
   getVideoFiles,
   parseSubmissionInput,
   serializeSets,
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
 
     if (!user.isLightParticipant) {
       const files = getVideoFiles(formData);
+      const displayNames = getVideoDisplayNames(formData, files);
       const { folderPath, safeUserLabel } = await ensureDailyUploadDirectory(
         user.name || user.email,
         parsed.challengeDate,
@@ -50,11 +52,12 @@ export async function POST(request: Request) {
       );
 
       for (const [index, file] of files.entries()) {
+        const originalName = displayNames[index] ?? file.name;
         const storedName = buildStoredVideoFileName({
           challengeDate: parsed.challengeDate,
           safeUserLabel,
           partIndex: index,
-          originalName: file.name,
+          originalName,
         });
         const storedPath = path.join(freshDirectory.folderPath, storedName);
         const bytes = Buffer.from(await file.arrayBuffer());
@@ -62,7 +65,7 @@ export async function POST(request: Request) {
         await writeFile(storedPath, bytes);
 
         persistedFiles.push({
-          originalName: file.name,
+          originalName,
           storedName,
           storedPath,
           mimeType: file.type || "application/octet-stream",

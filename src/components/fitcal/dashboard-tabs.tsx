@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type Dispatch, type FormEvent, type SetStateAction, useEffect, useMemo, useState } from "react";
 import type { AppDictionary } from "@/i18n";
 import {
   formatDashboardCurrency,
@@ -36,6 +36,11 @@ import {
 type DashboardLabels = AppDictionary["dashboard"];
 type TabKey = "overview" | "uploads" | "timeline" | "metastats" | "review" | "regeln" | "rechner";
 type ReviewSubtabKey = "progress" | "pending";
+type SelectedUploadVideo = {
+  id: string;
+  originalName: string;
+  displayName: string;
+};
 
 function formatCurrency(locale: Locale, cents: number) {
   return formatDashboardCurrency(locale, cents);
@@ -88,17 +93,40 @@ function isCompletedLikeStatus(status: ParticipantRow["todayStatus"]) {
   return ["completed", "partial", "joker", "sick"].includes(status);
 }
 
-async function handleUploadSubmit(event: FormEvent<HTMLFormElement>) {
+async function handleTrackedUploadSubmit(
+  event: FormEvent<HTMLFormElement>,
+  setUploadingDays: Dispatch<SetStateAction<Record<string, boolean>>>,
+) {
   event.preventDefault();
   const form = event.currentTarget;
   const formData = new FormData(form);
+  const challengeDateValue = formData.get("challengeDate");
+  const challengeDate =
+    typeof challengeDateValue === "string" ? challengeDateValue : "unknown";
+
+  setUploadingDays((current) => ({
+    ...current,
+    [challengeDate]: true,
+  }));
+
   const response = await fetch("/api/submissions", {
     method: "POST",
     body: formData,
     credentials: "same-origin",
     redirect: "follow",
   });
+
   window.location.assign(response.url || "/dashboard?error=Upload%20failed");
+}
+
+function handleVideoReplaceSelection(event: ChangeEvent<HTMLInputElement>) {
+  if (event.currentTarget.files?.length) {
+    event.currentTarget.form?.requestSubmit();
+  }
+}
+
+function buildUploadVideoId(file: File, index: number) {
+  return `${file.name}-${file.size}-${file.lastModified}-${index}`;
 }
 
 export function DashboardTabs({
@@ -170,6 +198,8 @@ export function DashboardTabs({
   const [situpInput, setSitupInput] = useState(String(overview.currentTarget));
   const [weightInput, setWeightInput] = useState(profile.latestWeightKg != null ? String(profile.latestWeightKg).replace(".", ",") : "75");
   const [targetDateInput, setTargetDateInput] = useState(formatDateKeyForInput(CHALLENGE_START_DATE));
+  const [selectedUploadVideos, setSelectedUploadVideos] = useState<Record<string, SelectedUploadVideo[]>>({});
+  const [uploadingDays, setUploadingDays] = useState<Record<string, boolean>>({});
 
   const additionalSlackDays = Math.max(0, Math.floor(parseNumberInput(slackDaysInput)));
   const totalSlackDebtCents = Array.from({ length: additionalSlackDays }, (_, index) => slackBaseCents + (overview.existingSlackDays + index) * slackIncrementCents).reduce((sum, value) => sum + value, 0);
@@ -199,6 +229,35 @@ export function DashboardTabs({
     (sum, row) => sum + (row.isSelf ? 0 : row.pendingReviewCount),
     0,
   );
+
+  function handleUploadVideoSelection(
+    challengeDate: string,
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const nextVideos = Array.from(event.currentTarget.files ?? []).map((file, index) => ({
+      id: buildUploadVideoId(file, index),
+      originalName: file.name,
+      displayName: file.name.replace(/\.[^.]+$/, ""),
+    }));
+
+    setSelectedUploadVideos((current) => ({
+      ...current,
+      [challengeDate]: nextVideos,
+    }));
+  }
+
+  function handleUploadVideoRename(
+    challengeDate: string,
+    videoId: string,
+    value: string,
+  ) {
+    setSelectedUploadVideos((current) => ({
+      ...current,
+      [challengeDate]: (current[challengeDate] ?? []).map((video) =>
+        video.id === videoId ? { ...video, displayName: value } : video,
+      ),
+    }));
+  }
 
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-fitcal-section]"));
@@ -253,6 +312,11 @@ export function DashboardTabs({
           {openDays.length > 0 ? (
             openDays.map((day) => (
               <article className="fc-card" key={day.challengeDate}>
+                {(() => {
+                  const isUploading = uploadingDays[day.challengeDate] === true;
+
+                  return (
+                    <>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="fc-heading text-lg">{day.dateLabel}</h3>
@@ -263,20 +327,39 @@ export function DashboardTabs({
                     {day.isQualificationDay ? <span className="fc-chip fc-chip-warm">{labels.uploads.qualification}</span> : null}
                   </div>
                 </div>
-                <form className="mt-5 space-y-4" encType="multipart/form-data" onSubmit={handleUploadSubmit}>
+                <form className="mt-5 space-y-4" encType="multipart/form-data" onSubmit={(event) => handleTrackedUploadSubmit(event, setUploadingDays)}>
                   <input name="challengeDate" type="hidden" value={day.challengeDate} />
                   <div className="fc-grid-2">
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" min="0" name="pushupSet1" placeholder="0" type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" min="0" name="pushupSet2" placeholder="0" type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" min="0" name="situpSet1" placeholder="0" type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" min="0" name="situpSet2" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" disabled={isUploading} min="0" name="pushupSet1" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" disabled={isUploading} min="0" name="pushupSet2" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" disabled={isUploading} min="0" name="situpSet1" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" disabled={isUploading} min="0" name="situpSet2" placeholder="0" type="number" /></label>
                   </div>
                   <p className="text-sm text-[var(--fc-muted)]">{overview.isLightParticipant ? labels.uploads.lightHint : labels.uploads.fullHint}</p>
                   <div className={`grid gap-3 ${overview.isLightParticipant ? "sm:grid-cols-1" : "sm:grid-cols-[1.1fr_0.9fr]"}`}>
-                    {!overview.isLightParticipant ? <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.videos}</span><input accept="video/*" className="fc-input-file" multiple name="videos" required type="file" /></label> : null}
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.notes}</span><textarea className="fc-input min-h-[5.5rem]" name="notes" /></label>
+                    {!overview.isLightParticipant ? (
+                      <div className="space-y-3">
+                        <label className="fc-input-group">
+                          <span className="fc-input-label">{labels.uploads.videos}</span>
+                          <input accept="video/*" className="fc-input-file" disabled={isUploading} multiple name="videos" onChange={(event) => handleUploadVideoSelection(day.challengeDate, event)} required type="file" />
+                        </label>
+                        {selectedUploadVideos[day.challengeDate]?.length ? (
+                          <div className="grid gap-2">
+                            <p className="text-xs uppercase tracking-[0.18em] text-[var(--fc-muted)]">{labels.uploads.videoNames}</p>
+                            {selectedUploadVideos[day.challengeDate].map((video, index) => (
+                              <label className="fc-input-group" key={video.id}>
+                                <span className="fc-input-label">{labels.uploads.videoNameLabel.replace("{index}", String(index + 1))}</span>
+                                <input className="fc-input" disabled={isUploading} maxLength={120} name={`videoDisplayName${index}`} onChange={(event) => handleUploadVideoRename(day.challengeDate, video.id, event.target.value)} placeholder={video.originalName} type="text" value={video.displayName} />
+                              </label>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.notes}</span><textarea className="fc-input min-h-[5.5rem]" disabled={isUploading} name="notes" /></label>
                   </div>
-                  <div className="flex flex-wrap gap-3"><Button type="submit">{overview.isLightParticipant ? labels.uploads.saveEntry : labels.uploads.saveWorkout}</Button></div>
+                  {isUploading ? <p className="text-sm text-[var(--fc-muted)]">{labels.uploads.uploadPendingHint}</p> : null}
+                  <div className="flex flex-wrap gap-3"><Button disabled={isUploading} type="submit">{isUploading ? (overview.isLightParticipant ? labels.uploads.uploadingEntry : labels.uploads.uploadingWorkout) : (overview.isLightParticipant ? labels.uploads.saveEntry : labels.uploads.saveWorkout)}</Button></div>
                 </form>
                 {!overview.isLightParticipant ? (
                   <>
@@ -292,6 +375,9 @@ export function DashboardTabs({
                     {day.canUseJoker ? <form action="/api/challenge/joker" className="mt-3" method="post"><input name="challengeDate" type="hidden" value={day.challengeDate} /><Button type="submit" variant="secondary">{labels.uploads.useJoker}</Button></form> : null}
                   </>
                 ) : null}
+                    </>
+                  );
+                })()}
               </article>
             ))
           ) : <div className="fc-card text-sm text-[var(--fc-muted)]">{labels.uploads.empty}</div>}
@@ -318,14 +404,13 @@ export function DashboardTabs({
                           <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
                         </div>
                         <div className="fc-video-actions">
-                          <Button asChild size="sm" variant="ghost"><a href={`/api/videos/${video.id}`} target="_blank">{commonLabels.open}</a></Button>
+                          <Button asChild className="fc-video-button" size="sm" variant="ghost"><a href={`/api/videos/${video.id}`} target="_blank">{commonLabels.open}</a></Button>
                           <form action="/api/videos/replace" className="fc-video-replace-form" encType="multipart/form-data" method="post">
                             <input name="videoId" type="hidden" value={video.id} />
-                            <label className="sr-only" htmlFor={`replacement-video-${video.id}`}>{labels.timeline.replaceVideoInput}</label>
-                            <input accept="video/*" className="fc-video-file-input" id={`replacement-video-${video.id}`} name="replacementVideo" required type="file" />
-                            <Button size="sm" type="submit" variant="secondary">{labels.timeline.videoReplace}</Button>
+                            <label className="fc-video-action-button" htmlFor={`replacement-video-${video.id}`}>{labels.timeline.videoReplace}</label>
+                            <input accept="video/*" className="sr-only" id={`replacement-video-${video.id}`} name="replacementVideo" onChange={handleVideoReplaceSelection} required type="file" />
                           </form>
-                          <form action="/api/videos/delete" method="post"><input name="videoId" type="hidden" value={video.id} /><Button size="sm" type="submit" variant="secondary">{labels.timeline.videoDelete}</Button></form>
+                          <form action="/api/videos/delete" method="post"><input name="videoId" type="hidden" value={video.id} /><Button className="fc-video-button" size="sm" type="submit" variant="secondary">{labels.timeline.videoDelete}</Button></form>
                         </div>
                       </div>
                     ))}

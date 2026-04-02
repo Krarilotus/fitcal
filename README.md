@@ -43,6 +43,7 @@ Aktueller bekannter Resthinweis:
 - Bootstrap: [`deploy/bootstrap-fitcal.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/bootstrap-fitcal.sh)
 - Install/Deploy: [`deploy/install-fitcal-service.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/install-fitcal-service.sh)
 - Update-Skript: [`deploy/update-fitcal.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/update-fitcal.sh)
+- Repo-Root-Updater: [`update.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/update.sh)
 
 ## Resend + STRATO
 
@@ -218,6 +219,29 @@ Option B:
 ```bash
 cd /opt/fitcal/app
 sudo -u fitcal cp .env.production.example .env.production
+
+## Updates auf dem Server
+
+Wenn das Repo auf dem Server bereits unter `/home/fitcal/app` liegt, reicht kuenftig:
+
+```bash
+cd /home/fitcal/app
+chmod +x update.sh
+./update.sh
+```
+
+Das Skript macht:
+- `git fetch`
+- `git checkout main`
+- `git pull --ff-only`
+- `docker compose up -d --build`
+- `docker compose ps`
+
+Optional kannst du Branch/User/Env ueberschreiben:
+
+```bash
+APP_USER=fitcal APP_BRANCH=main ENV_FILE=.env.production ./update.sh
+```
 sudo -u fitcal nano .env.production
 ```
 

@@ -423,7 +423,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .fc-video-replace-form {
@@ -431,29 +431,35 @@ button, input, textarea, select { font: inherit; color: inherit; }
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
-.fc-video-file-input {
-  width: min(15.5rem, 100%);
-  font-size: 0.75rem;
-  color: var(--fc-muted);
+.fc-video-button {
+  min-height: 2rem;
+  padding-inline: 0.7rem;
 }
 
-.fc-video-file-input::file-selector-button {
-  margin-right: 0.5rem;
+.fc-video-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.45rem 0.7rem;
   border: 1px solid var(--fc-border);
   border-radius: var(--fc-radius-sm);
   background: var(--fc-surface);
   color: var(--fc-ink-secondary);
-  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
 }
 
-.fc-video-file-input:hover::file-selector-button,
-.fc-video-file-input:focus::file-selector-button {
+.fc-video-action-button:hover,
+.fc-video-action-button:focus-visible {
   border-color: var(--fc-border-strong);
   color: var(--fc-ink);
+  background: var(--fc-surface-hover);
 }
 
 /* ── Chart ── */

@@ -222,9 +222,15 @@
       fullHint:
         "Anything above the daily target is calculated automatically from your sets and only applied to open debt.",
       videos: "Videos",
+      videoNames: "Video names",
+      videoNameLabel: "Video name {index}",
       notes: "Note",
       saveEntry: "Save entry",
       saveWorkout: "Save workout",
+      uploadingEntry: "Sending entry ...",
+      uploadingWorkout: "Uploading ...",
+      uploadPendingHint:
+        "Upload in progress. Phone videos can take a bit, so it is best to keep the page open.",
       sicknessToggle: "Man flu?",
       sicknessConsent:
         "I consent to having it reviewed that I was sick today and therefore could not do a workout. I request that today should not count as a slack day.",

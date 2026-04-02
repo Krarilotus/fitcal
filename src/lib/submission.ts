@@ -84,6 +84,35 @@ export function getVideoFiles(formData: FormData) {
   return files;
 }
 
+export function getVideoDisplayNames(formData: FormData, files: File[]) {
+  return files.map((file, index) => {
+    const rawValue = formData.get(`videoDisplayName${index}`);
+
+    if (typeof rawValue !== "string") {
+      return file.name;
+    }
+
+    const trimmed = rawValue.trim();
+
+    if (!trimmed) {
+      return file.name;
+    }
+
+    const lastDotIndex = file.name.lastIndexOf(".");
+    const extension = lastDotIndex >= 0 ? file.name.slice(lastDotIndex) : "";
+    const hasExtension = /\.[A-Za-z0-9]{1,8}$/.test(trimmed);
+    const normalizedBase = trimmed.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+
+    if (!normalizedBase) {
+      return file.name;
+    }
+
+    const withExtension = hasExtension ? normalizedBase : `${normalizedBase}${extension}`;
+
+    return withExtension.slice(0, 120);
+  });
+}
+
 export function serializeSets(sets: number[]) {
   return JSON.stringify(sets);
 }
