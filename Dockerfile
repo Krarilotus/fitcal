@@ -26,6 +26,7 @@ COPY --from=builder --chown=fitcal:fitcal /app/public ./public
 COPY --from=builder --chown=fitcal:fitcal /app/package.json ./package.json
 COPY --from=builder --chown=fitcal:fitcal /app/package-lock.json ./package-lock.json
 COPY --from=builder --chown=fitcal:fitcal /app/node_modules ./node_modules
+COPY --from=builder --chown=fitcal:fitcal /app/prisma ./prisma
 
 USER fitcal
 EXPOSE 3000
