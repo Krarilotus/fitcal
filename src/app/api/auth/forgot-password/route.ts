@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { sendPasswordResetMail } from "@/lib/auth/email";
 import { createRandomToken, hashToken } from "@/lib/auth/token";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
-import { getAppBaseUrl } from "@/lib/auth/url";
+import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         },
       });
 
-      const resetLink = `${getAppBaseUrl(request.url)}/reset-password?token=${token}`;
+      const resetLink = `${getAppBaseUrl(request)}/reset-password?token=${token}`;
       const delivered = await sendPasswordResetMail({
         to: user.email,
         resetLink,
@@ -62,14 +62,14 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.redirect(
-      new URL("/forgot-password?success=Wenn%20die%20Adresse%20existiert,%20wurde%20ein%20Link%20versendet.", request.url),
+      getAppUrl("/forgot-password?success=Wenn%20die%20Adresse%20existiert,%20wurde%20ein%20Link%20versendet.", request),
     );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Reset-Link konnte nicht erstellt werden.";
 
     return NextResponse.redirect(
-      new URL(`/forgot-password?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/forgot-password?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

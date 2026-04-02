@@ -3,6 +3,7 @@ import { RegistrationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { createUserSession } from "@/lib/auth/session";
 import { verifyPassword } from "@/lib/auth/password";
+import { getAppUrl } from "@/lib/auth/url";
 import { loginSchema } from "@/lib/auth/validation";
 
 export async function POST(request: Request) {
@@ -40,12 +41,12 @@ export async function POST(request: Request) {
 
     await createUserSession(user.id);
 
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(getAppUrl("/dashboard", request));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Login fehlgeschlagen.";
 
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/login?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

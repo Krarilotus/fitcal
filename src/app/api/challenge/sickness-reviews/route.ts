@@ -3,8 +3,9 @@ import {
   RegistrationApprovalDecision,
   RegistrationStatus,
 } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
+import { prisma } from "@/lib/db";
 
 const REVIEW_REWARD_CENTS = 5;
 
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     user.registrationStatus !== RegistrationStatus.APPROVED ||
     user.isLightParticipant
   ) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   try {
@@ -116,14 +117,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      new URL("/dashboard?success=Krankmeldung%20bewertet", request.url),
+      getAppUrl("/dashboard?success=Krankmeldung%20bewertet", request),
     );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Krankmeldung konnte nicht bewertet werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

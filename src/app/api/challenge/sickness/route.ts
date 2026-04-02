@@ -3,20 +3,21 @@ import {
   RegistrationApprovalDecision,
   RegistrationStatus,
 } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
 import { CHALLENGE_START_DATE, canSubmitForDate } from "@/lib/challenge";
+import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   if (user.isLightParticipant) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=Die%20Light-Variante%20nutzt%20keine%20Krankmeldungen", request.url),
+      getAppUrl("/dashboard?error=Die%20Light-Variante%20nutzt%20keine%20Krankmeldungen", request),
     );
   }
 
@@ -117,14 +118,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      new URL("/dashboard?success=M%C3%A4nner-Grippe%20zur%20Abstimmung%20eingereicht", request.url),
+      getAppUrl("/dashboard?success=M%C3%A4nner-Grippe%20zur%20Abstimmung%20eingereicht", request),
     );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Krankmeldung konnte nicht gespeichert werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

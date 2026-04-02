@@ -1,9 +1,10 @@
 import { rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
 import { CHALLENGE_START_DATE, canSubmitForDate } from "@/lib/challenge";
+import { prisma } from "@/lib/db";
 import { buildStoredVideoFileName, ensureDailyUploadDirectory } from "@/lib/storage";
 import {
   assertSubmissionMatchesRules,
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   try {
@@ -142,11 +143,11 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      new URL(
+      getAppUrl(
         user.isLightParticipant
           ? "/dashboard?success=Eintrag%20gespeichert"
           : "/dashboard?success=Trainingstag%20gespeichert",
-        request.url,
+        request,
       ),
     );
   } catch (error) {
@@ -154,7 +155,7 @@ export async function POST(request: Request) {
       error instanceof Error ? error.message : "Submission konnte nicht gespeichert werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

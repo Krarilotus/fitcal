@@ -4,6 +4,7 @@ import { RegistrationStatus } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { sendAppInviteMail } from "@/lib/auth/email";
+import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
 import { inviteSchema } from "@/lib/auth/validation";
 
 const INVITE_DURATION_DAYS = 14;
@@ -16,10 +17,6 @@ function hashInviteToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-function getBaseUrl(request: Request) {
-  return process.env.AUTH_URL || new URL(request.url).origin;
-}
-
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
@@ -28,7 +25,7 @@ export async function POST(request: Request) {
     user.registrationStatus !== RegistrationStatus.APPROVED ||
     user.isLightParticipant
   ) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   const formData = await request.formData();
@@ -64,7 +61,7 @@ export async function POST(request: Request) {
       },
     });
 
-    const inviteLink = `${getBaseUrl(request)}/register?invite=${encodeURIComponent(token)}`;
+    const inviteLink = `${getAppBaseUrl(request)}/register?invite=${encodeURIComponent(token)}`;
 
     await sendAppInviteMail({
       to: parsed.email,
@@ -73,14 +70,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      new URL("/dashboard?success=Einladung%20verschickt", request.url),
+      getAppUrl("/dashboard?success=Einladung%20verschickt", request),
     );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Einladung konnte nicht verschickt werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

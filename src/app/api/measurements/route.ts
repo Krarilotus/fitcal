@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
 import { measurementSchema } from "@/lib/auth/validation";
 import { normalizeMeasurementDate } from "@/lib/measurements";
 
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   const formData = await request.formData();
@@ -36,14 +37,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      new URL("/dashboard?success=Messwert%20gespeichert", request.url),
+      getAppUrl("/dashboard?success=Messwert%20gespeichert", request),
     );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Messwert konnte nicht gespeichert werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

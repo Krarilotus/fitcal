@@ -4,6 +4,7 @@ import { RegistrationApprovalDecision, RegistrationStatus } from "@prisma/client
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
 import { createUserSession } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
 import { sendRegistrationApprovedMail } from "@/lib/auth/email";
 import { registerSchema } from "@/lib/auth/validation";
 import { normalizeMeasurementDate } from "@/lib/measurements";
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
     if (existingUser) {
       return NextResponse.redirect(
-        new URL("/register?error=E-Mail%20existiert%20bereits", request.url),
+        getAppUrl("/register?error=E-Mail%20existiert%20bereits", request),
       );
     }
 
@@ -147,13 +148,13 @@ export async function POST(request: Request) {
         name: parsed.name || null,
       });
 
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(getAppUrl("/dashboard", request));
     }
 
     return NextResponse.redirect(
-      new URL(
+      getAppUrl(
         "/login?success=Registrierungsanfrage%20gesendet.%20Bestehende%20Nutzer%20m%C3%BCssen%20deinen%20Zugang%20erst%20freigeben.",
-        request.url,
+        request,
       ),
     );
   } catch (error) {
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
       error instanceof Error ? error.message : "Registrierung fehlgeschlagen";
 
     return NextResponse.redirect(
-      new URL(`/register?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/register?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

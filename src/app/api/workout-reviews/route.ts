@@ -5,8 +5,9 @@ import {
   WorkoutReviewStage,
   WorkoutReviewStatus,
 } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
+import { prisma } from "@/lib/db";
 import { getSetsTotal } from "@/lib/submission";
 
 const REVIEW_REWARD_CENTS = 5;
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     user.registrationStatus !== RegistrationStatus.APPROVED ||
     user.isLightParticipant
   ) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   const formData = await request.formData();
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
 
   if (!submissionId || (mode !== "primary" && mode !== "arbitration")) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=Review%20konnte%20nicht%20gespeichert%20werden", request.url),
+      getAppUrl("/dashboard?error=Review%20konnte%20nicht%20gespeichert%20werden", request),
     );
   }
 
@@ -255,14 +256,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      new URL("/dashboard?success=Review%20gespeichert", request.url),
+      getAppUrl("/dashboard?success=Review%20gespeichert", request),
     );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Review konnte nicht gespeichert werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

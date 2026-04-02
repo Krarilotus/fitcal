@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
+import { getAppUrl } from "@/lib/auth/url";
 import { hashToken } from "@/lib/auth/token";
 import { resetPasswordSchema } from "@/lib/auth/validation";
 
@@ -53,14 +54,14 @@ export async function POST(request: Request) {
     ]);
 
     return NextResponse.redirect(
-      new URL("/login?success=Passwort%20erfolgreich%20geaendert", request.url),
+      getAppUrl("/login?success=Passwort%20erfolgreich%20geaendert", request),
     );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Passwort konnte nicht gesetzt werden.";
 
     return NextResponse.redirect(
-      new URL(`/reset-password?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/reset-password?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

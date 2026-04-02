@@ -1,8 +1,9 @@
 import path from "node:path";
 import { rm } from "node:fs/promises";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
+import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   try {
@@ -57,12 +58,12 @@ export async function POST(request: Request) {
       await rm(path.dirname(video.storedPath), { recursive: true, force: true });
     }
 
-    return NextResponse.redirect(new URL("/dashboard?success=Video%20gelöscht", request.url));
+    return NextResponse.redirect(getAppUrl("/dashboard?success=Video%20gelöscht", request));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Video konnte nicht gelöscht werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

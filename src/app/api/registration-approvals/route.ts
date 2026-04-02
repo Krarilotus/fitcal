@@ -3,8 +3,9 @@ import {
   RegistrationApprovalDecision,
   RegistrationStatus,
 } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getAppUrl } from "@/lib/auth/url";
+import { prisma } from "@/lib/db";
 import {
   sendRegistrationApprovedMail,
   sendRegistrationRejectedMail,
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     user.registrationStatus !== RegistrationStatus.APPROVED ||
     user.isLightParticipant
   ) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   const formData = await request.formData();
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
 
   if (!approvalId || !decision) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=Freigabe%20konnte%20nicht%20verarbeitet%20werden", request.url),
+      getAppUrl("/dashboard?error=Freigabe%20konnte%20nicht%20verarbeitet%20werden", request),
     );
   }
 
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.redirect(
-      new URL("/dashboard?success=Freigabe%20gespeichert", request.url),
+      getAppUrl("/dashboard?success=Freigabe%20gespeichert", request),
     );
   } catch (error) {
     const message =
@@ -167,7 +168,7 @@ export async function POST(request: Request) {
         : "Freigabe konnte nicht verarbeitet werden.";
 
     return NextResponse.redirect(
-      new URL(`/dashboard?error=${encodeURIComponent(message)}`, request.url),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
     );
   }
 }

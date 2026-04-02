@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAppUrl } from "@/lib/auth/url";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
@@ -13,12 +14,12 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(getAppUrl("/login", request));
   }
 
   if (user.isLightParticipant) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=Die%20Light-Variante%20nutzt%20keine%20Joker", request.url),
+      getAppUrl("/dashboard?error=Die%20Light-Variante%20nutzt%20keine%20Joker", request),
     );
   }
 
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     !canSubmitForDate(challengeDate)
   ) {
     return NextResponse.redirect(
-      new URL("/dashboard?error=Der%20Tag%20kann%20nicht%20mehr%20gejokert%20werden", request.url),
+      getAppUrl("/dashboard?error=Der%20Tag%20kann%20nicht%20mehr%20gejokert%20werden", request),
     );
   }
 
@@ -56,9 +57,9 @@ export async function POST(request: Request) {
 
   if (countUsedJokers(existingEntries, challengeDate) >= jokerAllowance) {
     return NextResponse.redirect(
-      new URL(
+      getAppUrl(
         "/dashboard?error=Kein%20angesparter%20Joker%20mehr%20frei",
-        request.url,
+        request,
       ),
     );
   }
@@ -118,5 +119,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.redirect(new URL("/dashboard?success=Joker%20gespeichert", request.url));
+  return NextResponse.redirect(getAppUrl("/dashboard?success=Joker%20gespeichert", request));
 }
