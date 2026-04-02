@@ -1,3 +1,5 @@
+import type { DayCompletionState } from "@/lib/challenge";
+
 export type OpenDay = {
   challengeDate: string;
   dateLabel: string;
@@ -86,11 +88,19 @@ export type OverviewSummary = {
 export type ParticipantRow = {
   id: string;
   name: string;
+  isSelf: boolean;
   modeLabel: string;
+  todayStatus: DayCompletionState;
+  yesterdayStatus: DayCompletionState;
   todayLabel: string;
   yesterdayLabel: string;
+  totalPushups: number;
+  totalSitups: number;
+  qualificationUploads: number;
+  qualificationRequiredUploads: number;
   qualificationLabel: string;
   documentedDays: number;
+  pendingReviewCount: number;
   debtLabel: string | null;
   reviewLabel: string;
 };

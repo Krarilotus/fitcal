@@ -124,7 +124,7 @@ export function getDailyMessage(
   const secondLine = getSecondLine(context, helpers, dayNumber, fact, dictionary);
 
   if (!strippedFact || strippedFact === fact) {
-    return `${fact} ${secondLine}`.trim();
+    return `${uppercaseFirst(fact)}\n${uppercaseFirst(secondLine)}`.trim();
   }
 
   const leadVariants = beginsWithVerb(strippedFact, dictionary.beginsWithVerbPattern)
@@ -132,8 +132,10 @@ export function getDailyMessage(
     : dictionary.nounLeadVariants;
   const lead = leadVariants[dayNumber % leadVariants.length]({
     weekday,
-    strippedFact,
+    strippedFact: beginsWithVerb(strippedFact, dictionary.beginsWithVerbPattern)
+      ? strippedFact
+      : uppercaseFirst(strippedFact),
   });
 
-  return `${lead} ${secondLine}`.trim();
+  return `${lead}\n${uppercaseFirst(secondLine)}`.trim();
 }

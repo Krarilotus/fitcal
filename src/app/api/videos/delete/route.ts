@@ -58,9 +58,12 @@ export async function POST(request: Request) {
       await rm(path.dirname(video.storedPath), { recursive: true, force: true });
     }
 
-    return NextResponse.redirect(getAppUrl("/dashboard?success=Video%20gelöscht", request));
+    return NextResponse.redirect(
+      getAppUrl("/dashboard?success=Video%20gelöscht", request),
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Video konnte nicht gelöscht werden.";
+    const message =
+      error instanceof Error ? error.message : "Video konnte nicht gelöscht werden.";
 
     return NextResponse.redirect(
       getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),

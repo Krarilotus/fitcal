@@ -84,6 +84,10 @@ function StatBox({ label, value, valueClassName }: { label: string; value: React
   );
 }
 
+function isCompletedLikeStatus(status: ParticipantRow["todayStatus"]) {
+  return ["completed", "partial", "joker", "sick"].includes(status);
+}
+
 async function handleUploadSubmit(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -185,6 +189,16 @@ export function DashboardTabs({
   const selectedDateInChallenge = selectedDateKey ? isWithinChallenge(selectedDateKey) : false;
   const selectedDateTarget = selectedDateKey && selectedDateInChallenge ? getRequiredReps(selectedDateKey) : null;
   const selectedChallengeDay = selectedDateKey && selectedDateInChallenge ? getChallengeDayIndex(selectedDateKey) + 1 : null;
+  const reviewParticipants = participantRows;
+  const reviewSelfRow = reviewParticipants.find((row) => row.isSelf) ?? null;
+  const activeTodayCount = reviewParticipants.filter((row) => isCompletedLikeStatus(row.todayStatus)).length;
+  const qualifiedCount = reviewParticipants.filter(
+    (row) => row.qualificationUploads >= row.qualificationRequiredUploads,
+  ).length;
+  const openReviewCount = reviewParticipants.reduce(
+    (sum, row) => sum + (row.isSelf ? 0 : row.pendingReviewCount),
+    0,
+  );
 
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-fitcal-section]"));
@@ -252,10 +266,10 @@ export function DashboardTabs({
                 <form className="mt-5 space-y-4" encType="multipart/form-data" onSubmit={handleUploadSubmit}>
                   <input name="challengeDate" type="hidden" value={day.challengeDate} />
                   <div className="fc-grid-2">
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" min="0" name="pushupSet1" required type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" min="0" name="pushupSet2" required type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" min="0" name="situpSet1" required type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" min="0" name="situpSet2" required type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" min="0" name="pushupSet1" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" min="0" name="pushupSet2" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" min="0" name="situpSet1" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" min="0" name="situpSet2" placeholder="0" type="number" /></label>
                   </div>
                   <p className="text-sm text-[var(--fc-muted)]">{overview.isLightParticipant ? labels.uploads.lightHint : labels.uploads.fullHint}</p>
                   <div className={`grid gap-3 ${overview.isLightParticipant ? "sm:grid-cols-1" : "sm:grid-cols-[1.1fr_0.9fr]"}`}>
@@ -303,8 +317,14 @@ export function DashboardTabs({
                           <p className="truncate text-sm font-medium">{video.originalName}</p>
                           <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="fc-video-actions">
                           <Button asChild size="sm" variant="ghost"><a href={`/api/videos/${video.id}`} target="_blank">{commonLabels.open}</a></Button>
+                          <form action="/api/videos/replace" className="fc-video-replace-form" encType="multipart/form-data" method="post">
+                            <input name="videoId" type="hidden" value={video.id} />
+                            <label className="sr-only" htmlFor={`replacement-video-${video.id}`}>{labels.timeline.replaceVideoInput}</label>
+                            <input accept="video/*" className="fc-video-file-input" id={`replacement-video-${video.id}`} name="replacementVideo" required type="file" />
+                            <Button size="sm" type="submit" variant="secondary">{labels.timeline.videoReplace}</Button>
+                          </form>
                           <form action="/api/videos/delete" method="post"><input name="videoId" type="hidden" value={video.id} /><Button size="sm" type="submit" variant="secondary">{labels.timeline.videoDelete}</Button></form>
                         </div>
                       </div>
@@ -395,35 +415,106 @@ export function DashboardTabs({
           />
 
           {reviewSubtab === "progress" ? (
-            <div className="fc-card overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="border-b border-[var(--fc-border)] text-[var(--fc-muted)]">
-                  <tr>
-                    <th className="pb-3 pr-4 font-medium">{labels.review.table.name}</th>
-                    <th className="pb-3 pr-4 font-medium">{labels.review.table.mode}</th>
-                    <th className="pb-3 pr-4 font-medium">{labels.review.table.today}</th>
-                    <th className="pb-3 pr-4 font-medium">{labels.review.table.yesterday}</th>
-                    <th className="pb-3 pr-4 font-medium">{labels.review.table.qualification}</th>
-                    <th className="pb-3 pr-4 font-medium">{labels.review.table.days}</th>
-                    <th className="pb-3 pr-4 font-medium">{labels.review.table.debt}</th>
-                    <th className="pb-3 font-medium">{labels.review.table.reviews}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {participantRows.map((row) => (
-                    <tr className="border-b border-[var(--fc-border)]/70 last:border-b-0" key={row.id}>
-                      <td className="py-3 pr-4 font-medium">{row.name}</td>
-                      <td className="py-3 pr-4">{row.modeLabel}</td>
-                      <td className="py-3 pr-4">{row.todayLabel}</td>
-                      <td className="py-3 pr-4">{row.yesterdayLabel}</td>
-                      <td className="py-3 pr-4">{row.qualificationLabel}</td>
-                      <td className="py-3 pr-4">{row.documentedDays}</td>
-                      <td className="py-3 pr-4">{row.debtLabel ?? labels.participantReview.off}</td>
-                      <td className="py-3">{row.reviewLabel}</td>
+            <div className="grid gap-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="fc-card"><StatBox label={labels.review.summary.participants} value={reviewParticipants.length} /></div>
+                <div className="fc-card"><StatBox label={labels.review.summary.activeToday} value={activeTodayCount} /></div>
+                <div className="fc-card"><StatBox label={labels.review.summary.qualified} value={qualifiedCount} /></div>
+                <div className="fc-card"><StatBox label={labels.review.summary.pendingReviews} value={openReviewCount} /></div>
+              </div>
+
+              {reviewSelfRow ? (
+                <article className="fc-card">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="fc-heading text-lg">{reviewSelfRow.name}</h3>
+                        <span className="fc-chip fc-chip-accent">{labels.review.you}</span>
+                        <span className="fc-chip fc-chip-muted">{reviewSelfRow.modeLabel}</span>
+                      </div>
+                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.selfHint}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="fc-chip fc-chip-muted">{labels.review.todayStat} {reviewSelfRow.todayLabel}</span>
+                      <span className="fc-chip fc-chip-muted">{labels.review.yesterdayStat} {reviewSelfRow.yesterdayLabel}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                    <StatBox label={labels.review.stats.totalPushups} value={reviewSelfRow.totalPushups} />
+                    <StatBox label={labels.review.stats.totalSitups} value={reviewSelfRow.totalSitups} />
+                    <StatBox label={labels.review.stats.days} value={reviewSelfRow.documentedDays} />
+                    <StatBox label={labels.review.stats.qualification} value={reviewSelfRow.qualificationLabel} />
+                    <StatBox label={labels.review.stats.debt} value={reviewSelfRow.debtLabel ?? labels.participantReview.off} />
+                  </div>
+                </article>
+              ) : null}
+
+              <div className="grid gap-3 md:hidden">
+                {reviewParticipants.map((row) => (
+                  <article className="fc-card" key={row.id}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="fc-heading text-base">{row.name}</h3>
+                          {row.isSelf ? <span className="fc-chip fc-chip-accent">{labels.review.you}</span> : null}
+                          <span className="fc-chip fc-chip-muted">{row.modeLabel}</span>
+                        </div>
+                        <p className="mt-1 text-sm text-[var(--fc-muted)]">
+                          {labels.review.todayStat} {row.todayLabel} · {labels.review.yesterdayStat} {row.yesterdayLabel}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <StatBox label={labels.review.stats.totalPushups} value={row.totalPushups} />
+                      <StatBox label={labels.review.stats.totalSitups} value={row.totalSitups} />
+                      <StatBox label={labels.review.stats.days} value={row.documentedDays} />
+                      <StatBox label={labels.review.stats.qualification} value={row.qualificationLabel} />
+                      <StatBox label={labels.review.stats.debt} value={row.debtLabel ?? labels.participantReview.off} />
+                      <StatBox label={labels.review.stats.reviews} value={row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel} />
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="fc-card hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[980px] text-left text-sm">
+                  <thead className="border-b border-[var(--fc-border)] text-[var(--fc-muted)]">
+                    <tr>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.name}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.mode}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.today}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.yesterday}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.totalPushups}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.totalSitups}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.qualification}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.days}</th>
+                      <th className="pb-3 pr-4 font-medium">{labels.review.table.debt}</th>
+                      <th className="pb-3 font-medium">{labels.review.table.reviews}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {reviewParticipants.map((row) => (
+                      <tr className="border-b border-[var(--fc-border)]/70 last:border-b-0" key={row.id}>
+                        <td className="py-3 pr-4 font-medium">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{row.name}</span>
+                            {row.isSelf ? <span className="fc-chip fc-chip-accent">{labels.review.you}</span> : null}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">{row.modeLabel}</td>
+                        <td className="py-3 pr-4">{row.todayLabel}</td>
+                        <td className="py-3 pr-4">{row.yesterdayLabel}</td>
+                        <td className="py-3 pr-4">{row.totalPushups}</td>
+                        <td className="py-3 pr-4">{row.totalSitups}</td>
+                        <td className="py-3 pr-4">{row.qualificationLabel}</td>
+                        <td className="py-3 pr-4">{row.documentedDays}</td>
+                        <td className="py-3 pr-4">{row.debtLabel ?? labels.participantReview.off}</td>
+                        <td className="py-3">{row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <div className="grid gap-6">

@@ -179,9 +179,6 @@ async function buildParticipantRows(
 ): Promise<ParticipantRow[]> {
   const participants = await prisma.user.findMany({
     where: {
-      id: {
-        not: currentUser.id,
-      },
       registrationStatus: RegistrationStatus.APPROVED,
     },
     select: {
@@ -203,6 +200,8 @@ async function buildParticipantRows(
           reviewStatus: true,
           pushupSets: true,
           situpSets: true,
+          verifiedPushupTotal: true,
+          verifiedSitupTotal: true,
         },
         orderBy: {
           challengeDate: "asc",
@@ -249,13 +248,22 @@ async function buildParticipantRows(
           0,
           participantOverview.outstandingDebtCents - (participant.reviewCreditCents ?? 0),
         );
+    const totalPushups = participant.dailySubmissions
+      .filter((submission) => submission.status === "COMPLETED")
+      .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectivePushupTotal, 0);
+    const totalSitups = participant.dailySubmissions
+      .filter((submission) => submission.status === "COMPLETED")
+      .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectiveSitupTotal, 0);
 
     return {
       id: participant.id,
       name: participant.name || participant.email,
+      isSelf: participant.id === currentUser.id,
       modeLabel: participant.isLightParticipant
         ? labels.participantModeLabels.light
         : labels.participantModeLabels.full,
+      todayStatus: todayStatus?.status ?? "upcoming",
+      yesterdayStatus: yesterdayStatus?.status ?? "upcoming",
       todayLabel: getDayStatusLabel(
         todayStatus?.status ?? "upcoming",
         labels.statusLabels,
@@ -264,8 +272,13 @@ async function buildParticipantRows(
         yesterdayStatus?.status ?? "upcoming",
         labels.statusLabels,
       ),
+      totalPushups,
+      totalSitups,
+      qualificationUploads: participantOverview.qualificationUploads,
+      qualificationRequiredUploads: participantOverview.qualificationRequiredUploads,
       qualificationLabel: `${participantOverview.qualificationUploads}/${participantOverview.qualificationRequiredUploads}`,
       documentedDays: participantOverview.documentedDays,
+      pendingReviewCount,
       debtLabel: participant.isLightParticipant
         ? null
         : formatCurrencyFromCents(effectiveDebtCents),
@@ -275,6 +288,12 @@ async function buildParticipantRows(
           ? `${pendingReviewCount} ${labels.participantReview.pendingSuffix}`
           : labels.participantReview.clear,
     };
+  }).sort((left, right) => {
+    if (left.isSelf !== right.isSelf) {
+      return left.isSelf ? -1 : 1;
+    }
+
+    return left.name.localeCompare(right.name, locale === "en" ? "en" : "de");
   });
 }
 

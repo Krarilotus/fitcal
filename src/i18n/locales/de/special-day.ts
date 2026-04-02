@@ -150,9 +150,9 @@ export const deSpecialDay: SpecialDayLocaleDictionary = {
     /Sport|Olymp|Dance|Yoga|Skateboarding|Tour de France|Tennis|Bicycle|Cricket|Fußball|WM|Wimbledon/i,
   verbLeadVariants: [
     ({ strippedFact }) => `Heute ${strippedFact}`,
-    ({ strippedFact }) => `Für heute bleibt hängen: ${strippedFact}`,
-    ({ strippedFact }) => `Im Kalender steht heute: ${strippedFact}`,
-    ({ weekday, strippedFact }) => `${weekday} gilt hier: ${strippedFact}`,
+    ({ strippedFact }) => `Für heute bleibt hängen, dass ${strippedFact}`,
+    ({ strippedFact }) => `Im Kalender steht heute, dass ${strippedFact}`,
+    ({ weekday, strippedFact }) => `${weekday} gilt hier, dass ${strippedFact}`,
   ],
   nounLeadVariants: [
     ({ strippedFact }) => `Heute gilt: ${strippedFact}`,

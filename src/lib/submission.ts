@@ -8,12 +8,17 @@ import {
 
 export const dailySubmissionSchema = z.object({
   challengeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  pushupSet1: z.coerce.number().int().min(0).max(10000),
-  pushupSet2: z.coerce.number().int().min(0).max(10000),
-  situpSet1: z.coerce.number().int().min(0).max(10000),
-  situpSet2: z.coerce.number().int().min(0).max(10000),
+  pushupSet1: z.coerce.number().int().min(0).max(10000).default(0),
+  pushupSet2: z.coerce.number().int().min(0).max(10000).default(0),
+  situpSet1: z.coerce.number().int().min(0).max(10000).default(0),
+  situpSet2: z.coerce.number().int().min(0).max(10000).default(0),
   notes: z.string().trim().max(1000).optional().default(""),
 });
+
+function getSetValue(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return value == null || value === "" ? 0 : value;
+}
 
 export interface ParsedSubmissionInput {
   challengeDate: string;
@@ -25,10 +30,10 @@ export interface ParsedSubmissionInput {
 export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput {
   const parsed = dailySubmissionSchema.parse({
     challengeDate: formData.get("challengeDate"),
-    pushupSet1: formData.get("pushupSet1"),
-    pushupSet2: formData.get("pushupSet2"),
-    situpSet1: formData.get("situpSet1"),
-    situpSet2: formData.get("situpSet2"),
+    pushupSet1: getSetValue(formData, "pushupSet1"),
+    pushupSet2: getSetValue(formData, "pushupSet2"),
+    situpSet1: getSetValue(formData, "situpSet1"),
+    situpSet2: getSetValue(formData, "situpSet2"),
     notes: formData.get("notes"),
   });
 

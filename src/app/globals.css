@@ -418,6 +418,44 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background: var(--fc-bg);
 }
 
+.fc-video-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.fc-video-replace-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.fc-video-file-input {
+  width: min(15.5rem, 100%);
+  font-size: 0.75rem;
+  color: var(--fc-muted);
+}
+
+.fc-video-file-input::file-selector-button {
+  margin-right: 0.5rem;
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-surface);
+  color: var(--fc-ink-secondary);
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+}
+
+.fc-video-file-input:hover::file-selector-button,
+.fc-video-file-input:focus::file-selector-button {
+  border-color: var(--fc-border-strong);
+  color: var(--fc-ink);
+}
+
 /* ── Chart ── */
 .fc-chart-area {
   border-radius: var(--fc-radius);
@@ -610,6 +648,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
   margin-top: 0.75rem;
   font-size: 0.88rem;
   line-height: 1.7;
+  white-space: pre-line;
   color: var(--fc-muted);
   border-left: 2px solid var(--fc-accent-border);
   padding-left: 0.85rem;
