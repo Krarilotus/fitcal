@@ -16,6 +16,11 @@ type AppInviteMailParams = {
   inviteLink: string;
 };
 
+type EmailVerificationMailParams = {
+  to: string;
+  verifyLink: string;
+};
+
 let cachedClient: Resend | null = null;
 
 function hasResendConfig(): boolean {
@@ -61,7 +66,7 @@ async function sendMail(params: {
     });
 
     if (error) {
-      console.error("[fitcal-auth] Fehler beim Versand über Resend:", error);
+      console.error("[fitcal-auth] Fehler beim Versand ueber Resend:", error);
       return false;
     }
 
@@ -77,9 +82,20 @@ export async function sendPasswordResetMail(
 ): Promise<boolean> {
   return sendMail({
     to: params.to,
-    subject: "FitCal Passwort zurücksetzen",
-    text: `Du hast ein Passwort-Reset angefordert. Link (24h gültig): ${params.resetLink}`,
-    html: `<p>Du hast ein Passwort-Reset angefordert.</p><p><a href="${params.resetLink}">Passwort zurücksetzen</a> (24h gültig)</p>`,
+    subject: "FitCal Passwort zuruecksetzen",
+    text: `Du hast ein Passwort-Reset angefordert. Link (24h gueltig): ${params.resetLink}`,
+    html: `<p>Du hast ein Passwort-Reset angefordert.</p><p><a href="${params.resetLink}">Passwort zuruecksetzen</a> (24h gueltig)</p>`,
+  });
+}
+
+export async function sendEmailVerificationMail(
+  params: EmailVerificationMailParams,
+): Promise<boolean> {
+  return sendMail({
+    to: params.to,
+    subject: "FitCal E-Mail bestaetigen",
+    text: `Bitte bestaetige deine E-Mail-Adresse ueber diesen Link (24h gueltig): ${params.verifyLink}`,
+    html: `<p>Bitte bestaetige deine E-Mail-Adresse.</p><p><a href="${params.verifyLink}">E-Mail bestaetigen</a> (24h gueltig)</p>`,
   });
 }
 
@@ -90,9 +106,9 @@ export async function sendRegistrationApprovedMail(
 
   return sendMail({
     to: params.to,
-    subject: "FitCal Registrierung bestätigt",
-    text: `${greeting}\n\ndein Zugang zu FitCal wurde freigegeben. Du kannst dich jetzt mit deiner E-Mail und deinem Passwort anmelden.`,
-    html: `<p>${greeting}</p><p>dein Zugang zu FitCal wurde freigegeben.</p><p>Du kannst dich jetzt mit deiner E-Mail und deinem Passwort anmelden.</p>`,
+    subject: "FitCal Registrierung bestaetigt",
+    text: `${greeting}\n\ndein Zugang zu FitCal wurde freigegeben. Wenn du deine E-Mail bereits bestaetigt hast, kannst du dich jetzt mit deiner E-Mail und deinem Passwort anmelden.`,
+    html: `<p>${greeting}</p><p>dein Zugang zu FitCal wurde freigegeben.</p><p>Wenn du deine E-Mail bereits bestaetigt hast, kannst du dich jetzt mit deiner E-Mail und deinem Passwort anmelden.</p>`,
   });
 }
 
@@ -117,7 +133,7 @@ export async function sendAppInviteMail(
   return sendMail({
     to: params.to,
     subject: "Einladung zu FitCal",
-    text: `${inviter} hat dich zu FitCal eingeladen.\n\nÜber diesen Link kannst du deinen Account anlegen und wirst dabei direkt freigeschaltet:\n${params.inviteLink}`,
+    text: `${inviter} hat dich zu FitCal eingeladen.\n\nUeber diesen Link kannst du deinen Account anlegen und wirst dabei direkt freigeschaltet:\n${params.inviteLink}`,
     html: `<p>${inviter} hat dich zu FitCal eingeladen.</p><p><a href="${params.inviteLink}">Account anlegen und direkt freischalten</a></p>`,
   });
 }

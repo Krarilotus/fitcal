@@ -39,6 +39,12 @@ export async function POST(request: Request) {
       throw new Error("Dein Account wurde nicht freigegeben.");
     }
 
+    if (!user.emailVerified) {
+      throw new Error(
+        "Bitte bestaetige zuerst deine E-Mail-Adresse. Ueber Passwort vergessen kannst du dir notfalls eine neue Bestaetigungs-Mail zusenden.",
+      );
+    }
+
     await createUserSession(user.id);
 
     return NextResponse.redirect(getAppUrl("/dashboard", request));

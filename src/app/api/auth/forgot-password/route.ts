@@ -1,7 +1,11 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendPasswordResetMail } from "@/lib/auth/email";
+import {
+  sendEmailVerificationMail,
+  sendPasswordResetMail,
+} from "@/lib/auth/email";
+import { createEmailVerificationToken } from "@/lib/auth/email-verification";
 import { createRandomToken, hashToken } from "@/lib/auth/token";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
 import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
@@ -20,7 +24,7 @@ export async function POST(request: Request) {
       },
     });
 
-    if (user) {
+    if (user?.emailVerified) {
       const token = createRandomToken();
       const tokenHash = hashToken(token);
       const requestHeaders = await headers();
@@ -58,6 +62,14 @@ export async function POST(request: Request) {
         data: {
           emailDelivered: delivered,
         },
+      });
+    } else if (user) {
+      const verificationToken = await createEmailVerificationToken(user.email);
+      const verifyLink = `${getAppBaseUrl(request)}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
+
+      await sendEmailVerificationMail({
+        to: user.email,
+        verifyLink,
       });
     }
 

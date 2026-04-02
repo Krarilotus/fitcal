@@ -1,6 +1,7 @@
 import { RegistrationStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { DashboardTabs } from "@/components/fitcal/dashboard-tabs";
+import { DashboardAutoRefresh } from "@/components/fitcal/dashboard-auto-refresh";
 import { FlashMessage } from "@/components/fitcal/flash-message";
 import { PreferenceControls } from "@/components/fitcal/preference-controls";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="fc-shell min-h-screen px-4 py-5 text-[var(--fc-ink)] sm:px-6 sm:py-8">
       <div className="fc-noise pointer-events-none absolute inset-0 -z-20" />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+        <DashboardAutoRefresh enabled={canReview} />
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="fc-display text-[clamp(1.5rem,3vw,2.25rem)]">

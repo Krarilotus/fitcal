@@ -3,9 +3,12 @@ import { NextResponse } from "next/server";
 import { RegistrationApprovalDecision, RegistrationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
-import { createUserSession } from "@/lib/auth/session";
-import { getAppUrl } from "@/lib/auth/url";
-import { sendRegistrationApprovedMail } from "@/lib/auth/email";
+import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
+import {
+  sendEmailVerificationMail,
+  sendRegistrationApprovedMail,
+} from "@/lib/auth/email";
+import { createEmailVerificationToken } from "@/lib/auth/email-verification";
 import { registerSchema } from "@/lib/auth/validation";
 import { normalizeMeasurementDate } from "@/lib/measurements";
 
@@ -135,25 +138,35 @@ export async function POST(request: Request) {
       }
 
       return {
-        userId: createdUser.id,
         autoApprove,
-        usedInvite: Boolean(invite),
       };
     });
 
+    const verificationToken = await createEmailVerificationToken(parsed.email);
+    const verifyLink = `${getAppBaseUrl(request)}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
+
+    await sendEmailVerificationMail({
+      to: parsed.email,
+      verifyLink,
+    });
+
     if (result.autoApprove) {
-      await createUserSession(result.userId);
       await sendRegistrationApprovedMail({
         to: parsed.email,
         name: parsed.name || null,
       });
 
-      return NextResponse.redirect(getAppUrl("/dashboard", request));
+      return NextResponse.redirect(
+        getAppUrl(
+          "/login?success=Account%20erstellt.%20Bitte%20bestaetige%20zuerst%20deine%20E-Mail-Adresse.",
+          request,
+        ),
+      );
     }
 
     return NextResponse.redirect(
       getAppUrl(
-        "/login?success=Registrierungsanfrage%20gesendet.%20Bestehende%20Nutzer%20m%C3%BCssen%20deinen%20Zugang%20erst%20freigeben.",
+        "/login?success=Registrierungsanfrage%20gesendet.%20Bitte%20bestaetige%20deine%20E-Mail-Adresse.%20Danach%20muessen%20bestehende%20Nutzer%20deinen%20Zugang%20noch%20freigeben.",
         request,
       ),
     );
