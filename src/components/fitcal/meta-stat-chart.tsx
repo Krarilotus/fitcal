@@ -120,7 +120,7 @@ export function MetaStatChart({
               return (
                 <line
                   key={step}
-                  stroke="rgba(54, 65, 58, 0.12)"
+                  stroke="rgba(255, 255, 255, 0.08)"
                   strokeDasharray="1.4 1.8"
                   strokeWidth="0.35"
                   x1="0"

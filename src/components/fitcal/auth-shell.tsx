@@ -21,15 +21,15 @@ export function AuthShell({
     <div className="fc-shell min-h-screen px-4 py-6 text-[var(--fc-ink)] sm:px-6 sm:py-10">
       <div className="fc-noise pointer-events-none absolute inset-0 -z-20" />
       <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-5 flex items-center justify-between text-sm text-[var(--fc-muted)]">
-          <Link href="/" className="inline-flex items-center gap-2 font-medium transition-colors hover:text-[var(--fc-ink)]">
+        <div className="mb-5 flex items-center justify-between text-sm text-[var(--fc-muted)] fc-rise">
+          <Link href="/" className="inline-flex items-center gap-2 font-medium transition-colors hover:text-[var(--fc-accent)]">
             <span aria-hidden>←</span> Zur Startseite
           </Link>
           <span className="text-xs">Europe/Berlin</span>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[0.86fr_1.14fr]">
-          <section className="fc-card-lg flex flex-col justify-between gap-8">
+        <div className="grid gap-4 lg:grid-cols-[0.86fr_1.14fr]">
+          <section className="fc-card-dark flex flex-col justify-between gap-8 fc-rise">
             <div>
               <Badge variant="accent">{eyebrow}</Badge>
               <h1 className="fc-display mt-5 max-w-xl text-[clamp(2rem,4vw,3.2rem)]">
@@ -41,7 +41,7 @@ export function AuthShell({
             </div>
 
             <div className="space-y-3">
-              <div className="rounded-xl border border-[var(--fc-border)] bg-white/50 p-3.5">
+              <div className="rounded-[var(--fc-radius)] border border-[rgba(255,255,255,0.06)] bg-white/[0.03] p-3.5">
                 <p className="fc-kicker">Zugang</p>
                 <p className="mt-1.5 text-sm leading-relaxed text-[var(--fc-muted)]">
                   Mail, Passwort und optionale Startwerte.
@@ -55,9 +55,9 @@ export function AuthShell({
             </div>
           </section>
 
-          <section className="fc-card-lg flex flex-col justify-between">
+          <section className="fc-card flex flex-col justify-between fc-rise fc-rise-delay-1">
             <div className="space-y-5">{children}</div>
-            <Separator className="mt-8 bg-[var(--fc-border)]" />
+            <Separator className="mt-8 bg-[rgba(255,255,255,0.06)]" />
             <div className="pt-4 text-sm text-[var(--fc-muted)] [&_a]:font-medium [&_a]:text-[var(--fc-accent)] [&_a]:transition-colors hover:[&_a]:text-[var(--fc-accent-hover)]">
               {footer}
             </div>

@@ -366,7 +366,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <div className="mt-4 space-y-3">
               {pendingApprovals.map((approval) => (
                 <div
-                  className="flex flex-col gap-3 rounded-2xl border border-[var(--fc-border)] bg-white/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-[var(--fc-radius)] border border-[rgba(255,255,255,0.06)] bg-white/[0.03] px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
                   key={approval.id}
                 >
                   <div className="space-y-1">

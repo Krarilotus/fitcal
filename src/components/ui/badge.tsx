@@ -2,12 +2,13 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+// noinspection JSUnusedLocalSymbols
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em]",
+  "inline-flex items-center rounded-[var(--fc-radius-sm)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] font-[family-name:var(--font-syne)]",
   {
     variants: {
       variant: {
-        default: "bg-[var(--fc-bg-alt)] text-[var(--fc-muted)] ring-1 ring-[var(--fc-border)]",
+        default: "bg-[rgba(255,255,255,0.04)] text-[var(--fc-muted)] ring-1 ring-[var(--fc-border-strong)]",
         accent: "bg-[var(--fc-accent-soft)] text-[var(--fc-accent)] ring-1 ring-[var(--fc-accent-border)]",
         warm: "bg-[var(--fc-warm-soft)] text-[var(--fc-warm)] ring-1 ring-[var(--fc-warm-border)]",
       },

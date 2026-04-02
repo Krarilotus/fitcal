@@ -102,8 +102,6 @@ const rules = [
   "Qualifikation durch 10 Uploads in den ersten 14 Tagen.",
   "2 neue Slack-Day-Joker pro Monat. Ungenutzte Joker bleiben erhalten.",
   "Slacken kostet 10 €, dann 12 €, 14 €, 16 € und so weiter.",
-  "Maximal 4 Videos, weil maximal 4 Sets dokumentiert werden.",
-  "Max. 100 MB pro Datei.",
 ];
 
 function formatCurrency(cents: number) {
@@ -237,7 +235,7 @@ export function DashboardTabs({
           </div>
 
           {/* Status chips grid */}
-          <div className="mt-5 grid grid-cols-2 gap-2.5 border-t border-[var(--fc-border)] pt-5 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-5 grid grid-cols-2 gap-2.5 border-t border-[rgba(255,255,255,0.06)] pt-5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="fc-stat">
               <span className="fc-stat-label">
                 {overview.isQualificationPhase ? "Quali-Tag" : "Qualifiziert"}
@@ -620,13 +618,13 @@ export function DashboardTabs({
 
           <div className="fc-card-dark">
             <div>
-              <span className="fc-kicker" style={{ color: "rgba(250,249,246,0.5)" }}>Referenz</span>
-              <p className="fc-heading mt-2 text-2xl text-white/95">
+              <span className="fc-kicker">Referenz</span>
+              <p className="fc-heading mt-2 text-2xl">
                 Technik und Vergleichsvideos.
               </p>
             </div>
 
-            <p className="mt-3 text-sm leading-relaxed text-white/50">
+            <p className="mt-3 text-sm leading-relaxed text-[var(--fc-muted)]">
               Die Referenzvideos helfen nur bei der Einordnung. Für die Challenge zählen deine dokumentierten Sets.
             </p>
 

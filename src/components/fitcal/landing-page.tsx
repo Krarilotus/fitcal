@@ -13,8 +13,6 @@ const rules = [
   "Qualifikation durch 10 Uploads in den ersten 14 Tagen.",
   "2 neue Slack-Day-Joker pro Monat. Ungenutzte Joker bleiben erhalten.",
   "Slacken kostet 10 € plus 2 € für jeden weiteren Tag.",
-  "Maximal 4 Videos, weil maximal 4 Sets dokumentiert werden.",
-  "Max. 100 MB pro Datei.",
 ];
 
 const flow = [
@@ -52,15 +50,15 @@ export function FitcalLandingPage({
     <div className="fc-shell min-h-screen text-[var(--fc-ink)]">
       <div className="fc-noise pointer-events-none absolute inset-0 -z-20" />
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 lg:gap-14">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 pb-16 pt-5 sm:px-6 sm:pt-8 lg:gap-16">
         {/* ── Header ── */}
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-between fc-rise">
           <Link
-            className="inline-flex items-center gap-2.5 text-sm font-semibold tracking-[0.12em] uppercase text-[var(--fc-muted)] transition-colors hover:text-[var(--fc-ink)]"
+            className="inline-flex items-center gap-2.5 text-sm font-semibold tracking-[0.16em] uppercase text-[var(--fc-muted)] transition-colors hover:text-[var(--fc-accent)]"
             href="/"
           >
             <span className="fc-brand-dot" />
-            FitCal 2026
+            FitCal
           </Link>
 
           <div className="flex items-center gap-2">
@@ -74,22 +72,22 @@ export function FitcalLandingPage({
         </header>
 
         {/* ── Hero ── */}
-        <section className="grid items-stretch gap-6 lg:grid-cols-[1.1fr_0.9fr] fc-rise">
-          <div className="flex flex-col justify-center py-2 sm:py-4">
-            <Badge variant="accent">365-Tage-Challenge</Badge>
-            <h1 className="fc-display mt-5 max-w-4xl text-[clamp(2.5rem,6vw,5.5rem)]">
+        <section className="grid items-stretch gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="flex flex-col justify-center py-4 sm:py-8 fc-rise">
+            <Badge variant="accent">365 Tage</Badge>
+            <h1 className="fc-display mt-6 max-w-4xl text-[clamp(2.8rem,7vw,6rem)]">
               Jeden Tag
               <br />
-              <span className="text-[var(--fc-accent)]">klar trainieren.</span>
+              <span className="text-[var(--fc-accent)]" style={{ textShadow: "0 0 40px rgba(200,255,0,0.2)" }}>trainieren.</span>
               <br />
-              Sauber belegen.
+              <span className="text-[var(--fc-muted)]">belegen.</span>
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--fc-muted)] sm:text-lg">
+            <p className="mt-6 max-w-lg text-base leading-relaxed text-[var(--fc-muted)] sm:text-lg">
               Tagesziel, Uploads, Joker, Schulden und Verlauf – alles an einem
               Ort gebündelt.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-10 flex flex-wrap gap-3">
               <Button asChild size="lg">
                 <Link href="/register">
                   Account anlegen
@@ -97,44 +95,46 @@ export function FitcalLandingPage({
                 </Link>
               </Button>
               <Button asChild size="lg" variant="secondary">
-                <Link href="/login">Zum Dashboard</Link>
+                <Link href="/login">Dashboard</Link>
               </Button>
             </div>
           </div>
 
-          {/* ── Target card ── */}
-          <div className="grid gap-4 fc-rise-delay-1">
-            <div className="fc-card-lg">
+          {/* ── Target card — the focal point ── */}
+          <div className="grid gap-4 fc-rise fc-rise-delay-1">
+            <div className="fc-card-dark relative overflow-hidden">
+              {/* Atmospheric glow behind the number */}
+              <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-[var(--fc-accent)] opacity-[0.06] blur-[60px]" />
+
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="fc-kicker">Heute pro Übung</span>
                 <Badge variant="warm">Tag {snapshot.challengeDay}</Badge>
               </div>
-              <p className="fc-display fc-count-animated mt-5 text-[clamp(4rem,10vw,7rem)] text-[var(--fc-accent)]">
+              <p className="fc-display fc-count-animated mt-6 text-[clamp(5rem,12vw,9rem)] text-[var(--fc-accent)]" style={{ textShadow: "0 0 60px rgba(200,255,0,0.15)" }}>
                 {snapshot.targetReps}
               </p>
-              <div className="mt-4 space-y-1 border-t border-[var(--fc-border)] pt-4">
+              <div className="mt-4 space-y-1 border-t border-[rgba(255,255,255,0.06)] pt-4">
                 <p className="text-sm text-[var(--fc-muted)]">{snapshot.todayLabel}</p>
                 <p className="text-sm text-[var(--fc-muted)]">je Übung gleich viele Wiederholungen</p>
               </div>
             </div>
 
             <p className="px-1 text-sm leading-relaxed text-[var(--fc-muted)]">
-              Tagesziel für heute. Alles Weitere steht unten in den Regeln und im
-              aufklappbaren Detailbereich.
+              Tagesziel für heute. Details und Schuldenbeispiele stehen unten in den Regeln.
             </p>
           </div>
         </section>
 
         {/* ── Flow / How-it-works ── */}
-        <section className="fc-rise fc-rise-delay-1">
-          <div className="flex items-center justify-between gap-4 mb-5">
+        <section className="fc-rise fc-rise-delay-2">
+          <div className="flex items-center justify-between gap-4 mb-6">
             <Badge>Ablauf</Badge>
             <p className="text-sm text-[var(--fc-muted)]">Drei Schritte, jeden Tag.</p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            {flow.map((item) => (
-              <div className="fc-step-card" key={item.label}>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {flow.map((item, i) => (
+              <div className="fc-step-card" key={item.label} style={{ animationDelay: `${300 + i * 80}ms` }}>
                 <div className="fc-step-num">
                   <item.icon className="size-3.5" />
                 </div>
@@ -146,8 +146,8 @@ export function FitcalLandingPage({
         </section>
 
         {/* ── Rules ── */}
-        <section className="fc-rise fc-rise-delay-2" id="regeln">
-          <div className="flex items-center justify-between gap-4 mb-5">
+        <section className="fc-rise fc-rise-delay-3" id="regeln">
+          <div className="flex items-center justify-between gap-4 mb-6">
             <Badge>Regeln</Badge>
             <p className="text-sm text-[var(--fc-muted)]">Der Rahmen für jeden Tag.</p>
           </div>
@@ -170,7 +170,7 @@ export function FitcalLandingPage({
                     <p className="mt-2 text-sm leading-relaxed text-[var(--fc-muted)]">
                       Die Wiederholungen pro Übung folgen:
                       <br />
-                      <code className="mt-1 inline-block rounded-md bg-black/5 px-2 py-0.5 text-xs font-mono">
+                      <code className="mt-1 inline-block rounded-[var(--fc-radius-sm)] bg-white/5 px-2 py-0.5 text-xs font-mono text-[var(--fc-accent)]">
                         round_up(1 + 2.5 * sqrt(Tage seit 01.04.2026))
                       </code>
                     </p>
@@ -210,11 +210,11 @@ export function FitcalLandingPage({
           <div className="fc-card-dark">
             <div className="grid gap-6 sm:grid-cols-[1fr_auto]">
               <div>
-                <span className="fc-kicker" style={{ color: "rgba(250,249,246,0.5)" }}>Videos</span>
-                <p className="fc-heading mt-3 text-2xl sm:text-3xl text-white/95">
+                <span className="fc-kicker">Videos</span>
+                <p className="fc-heading mt-3 text-2xl sm:text-3xl">
                   Maximal 4 Videos. Extras müssen im Video zu sehen sein.
                 </p>
-                <p className="mt-3 text-sm leading-relaxed text-white/55">
+                <p className="mt-3 text-sm leading-relaxed text-[var(--fc-muted)]">
                   Eine Datei reicht. Wenn nötig kannst du auf bis zu vier Teile
                   aufteilen. Max. 100 MB pro Datei.
                 </p>

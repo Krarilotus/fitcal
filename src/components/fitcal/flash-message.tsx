@@ -11,10 +11,10 @@ export function FlashMessage({
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium fc-rise ${
+      className={`flex items-start gap-3 rounded-[var(--fc-radius-md)] border px-4 py-3.5 text-sm font-medium fc-rise ${
         error
-          ? "border-red-200 bg-red-50 text-red-800"
-          : "border-emerald-200 bg-emerald-50 text-emerald-800"
+          ? "border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] text-red-400"
+          : "border-[var(--fc-accent-border)] bg-[var(--fc-accent-soft)] text-[var(--fc-accent)]"
       }`}
     >
       <span className="mt-0.5 text-base leading-none" aria-hidden>
