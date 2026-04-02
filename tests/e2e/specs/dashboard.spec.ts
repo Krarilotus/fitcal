@@ -1,13 +1,13 @@
-import { afterAll, beforeEach, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { disconnectTestDb, prisma } from "../helpers/db";
 import { loginAsReviewer } from "../helpers/auth";
 import { resetE2EState } from "../helpers/reset";
 
-beforeEach(() => {
+test.beforeEach(() => {
   resetE2EState();
 });
 
-afterAll(async () => {
+test.afterAll(async () => {
   await disconnectTestDb();
 });
 

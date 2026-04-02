@@ -1,9 +1,33 @@
 import crypto from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 
 const SESSION_COOKIE_NAME = "fitcal_session";
 const SESSION_DURATION_DAYS = 30;
+
+export type CurrentUser = Prisma.UserGetPayload<{
+  include: {
+    challengeEnrollment: true;
+    dailySubmissions: {
+      include: {
+        videos: true;
+        workoutReviews: {
+          include: {
+            reviewer: {
+              select: {
+                id: true;
+                name: true;
+                email: true;
+              };
+            };
+          };
+        };
+      };
+    };
+    measurements: true;
+  };
+}>;
 
 function addDays(date: Date, days: number) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
@@ -58,7 +82,7 @@ export async function clearUserSession() {
   });
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<CurrentUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 

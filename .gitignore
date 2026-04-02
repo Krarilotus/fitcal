@@ -40,13 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma sqlite local files
-prisma/dev.db
-prisma/dev.db-journal
-
-# local uploaded runtime data
-data/uploads/
-data/e2e-uploads/
+# local runtime data
+data/
+prisma/*.db
+prisma/*.db-*
+prisma/*.sqlite
+prisma/*.sqlite-*
 
 # local AI/tooling notes
 AGENTS.md
