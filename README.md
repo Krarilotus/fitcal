@@ -236,11 +236,21 @@ Das Skript macht:
 - `git pull --ff-only`
 - `docker compose up -d --build`
 - `docker compose ps`
+- bei Root-Ausfuehrung zusaetzlich:
+  - `deploy/nginx-fitcal.conf` nach `/etc/nginx/sites-available/fitcal.hisqu.de.conf` kopieren
+  - `nginx -t`
+  - `systemctl reload nginx`
 
 Optional kannst du Branch/User/Env ueberschreiben:
 
 ```bash
 APP_USER=fitcal APP_BRANCH=main ENV_FILE=.env.production ./update.sh
+```
+
+Optional kannst du auch das Nginx-Sync deaktivieren:
+
+```bash
+SYNC_NGINX=0 ./update.sh
 ```
 sudo -u fitcal nano .env.production
 ```
