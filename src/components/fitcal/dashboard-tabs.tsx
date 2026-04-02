@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { type ChangeEvent, type Dispatch, type FormEvent, type SetStateAction, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import type { AppDictionary } from "@/i18n";
 import {
   formatDashboardCurrency,
@@ -43,6 +43,7 @@ type SelectedUploadVideo = {
   id: string;
   originalName: string;
   displayName: string;
+  sizeLabel: string;
 };
 
 function formatCurrency(locale: Locale, cents: number) {
@@ -61,6 +62,14 @@ function formatLocalizedNumber(locale: Locale, value: number, digits = 1) {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value);
+}
+
+function formatFileSizeLabel(locale: Locale, sizeBytes: number) {
+  if (sizeBytes >= 1024 * 1024 * 1024) {
+    return `${formatLocalizedNumber(locale, sizeBytes / (1024 * 1024 * 1024), 2)} GB`;
+  }
+
+  return `${formatLocalizedNumber(locale, sizeBytes / (1024 * 1024), 1)} MB`;
 }
 
 function SectionHeader({
@@ -96,15 +105,13 @@ function isCompletedLikeStatus(status: ParticipantRow["todayStatus"]) {
   return ["completed", "partial", "joker", "sick"].includes(status);
 }
 
-async function handleTrackedUploadSubmit(
-  event: FormEvent<HTMLFormElement>,
+async function submitTrackedUpload(
+  form: HTMLFormElement,
   setUploadingDays: Dispatch<SetStateAction<Record<string, boolean>>>,
   setUploadErrors: Dispatch<SetStateAction<Record<string, string | null>>>,
   labels: DashboardLabels["uploads"],
   isLightParticipant: boolean,
 ) {
-  event.preventDefault();
-  const form = event.currentTarget;
   const formData = new FormData(form);
   const challengeDateValue = formData.get("challengeDate");
   const challengeDate =
@@ -299,6 +306,7 @@ export function DashboardTabs({
       id: buildUploadVideoId(file, index),
       originalName: file.name,
       displayName: file.name.replace(/\.[^.]+$/, ""),
+      sizeLabel: formatFileSizeLabel(locale, file.size),
     }));
 
     let nextError: string | null = null;
@@ -401,7 +409,20 @@ export function DashboardTabs({
                     {day.isQualificationDay ? <span className="fc-chip fc-chip-warm">{labels.uploads.qualification}</span> : null}
                   </div>
                 </div>
-                <form className="mt-5 space-y-4" encType="multipart/form-data" onSubmit={(event) => handleTrackedUploadSubmit(event, setUploadingDays, setUploadErrors, labels.uploads, overview.isLightParticipant)}>
+                <form
+                  className="mt-5 space-y-4"
+                  encType="multipart/form-data"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void submitTrackedUpload(
+                      event.currentTarget,
+                      setUploadingDays,
+                      setUploadErrors,
+                      labels.uploads,
+                      overview.isLightParticipant,
+                    );
+                  }}
+                >
                   <input name="challengeDate" type="hidden" value={day.challengeDate} />
                   <div className="fc-grid-2">
                     <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" disabled={isUploading} min="0" name="pushupSet1" placeholder="0" type="number" /></label>
@@ -417,6 +438,7 @@ export function DashboardTabs({
                           <span className="fc-input-label">{labels.uploads.videos}</span>
                           <input accept="video/*" className="fc-input-file" disabled={isUploading} multiple name="videos" onChange={(event) => handleUploadVideoSelection(day.challengeDate, event)} required type="file" />
                         </label>
+                        <p className="text-sm text-[var(--fc-muted)]">{labels.uploads.mobileVideoHint}</p>
                         {selectedUploadVideos[day.challengeDate]?.length ? (
                           <div className="grid gap-2">
                             <p className="text-xs uppercase tracking-[0.18em] text-[var(--fc-muted)]">{labels.uploads.videoNames}</p>
@@ -424,6 +446,7 @@ export function DashboardTabs({
                               <label className="fc-input-group" key={video.id}>
                                 <span className="fc-input-label">{labels.uploads.videoNameLabel.replace("{index}", String(index + 1))}</span>
                                 <input className="fc-input" disabled={isUploading} maxLength={120} name={`videoDisplayName${index}`} onChange={(event) => handleUploadVideoRename(day.challengeDate, video.id, event.target.value)} placeholder={video.originalName} type="text" value={video.displayName} />
+                                <span className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</span>
                               </label>
                             ))}
                           </div>
@@ -434,7 +457,25 @@ export function DashboardTabs({
                   </div>
                   {uploadError ? <p className="text-sm font-medium text-[var(--fc-warm)]">{uploadError}</p> : null}
                   {isUploading ? <p className="text-sm text-[var(--fc-muted)]">{labels.uploads.uploadPendingHint}</p> : null}
-                  <div className="flex flex-wrap gap-3"><Button disabled={isUploading} type="submit">{isUploading ? (overview.isLightParticipant ? labels.uploads.uploadingEntry : labels.uploads.uploadingWorkout) : (overview.isLightParticipant ? labels.uploads.saveEntry : labels.uploads.saveWorkout)}</Button></div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      disabled={isUploading}
+                      onClick={(event) => {
+                        const form = event.currentTarget.form;
+                        if (!form) return;
+                        void submitTrackedUpload(
+                          form,
+                          setUploadingDays,
+                          setUploadErrors,
+                          labels.uploads,
+                          overview.isLightParticipant,
+                        );
+                      }}
+                      type="button"
+                    >
+                      {isUploading ? (overview.isLightParticipant ? labels.uploads.uploadingEntry : labels.uploads.uploadingWorkout) : (overview.isLightParticipant ? labels.uploads.saveEntry : labels.uploads.saveWorkout)}
+                    </Button>
+                  </div>
                 </form>
                 {!overview.isLightParticipant ? (
                   <>

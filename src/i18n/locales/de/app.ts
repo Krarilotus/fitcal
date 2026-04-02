@@ -222,6 +222,8 @@
       fullHint:
         "Alles \u00fcber dem Tagesziel wird automatisch aus deinen Sets berechnet und nur auf offene Schulden angerechnet.",
       videos: "Videos",
+      mobileVideoHint:
+        "Handy-Galerie lädt meist die Originaldatei hoch. Messenger wie Telegram komprimieren zusätzlich, normale Uploads nicht.",
       videoNames: "Videonamen",
       videoNameLabel: "Videoname {index}",
       notes: "Notiz",

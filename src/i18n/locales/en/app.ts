@@ -222,6 +222,8 @@
       fullHint:
         "Anything above the daily target is calculated automatically from your sets and only applied to open debt.",
       videos: "Videos",
+      mobileVideoHint:
+        "Phone galleries usually upload the original file. Messengers like Telegram compress additionally, normal uploads do not.",
       videoNames: "Video names",
       videoNameLabel: "Video name {index}",
       notes: "Note",
