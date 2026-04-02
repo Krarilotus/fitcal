@@ -287,13 +287,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   });
 
   return (
-    <div className="fitcal-shell min-h-screen px-4 py-5 text-[var(--fc-ink)] sm:px-6 sm:py-8">
-      <div className="fitcal-noise pointer-events-none absolute inset-0 -z-20" />
+    <div className="fc-shell min-h-screen px-4 py-5 text-[var(--fc-ink)] sm:px-6 sm:py-8">
+      <div className="fc-noise pointer-events-none absolute inset-0 -z-20" />
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <header className="fitcal-topbar">
+        <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <p className="fitcal-section-kicker">Dashboard</p>
-            <h1 className="text-4xl leading-[0.94] font-[var(--font-dm-serif-display)] sm:text-5xl">
+            <p className="fc-kicker">Dashboard</p>
+            <h1 className="fc-display text-[clamp(2rem,4vw,3.25rem)]">
               {user.name || user.email}
             </h1>
             <p className="text-sm text-[var(--fc-muted)]">
@@ -311,11 +311,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <FlashMessage error={error} success={success} />
 
         {canReview ? (
-          <section className="rounded-[28px] border border-[rgba(34,96,86,0.16)] bg-[rgba(255,252,245,0.82)] px-5 py-4 shadow-[0_18px_50px_rgba(20,33,28,0.08)] backdrop-blur sm:px-6">
+          <section className="fc-card">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="fitcal-section-kicker">Einladungen</p>
-              <h2 className="text-2xl font-semibold tracking-[-0.03em]">
+              <p className="fc-kicker">Einladungen</p>
+              <h2 className="fc-heading mt-1 text-xl">
                 Jemanden direkt freischalten
               </h2>
             </div>
@@ -325,9 +325,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </div>
 
           <form action="/api/invitations" className="mt-4 flex flex-col gap-3 sm:flex-row" method="post">
-            <label className="fitcal-input-wrap flex-1">
-              E-Mail
-              <input className="fitcal-input" name="email" required type="email" />
+            <label className="fc-input-group flex-1">
+              <span className="fc-input-label">E-Mail</span>
+              <input className="fc-input" name="email" required type="email" />
             </label>
             <div className="flex items-end">
               <Button type="submit">Einladung senden</Button>
@@ -338,7 +338,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <div className="mt-4 flex flex-wrap gap-2">
               {activeInvites.map((invite) => (
                 <span
-                  className="inline-flex items-center rounded-full border border-[rgba(34,96,86,0.14)] bg-white/80 px-3 py-2 text-sm text-[var(--fc-muted)]"
+                  className="fc-chip fc-chip-accent"
                   key={invite.id}
                 >
                   {invite.email}
@@ -350,11 +350,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : null}
 
         {canReview && pendingApprovals.length > 0 ? (
-          <section className="rounded-[28px] border border-[rgba(34,96,86,0.16)] bg-[rgba(255,252,245,0.82)] px-5 py-4 shadow-[0_18px_50px_rgba(20,33,28,0.08)] backdrop-blur sm:px-6">
+          <section className="fc-card">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="fitcal-section-kicker">Freigaben</p>
-                <h2 className="text-2xl font-semibold tracking-[-0.03em]">
+                <p className="fc-kicker">Freigaben</p>
+                <h2 className="fc-heading mt-1 text-xl">
                   Neue Registrierungen warten auf dein Ja oder Nein.
                 </h2>
               </div>
@@ -366,7 +366,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <div className="mt-4 space-y-3">
               {pendingApprovals.map((approval) => (
                 <div
-                  className="flex flex-col gap-3 rounded-[24px] border border-[rgba(34,96,86,0.12)] bg-white/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-2xl border border-[var(--fc-border)] bg-white/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
                   key={approval.id}
                 >
                   <div className="space-y-1">

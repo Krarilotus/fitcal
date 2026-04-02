@@ -18,44 +18,49 @@ export function AuthShell({
   footer,
 }: AuthShellProps) {
   return (
-    <div className="fitcal-shell min-h-screen px-4 py-6 text-[var(--fc-ink)] sm:px-6 sm:py-10">
-      <div className="fitcal-noise pointer-events-none absolute inset-0 -z-20" />
+    <div className="fc-shell min-h-screen px-4 py-6 text-[var(--fc-ink)] sm:px-6 sm:py-10">
+      <div className="fc-noise pointer-events-none absolute inset-0 -z-20" />
       <div className="mx-auto w-full max-w-5xl">
-        <div className="mb-4 flex items-center justify-between text-sm text-[var(--fc-muted)]">
-          <Link href="/">Zur Startseite</Link>
-          <span>Europe/Berlin</span>
+        <div className="mb-5 flex items-center justify-between text-sm text-[var(--fc-muted)]">
+          <Link href="/" className="inline-flex items-center gap-2 font-medium transition-colors hover:text-[var(--fc-ink)]">
+            <span aria-hidden>←</span> Zur Startseite
+          </Link>
+          <span className="text-xs">Europe/Berlin</span>
         </div>
+
         <div className="grid gap-5 lg:grid-cols-[0.86fr_1.14fr]">
-          <section className="fitcal-hero-panel flex flex-col justify-between">
+          <section className="fc-card-lg flex flex-col justify-between gap-8">
             <div>
               <Badge variant="accent">{eyebrow}</Badge>
-              <h1 className="mt-5 max-w-xl text-4xl leading-[0.95] font-[var(--font-dm-serif-display)] sm:text-5xl">
+              <h1 className="fc-display mt-5 max-w-xl text-[clamp(2rem,4vw,3.2rem)]">
                 {title}
               </h1>
-              <p className="mt-4 max-w-lg text-sm leading-7 text-[var(--fc-muted)] sm:text-base">
+              <p className="mt-4 max-w-lg text-sm leading-relaxed text-[var(--fc-muted)] sm:text-base">
                 {description}
               </p>
             </div>
 
-            <div className="mt-8 space-y-3">
-              <div className="fitcal-soft-block">
-                <p className="fitcal-soft-label">Zugang</p>
-                <p className="mt-2 text-sm leading-7 text-[var(--fc-muted)]">
+            <div className="space-y-3">
+              <div className="rounded-xl border border-[var(--fc-border)] bg-white/50 p-3.5">
+                <p className="fc-kicker">Zugang</p>
+                <p className="mt-1.5 text-sm leading-relaxed text-[var(--fc-muted)]">
                   Mail, Passwort und optionale Startwerte.
                 </p>
               </div>
-              <div className="fitcal-auth-aside-list">
-                <span>Reset-Link per Mail</span>
-                <span>Tage nach Europe/Berlin</span>
-                <span>Messwerte optional</span>
+              <div className="fc-auth-aside-list text-sm">
+                <span>✓ Reset-Link per Mail</span>
+                <span>✓ Tage nach Europe/Berlin</span>
+                <span>✓ Messwerte optional</span>
               </div>
             </div>
           </section>
 
-          <section className="fitcal-stream-panel flex flex-col justify-between">
-            <div className="space-y-6">{children}</div>
-            <Separator className="mt-8 bg-black/8" />
-            <div className="pt-4 text-sm text-[var(--fc-muted)]">{footer}</div>
+          <section className="fc-card-lg flex flex-col justify-between">
+            <div className="space-y-5">{children}</div>
+            <Separator className="mt-8 bg-[var(--fc-border)]" />
+            <div className="pt-4 text-sm text-[var(--fc-muted)] [&_a]:font-medium [&_a]:text-[var(--fc-accent)] [&_a]:transition-colors hover:[&_a]:text-[var(--fc-accent-hover)]">
+              {footer}
+            </div>
           </section>
         </div>
       </div>

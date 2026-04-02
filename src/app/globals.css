@@ -1,789 +1,629 @@
 @import "tailwindcss";
 
+/* ── Design Tokens ── */
 :root {
-  --background: #f3ecdf;
-  --foreground: #181915;
-  --fc-bg: #f3ecdf;
-  --fc-ink: #181915;
-  --fc-muted: #687167;
-  --fc-accent: #0d7a69;
-  --fc-accent-2: #d46f3b;
-  --fc-chart-blue: #286487;
-  --fc-chart-rose: #b55472;
-  --fc-chart-amber: #b67d33;
-  --fc-line: rgba(33, 31, 24, 0.09);
-  --fc-panel: rgba(255, 251, 245, 0.8);
+  --background: #faf9f6;
+  --foreground: #1c1917;
+
+  --fc-bg: #faf9f6;
+  --fc-bg-alt: #f5f3ef;
+  --fc-ink: #1c1917;
+  --fc-ink-secondary: #44403c;
+  --fc-muted: #78716c;
+  --fc-border: rgba(28, 25, 23, 0.07);
+  --fc-border-strong: rgba(28, 25, 23, 0.14);
+  --fc-surface: rgba(255, 255, 255, 0.72);
+  --fc-surface-hover: rgba(255, 255, 255, 0.92);
+
+  --fc-accent: #059669;
+  --fc-accent-hover: #047857;
+  --fc-accent-soft: rgba(5, 150, 105, 0.08);
+  --fc-accent-border: rgba(5, 150, 105, 0.18);
+
+  --fc-warm: #ea580c;
+  --fc-warm-soft: rgba(234, 88, 12, 0.08);
+  --fc-warm-border: rgba(234, 88, 12, 0.18);
+
+  --fc-chart-blue: #2563eb;
+  --fc-chart-rose: #e11d48;
+  --fc-chart-amber: #d97706;
+
+  --fc-panel-shadow: 0 8px 32px rgba(28, 25, 23, 0.06), 0 1px 2px rgba(28, 25, 23, 0.04);
+  --fc-panel-shadow-lg: 0 20px 48px rgba(28, 25, 23, 0.08), 0 2px 6px rgba(28, 25, 23, 0.04);
+
+  --fc-radius-sm: 0.75rem;
+  --fc-radius-md: 1rem;
+  --fc-radius-lg: 1.25rem;
+  --fc-radius-xl: 1.5rem;
+  --fc-radius-2xl: 2rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-space-grotesk);
+  --font-sans: var(--font-inter);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-}
+/* ── Base ── */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
 
 body {
   min-height: 100vh;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-space-grotesk), sans-serif;
+  background: var(--fc-bg);
+  color: var(--fc-ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-a {
-  text-decoration: none;
-}
+a { text-decoration: none; color: inherit; }
+button, input, textarea, select { font: inherit; }
 
-button,
-input,
-textarea {
-  font: inherit;
-}
-
-.fitcal-shell,
-.fitcal-dashboard-shell {
+/* ── Shell backgrounds ── */
+.fc-shell {
   position: relative;
   background:
-    radial-gradient(circle at 10% 12%, rgba(212, 111, 59, 0.18), transparent 28%),
-    radial-gradient(circle at 86% 10%, rgba(13, 122, 105, 0.18), transparent 26%),
-    linear-gradient(180deg, #f8f3ea 0%, #f4ecde 42%, #efe4d0 100%);
+    radial-gradient(ellipse 60% 50% at 15% 8%, rgba(5, 150, 105, 0.08), transparent),
+    radial-gradient(ellipse 50% 40% at 85% 12%, rgba(234, 88, 12, 0.06), transparent),
+    linear-gradient(180deg, var(--fc-bg) 0%, var(--fc-bg-alt) 100%);
 }
 
-.fitcal-noise {
+.fc-noise {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.28) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
-  background-size: 34px 34px;
-  mask-image: linear-gradient(to bottom, black 14%, transparent 95%);
+    linear-gradient(to right, rgba(255,255,255,0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.12) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, black 10%, transparent 90%);
 }
 
-.fitcal-brand-dot {
-  display: inline-block;
-  height: 0.72rem;
-  width: 0.72rem;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--fc-accent-2), var(--fc-accent));
-  box-shadow: 0 0 0 4px rgba(255, 248, 239, 0.92);
-}
-
-.fitcal-topbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.fitcal-section-kicker,
-.fitcal-soft-label {
-  font-size: 0.72rem;
+/* ── Typography ── */
+.fc-display {
+  font-family: var(--font-outfit), system-ui, sans-serif;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+
+.fc-heading {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.fc-kicker {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--fc-muted);
 }
 
-.fitcal-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 2.95rem;
-  padding: 0.8rem 1.15rem;
+.fc-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--fc-ink-secondary);
+}
+
+/* ── Panels ── */
+.fc-card {
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius-xl);
+  background: var(--fc-surface);
+  box-shadow: var(--fc-panel-shadow);
+  backdrop-filter: blur(12px);
+  padding: 1.25rem;
+}
+
+.fc-card-lg {
+  border: 1px solid var(--fc-border);
+  border-radius: var(--fc-radius-2xl);
+  background: var(--fc-surface);
+  box-shadow: var(--fc-panel-shadow-lg);
+  backdrop-filter: blur(12px);
+  padding: 1.5rem;
+}
+
+.fc-card-dark {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--fc-radius-2xl);
+  background: linear-gradient(160deg, #1c1917 0%, #292524 100%);
+  color: #fafaf9;
+  box-shadow: var(--fc-panel-shadow-lg);
+  padding: 1.5rem;
+}
+
+/* ── Brand dot ── */
+.fc-brand-dot {
+  display: inline-block;
+  height: 0.65rem;
+  width: 0.65rem;
   border-radius: 999px;
-  border: 1px solid var(--fc-line);
-  transition:
-    transform 180ms ease,
-    background-color 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease;
+  background: linear-gradient(135deg, var(--fc-warm), var(--fc-accent));
 }
 
-.fitcal-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(32, 31, 24, 0.08);
-}
-
-.fitcal-btn-main {
-  background: var(--fc-ink);
-  color: #f8f3ea;
-}
-
-.fitcal-btn-ghost {
-  background: rgba(255, 255, 255, 0.76);
-  color: var(--fc-ink);
-}
-
-.fitcal-hero-panel,
-.fitcal-stream-panel,
-.fitcal-proof-panel,
-.fitcal-target-panel {
-  border: 1px solid var(--fc-line);
-  background: var(--fc-panel);
-  box-shadow:
-    0 22px 48px rgba(43, 39, 31, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(6px);
-}
-
-.fitcal-hero-panel,
-.fitcal-proof-panel,
-.fitcal-target-panel {
-  border-radius: 2rem;
-  padding: 1.4rem;
-}
-
-.fitcal-stream-panel {
-  border-radius: 1.8rem;
-  padding: 1.2rem;
-}
-
-.fitcal-landing-hero {
-  display: grid;
-  gap: 1.35rem;
-  align-items: stretch;
-}
-
-.fitcal-landing-copy {
-  padding: 0.2rem 0;
-}
-
-.fitcal-target-stage {
-  display: grid;
-  gap: 1rem;
-}
-
-.fitcal-target-topline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.fitcal-target-meta {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--fc-line);
-}
-
-.fitcal-target-meta p {
-  font-size: 0.95rem;
-  line-height: 1.65;
-  color: var(--fc-muted);
-}
-
-.fitcal-landing-side-note {
-  padding-top: 0.95rem;
-  border-top: 1px solid var(--fc-line);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--fc-muted);
-}
-
-.fitcal-rule-ribbon {
+/* ── Inputs ── */
+.fc-input-group {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.35rem;
 }
 
-.fitcal-rule-list {
-  display: grid;
-  gap: 0.85rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.fitcal-rule-list li {
-  position: relative;
-  padding-left: 2.6rem;
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-.fitcal-rule-list li::before {
-  content: "•";
-  position: absolute;
-  left: 0.45rem;
-  top: -0.02rem;
-  font-family: var(--font-dm-serif-display), serif;
-  font-size: 1.6rem;
-  line-height: 1;
-  color: var(--fc-accent);
-}
-
-.fitcal-rule-list li + li {
-  padding-top: 0.2rem;
-}
-
-.fitcal-sequence-card span {
-  font-family: var(--font-dm-serif-display), serif;
-  font-size: 1.65rem;
-  line-height: 1;
-  color: var(--fc-accent);
-}
-
-.fitcal-sequence-card {
-  display: grid;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: 1.45rem;
-  border: 1px solid var(--fc-line);
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.fitcal-sequence-card h2 {
-  font-size: 1.18rem;
+.fc-input-label {
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: -0.03em;
+  color: var(--fc-ink-secondary);
 }
 
-.fitcal-sequence-card p {
-  font-size: 0.95rem;
-  line-height: 1.7;
+.fc-input {
+  width: 100%;
+  border: 1px solid var(--fc-border-strong);
+  border-radius: var(--fc-radius-md);
+  background: rgba(255,255,255,0.9);
+  padding: 0.7rem 0.85rem;
+  font-size: 0.92rem;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.fc-input:focus {
+  outline: none;
+  border-color: var(--fc-accent);
+  box-shadow: 0 0 0 3px var(--fc-accent-soft);
+}
+
+.fc-input::placeholder {
+  color: var(--fc-muted);
+  opacity: 0.6;
+}
+
+.fc-input-file {
+  width: 100%;
+  border: 2px dashed var(--fc-border-strong);
+  border-radius: var(--fc-radius-lg);
+  background: var(--fc-bg-alt);
+  padding: 1.25rem 1rem;
+  font-size: 0.85rem;
+  color: var(--fc-muted);
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.fc-input-file:hover, .fc-input-file:focus {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+}
+
+/* ── Status Chips ── */
+.fc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.fc-chip-accent {
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+  border: 1px solid var(--fc-accent-border);
+}
+
+.fc-chip-warm {
+  background: var(--fc-warm-soft);
+  color: var(--fc-warm);
+  border: 1px solid var(--fc-warm-border);
+}
+
+.fc-chip-muted {
+  background: rgba(120, 113, 108, 0.08);
+  color: var(--fc-muted);
+  border: 1px solid rgba(120, 113, 108, 0.14);
+}
+
+/* ── Stat block ── */
+.fc-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--fc-radius-md);
+  border: 1px solid var(--fc-border);
+  background: rgba(255,255,255,0.6);
+}
+
+.fc-stat-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--fc-muted);
 }
 
-.fitcal-proof-panel {
-  display: grid;
-  gap: 1.25rem;
-  background:
-    linear-gradient(165deg, rgba(24, 25, 21, 0.94), rgba(34, 50, 43, 0.88));
-  color: #f6efe3;
-}
-
-.fitcal-proof-panel .fitcal-section-kicker,
-.fitcal-proof-panel .fitcal-soft-label {
-  color: rgba(246, 239, 227, 0.7);
-}
-
-.fitcal-proof-grid {
-  display: grid;
-  gap: 0.8rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.fitcal-proof-grid div {
-  padding: 0.95rem 1rem;
-  border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.fitcal-proof-grid strong {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 1.05rem;
-}
-
-.fitcal-detail-drawer {
-  margin-top: 1.5rem;
-  border-top: 1px solid var(--fc-line);
-  padding-top: 1rem;
-}
-
-.fitcal-detail-drawer summary {
-  cursor: pointer;
-  list-style: none;
-  font-size: 0.92rem;
+.fc-stat-value {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-size: 1.1rem;
   font-weight: 600;
-  color: var(--fc-ink);
+  letter-spacing: -0.02em;
 }
 
-.fitcal-detail-drawer summary::-webkit-details-marker {
-  display: none;
-}
-
-.fitcal-detail-grid {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--fc-line);
-}
-
-.fitcal-detail-grid code {
-  font-family: var(--font-space-grotesk), sans-serif;
-  font-size: 0.86rem;
-}
-
-.fitcal-video-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.72rem;
-  justify-content: center;
-  border-radius: 999px;
-  padding: 0.95rem 1rem;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--fc-ink);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition:
-    transform 180ms ease,
-    background-color 180ms ease;
-}
-
-.fitcal-video-link:hover {
-  transform: translateY(-1px);
-  background: white;
-}
-
-.fitcal-dashboard-hero {
-  display: grid;
-  gap: 1rem;
-}
-
-.fitcal-tab-shell {
-  display: grid;
-  gap: 2rem;
-}
-
-.fitcal-tab-bar {
+/* ── Tab navigation ── */
+.fc-tab-bar {
   position: sticky;
-  top: 0.75rem;
-  z-index: 30;
+  top: 0;
+  z-index: 40;
   display: flex;
-  flex-wrap: nowrap;
-  gap: 0.6rem;
-  padding: 0.75rem;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border: 1px solid var(--fc-border);
+  border-radius: 999px;
+  background: rgba(250, 249, 246, 0.92);
+  box-shadow: 0 4px 20px rgba(28, 25, 23, 0.06);
+  backdrop-filter: blur(16px);
   overflow-x: auto;
-  border: 1px solid var(--fc-line);
-  border-radius: 1.4rem;
-  background: rgba(248, 243, 235, 0.88);
-  box-shadow:
-    0 12px 32px rgba(43, 39, 31, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(10px);
+  scrollbar-width: none;
 }
 
-.fitcal-tab-trigger {
+.fc-tab-bar::-webkit-scrollbar { display: none; }
+
+.fc-tab {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.6rem;
-  flex: 0 0 auto;
-  padding: 0.7rem 1rem;
+  min-height: 2.5rem;
+  padding: 0.6rem 1rem;
   border-radius: 999px;
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
   color: var(--fc-muted);
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  transition:
-    background-color 180ms ease,
-    color 180ms ease,
-    border-color 180ms ease,
-    transform 180ms ease;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 200ms ease;
 }
 
-.fitcal-tab-trigger:hover {
-  transform: translateY(-1px);
+.fc-tab:hover {
   color: var(--fc-ink);
+  background: rgba(28, 25, 23, 0.04);
 }
 
-.fitcal-tab-trigger.is-active {
-  border-color: rgba(13, 122, 105, 0.18);
-  background: rgba(13, 122, 105, 0.1);
-  color: var(--fc-accent);
+.fc-tab.is-active {
+  background: var(--fc-accent);
+  color: white;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
 }
 
-.fitcal-scroll-section {
+/* ── Timeline row ── */
+.fc-timeline-row {
   display: grid;
-  gap: 1.25rem;
-  scroll-margin-top: 6rem;
-}
-
-.fitcal-scroll-section + .fitcal-scroll-section {
-  padding-top: 1.4rem;
-  border-top: 1px solid rgba(33, 31, 24, 0.08);
-}
-
-.fitcal-section-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  justify-content: space-between;
+  grid-template-columns: 1fr auto;
   gap: 1rem;
+  align-items: start;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--fc-border);
 }
 
-.fitcal-section-title {
-  margin-top: 0.35rem;
-  font-size: clamp(1.7rem, 2vw, 2.35rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-  font-weight: 600;
+.fc-timeline-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
-.fitcal-section-stack {
-  display: grid;
-  gap: 1rem;
-  padding: 1.1rem 0 0;
-}
-
-.fitcal-status-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.2rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--fc-line);
-}
-
-.fitcal-status-chip {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.8rem 0.95rem;
-  border-radius: 1rem;
-  border: 1px solid var(--fc-line);
-  background: rgba(255, 255, 255, 0.7);
-  min-width: 8.5rem;
-}
-
-.fitcal-status-chip span {
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--fc-muted);
-}
-
-.fitcal-status-chip strong {
-  font-size: 1.1rem;
-  line-height: 1.2;
-  letter-spacing: -0.03em;
-}
-
-.fitcal-status-message {
-  max-width: 72ch;
-  margin-top: 1rem;
-  font-size: 0.98rem;
-  line-height: 1.7;
-  color: var(--fc-muted);
-}
-
-.fitcal-profile-grid > div,
-.fitcal-glance-stack > div {
-  padding: 1rem;
-  border-radius: 1.35rem;
-  border: 1px solid var(--fc-line);
-  background: rgba(255, 255, 255, 0.64);
-}
-
-.fitcal-glance-stack span {
-  display: block;
-  font-size: 0.72rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--fc-muted);
-}
-
-.fitcal-onboarding-grid,
-.fitcal-dashboard-grid {
-  display: grid;
-  gap: 1.25rem;
-}
-
-.fitcal-glance-stack,
-.fitcal-profile-grid {
-  display: grid;
-  gap: 0.85rem;
-}
-
-.fitcal-profile-grid strong,
-.fitcal-glance-stack strong {
-  display: block;
-  margin-top: 0.35rem;
-  font-size: 1.05rem;
-}
-
-.fitcal-upload-slab {
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--fc-line);
-}
-
-.fitcal-upload-slab:first-child {
-  padding-top: 0;
-  border-top: none;
-}
-
-.fitcal-status-pill {
+/* ── Tag ── */
+.fc-tag {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.4rem 0.74rem;
   border-radius: 999px;
-  border: 1px solid rgba(13, 122, 105, 0.15);
-  background: rgba(13, 122, 105, 0.08);
-  color: var(--fc-accent);
-  font-size: 0.76rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.7rem;
   font-weight: 700;
+  border: 1px solid var(--fc-warm-border);
+  background: var(--fc-warm-soft);
+  color: var(--fc-warm);
 }
 
-.fitcal-field-grid {
-  display: grid;
-  gap: 0.85rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.fc-tag-ok {
+  border: 1px solid var(--fc-accent-border);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
 }
 
-.fitcal-upload-grid {
-  display: grid;
-  gap: 0.85rem;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-}
-
-.fitcal-empty-state,
-.fitcal-soft-block,
-.fitcal-panel,
-.fitcal-mini-panel,
-.fitcal-chart-stage,
-.fitcal-chart-readout {
-  border: 1px solid var(--fc-line);
-  border-radius: 1.35rem;
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: 0 10px 22px rgba(43, 39, 31, 0.05);
-}
-
-.fitcal-empty-state,
-.fitcal-soft-block,
-.fitcal-panel,
-.fitcal-mini-panel,
-.fitcal-chart-stage,
-.fitcal-chart-readout {
-  padding: 1rem;
-}
-
-.fitcal-timeline-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  align-items: start;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--fc-line);
-}
-
-.fitcal-timeline-row:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.fitcal-video-admin-list {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.fitcal-video-admin-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem 0.85rem;
-  border-radius: 1rem;
-  border: 1px solid var(--fc-line);
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.fitcal-chart-stage {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(247, 239, 229, 0.82));
-}
-
-.fitcal-chart-readout {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  justify-content: space-between;
-}
-
-.fitcal-chart-readout-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  font-size: 0.92rem;
-}
-
-.fitcal-chart-readout-label {
+/* ── Toggle chip (charts) ── */
+.fc-toggle-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
-  color: var(--fc-muted);
-}
-
-.fitcal-toggle-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.58rem 0.86rem;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--chip-color) 24%, transparent);
-  background: color-mix(in srgb, var(--chip-color) 11%, white 89%);
+  border: 1px solid color-mix(in srgb, var(--chip-color) 22%, transparent);
+  background: color-mix(in srgb, var(--chip-color) 8%, white 92%);
   color: var(--fc-ink);
-  transition:
-    transform 180ms ease,
-    opacity 180ms ease;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 200ms ease;
 }
 
-.fitcal-toggle-chip:hover {
-  transform: translateY(-1px);
-}
+.fc-toggle-chip:hover { transform: translateY(-1px); }
+.fc-toggle-chip.is-off { opacity: 0.35; }
 
-.fitcal-toggle-chip.is-off {
-  opacity: 0.42;
-}
-
-.fitcal-toggle-dot {
-  width: 0.65rem;
-  height: 0.65rem;
+.fc-toggle-dot {
+  width: 0.55rem;
+  height: 0.55rem;
   border-radius: 999px;
   background: var(--chip-color, var(--fc-accent));
 }
 
-.fitcal-auth-aside-list {
-  display: grid;
-  gap: 0.5rem;
+/* ── Upload slab ── */
+.fc-upload-slab {
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--fc-border);
+}
+
+.fc-upload-slab:first-child { padding-top: 0; }
+.fc-upload-slab:last-child { border-bottom: none; padding-bottom: 0; }
+
+/* ── Video rows ── */
+.fc-video-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--fc-radius-md);
+  border: 1px solid var(--fc-border);
+  background: rgba(255,255,255,0.7);
+}
+
+/* ── Chart ── */
+.fc-chart-area {
+  border-radius: var(--fc-radius-lg);
+  border: 1px solid var(--fc-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,243,239,0.8));
+  padding: 1rem;
+}
+
+.fc-chart-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-radius: var(--fc-radius-lg);
+  border: 1px solid var(--fc-border);
+  background: rgba(255,255,255,0.6);
+  padding: 1rem;
+}
+
+.fc-chart-readout-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.fc-chart-readout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--fc-muted);
 }
 
-.fitcal-form-intro {
+/* ── Rules list ── */
+.fc-rule-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rule;
+}
+
+.fc-rule-list li {
+  position: relative;
+  padding-left: 2.8rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  counter-increment: rule;
+}
+
+.fc-rule-list li::before {
+  content: counter(rule);
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.fitcal-input-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #304039;
-}
-
-.fitcal-input {
-  width: 100%;
-  border: 1px solid rgba(31, 35, 31, 0.12);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.76rem 0.84rem;
-  font-size: 0.96rem;
-}
-
-.fitcal-input:focus {
-  outline: 2px solid rgba(13, 122, 105, 0.28);
-  outline-offset: 1px;
-}
-
-.fitcal-tag,
-.fitcal-tag-ok {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
   border-radius: 999px;
-  padding: 0.25rem 0.64rem;
+  background: var(--fc-accent-soft);
+  border: 1px solid var(--fc-accent-border);
+  color: var(--fc-accent);
+  font-family: var(--font-outfit), system-ui, sans-serif;
   font-size: 0.72rem;
   font-weight: 700;
 }
 
-.fitcal-tag {
-  border: 1px solid rgba(212, 111, 59, 0.18);
-  background: rgba(212, 111, 59, 0.12);
-  color: #8f4a24;
+/* ── Video link ── */
+.fc-video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.85rem 1.15rem;
+  background: rgba(255,255,255,0.9);
+  color: var(--fc-ink);
+  border: 1px solid var(--fc-border);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 200ms ease;
 }
 
-.fitcal-tag-ok {
-  border: 1px solid rgba(13, 122, 105, 0.18);
-  background: rgba(13, 122, 105, 0.12);
-  color: var(--fc-accent);
+.fc-video-link:hover {
+  transform: translateY(-2px);
+  background: white;
+  box-shadow: 0 6px 16px rgba(28,25,23,0.08);
 }
 
-.fitcal-rise {
+/* ── Animations ── */
+.fc-rise {
   opacity: 0;
-  transform: translateY(12px);
-  animation: fitcal-rise 640ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translateY(16px);
+  animation: fc-rise 600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-@keyframes fitcal-rise {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.fc-rise-delay-1 { animation-delay: 80ms; }
+.fc-rise-delay-2 { animation-delay: 160ms; }
+.fc-rise-delay-3 { animation-delay: 240ms; }
+
+@keyframes fc-rise {
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@media (min-width: 960px) {
-  .fitcal-landing-hero {
-    grid-template-columns: minmax(0, 1.05fr) minmax(19rem, 0.95fr);
-  }
-
-  .fitcal-detail-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .fitcal-dashboard-hero {
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-    align-items: stretch;
-  }
-
-  .fitcal-dashboard-grid {
-    grid-template-columns: minmax(0, 1.18fr) minmax(21rem, 0.82fr);
-    align-items: start;
-  }
-
-  .fitcal-onboarding-grid {
-    grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
-  }
+@keyframes fc-count-up {
+  from { opacity: 0; transform: scale(0.8) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-@media (max-width: 1024px) {
+.fc-count-animated {
+  animation: fc-count-up 500ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
 }
 
-@media (max-width: 768px) {
-  .fitcal-hero-panel,
-  .fitcal-stream-panel,
-  .fitcal-proof-panel,
-  .fitcal-target-panel {
-    border-radius: 1.45rem;
-    padding: 1rem;
+@keyframes fc-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(5, 150, 105, 0); }
+}
+
+.fc-pulse { animation: fc-pulse-glow 2s ease-in-out infinite; }
+
+/* ── Sequence cards ── */
+.fc-step-card {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.15rem;
+  border-radius: var(--fc-radius-lg);
+  border: 1px solid var(--fc-border);
+  background: rgba(255,255,255,0.6);
+  transition: all 250ms ease;
+}
+
+.fc-step-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(28,25,23,0.06);
+  background: rgba(255,255,255,0.85);
+}
+
+.fc-step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--fc-accent);
+  color: white;
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ── Details/Accordion ── */
+.fc-details summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--fc-ink);
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--fc-border);
+  transition: color 200ms ease;
+}
+
+.fc-details summary::-webkit-details-marker { display: none; }
+.fc-details summary::after {
+  content: "›";
+  font-size: 1.1rem;
+  transition: transform 200ms ease;
+  color: var(--fc-muted);
+}
+.fc-details[open] summary::after { transform: rotate(90deg); }
+
+/* ── Auth aside list ── */
+.fc-auth-aside-list {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--fc-muted);
+  font-size: 0.88rem;
+}
+
+/* ── Responsive grid helpers ── */
+.fc-grid-2 { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, 1fr); }
+.fc-grid-3 { display: grid; gap: 0.75rem; grid-template-columns: repeat(3, 1fr); }
+
+/* ── Scroll section (dashboard) ── */
+.fc-section {
+  display: grid;
+  gap: 1.25rem;
+  scroll-margin-top: 5rem;
+}
+
+.fc-section + .fc-section {
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--fc-border);
+}
+
+/* ── Status message ── */
+.fc-daily-message {
+  max-width: 72ch;
+  margin-top: 0.75rem;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--fc-muted);
+  font-style: italic;
+}
+
+/* ── Mobile bottom nav ── */
+@media (max-width: 639px) {
+  .fc-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    padding: 0.4rem 0.5rem calc(0.4rem + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(28,25,23,0.08);
   }
 
-  .fitcal-field-grid,
-  .fitcal-upload-grid,
-  .fitcal-proof-grid {
-    grid-template-columns: 1fr;
+  .fc-tab {
+    font-size: 0.72rem;
+    padding: 0.5rem 0.6rem;
+    min-height: 2.2rem;
   }
 
-  .fitcal-status-chip {
-    min-width: 0;
-    flex: 1 1 12rem;
-  }
+  .fc-has-bottom-nav { padding-bottom: 4.5rem; }
 
-  .fitcal-tab-bar {
-    top: 0.5rem;
-    padding: 0.6rem;
-  }
+  .fc-grid-2, .fc-grid-3 { grid-template-columns: 1fr; }
+}
 
-  .fitcal-tab-trigger {
-    min-height: 2.45rem;
-  }
+/* ── Tablet+ ── */
+@media (min-width: 640px) {
+  .fc-card-lg, .fc-card-dark { padding: 2rem; }
+}
 
-  .fitcal-timeline-row {
-    grid-template-columns: 1fr;
-  }
-
-  .fitcal-video-admin-row {
-    align-items: stretch;
-  }
-
-  .fitcal-chart-stage {
-    padding: 0.85rem;
-  }
+/* ── Desktop ── */
+@media (min-width: 1024px) {
+  .fc-grid-3 { grid-template-columns: repeat(3, 1fr); }
 }

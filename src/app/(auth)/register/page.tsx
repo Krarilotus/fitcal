@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/fitcal/auth-shell";
 import { FlashMessage } from "@/components/fitcal/flash-message";
+import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/session";
 
 interface PageProps {
@@ -39,23 +40,23 @@ export default async function RegisterPage({ searchParams }: PageProps) {
         <FlashMessage error={error} />
         <form action="/api/auth/register" className="space-y-4" method="post">
           <input name="invitationToken" type="hidden" value={inviteToken} />
-          <div className="fitcal-form-intro">
-            <p className="fitcal-section-kicker">Profil</p>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="fc-kicker">Profil</p>
             <p className="text-sm text-[var(--fc-muted)]">
               {hasInvite
                 ? "Basisdaten, optionale Messwerte und dann direkt los."
                 : "Basisdaten, optionale Messwerte und danach Freigabe durch bestehende Nutzer."}
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="fitcal-input-wrap">
-              Name
-              <input className="fitcal-input" name="name" type="text" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="fc-input-group">
+              <span className="fc-input-label">Name</span>
+              <input className="fc-input" name="name" type="text" />
             </label>
-            <label className="fitcal-input-wrap">
-              Geburtsdatum
+            <label className="fc-input-group">
+              <span className="fc-input-label">Geburtsdatum</span>
               <input
-                className="fitcal-input"
+                className="fc-input"
                 inputMode="numeric"
                 name="birthDate"
                 pattern="\d{2}\.\d{2}\.\d{4}"
@@ -63,10 +64,10 @@ export default async function RegisterPage({ searchParams }: PageProps) {
                 type="text"
               />
             </label>
-            <label className="fitcal-input-wrap">
-              Körpergröße in cm
+            <label className="fc-input-group">
+              <span className="fc-input-label">Körpergröße in cm</span>
               <input
-                className="fitcal-input"
+                className="fc-input"
                 inputMode="decimal"
                 name="heightCm"
                 placeholder="z. B. 178"
@@ -74,18 +75,18 @@ export default async function RegisterPage({ searchParams }: PageProps) {
                 type="number"
               />
             </label>
-            <label className="fitcal-input-wrap md:col-span-2">
-              E-Mail
-              <input className="fitcal-input" name="email" required type="email" />
+            <label className="fc-input-group sm:col-span-2">
+              <span className="fc-input-label">E-Mail</span>
+              <input className="fc-input" name="email" required type="email" />
             </label>
-            <label className="fitcal-input-wrap md:col-span-2">
-              Passwort
-              <input className="fitcal-input" name="password" required type="password" />
+            <label className="fc-input-group sm:col-span-2">
+              <span className="fc-input-label">Passwort</span>
+              <input className="fc-input" name="password" required type="password" />
             </label>
-            <label className="fitcal-input-wrap">
-              Bauchumfang in cm
+            <label className="fc-input-group">
+              <span className="fc-input-label">Bauchumfang in cm</span>
               <input
-                className="fitcal-input"
+                className="fc-input"
                 inputMode="decimal"
                 name="waistCircumferenceCm"
                 placeholder="z. B. 92"
@@ -93,10 +94,10 @@ export default async function RegisterPage({ searchParams }: PageProps) {
                 type="number"
               />
             </label>
-            <label className="fitcal-input-wrap">
-              Gewicht in kg
+            <label className="fc-input-group">
+              <span className="fc-input-label">Gewicht in kg</span>
               <input
-                className="fitcal-input"
+                className="fc-input"
                 inputMode="decimal"
                 name="weightKg"
                 placeholder="z. B. 81.5"
@@ -104,38 +105,35 @@ export default async function RegisterPage({ searchParams }: PageProps) {
                 type="number"
               />
             </label>
-            <label className="fitcal-input-wrap md:col-span-2">
-              Warum machst du mit?
+            <label className="fc-input-group sm:col-span-2">
+              <span className="fc-input-label">Warum machst du mit?</span>
               <textarea
-                className="fitcal-input min-h-24"
+                className="fc-input min-h-24"
                 maxLength={240}
                 name="motivation"
                 placeholder="Optional."
               />
             </label>
-            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] md:col-span-2">
+            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] sm:col-span-2">
               <input
-                className="h-4 w-4 accent-[var(--fc-accent)]"
+                className="h-4 w-4 rounded accent-[var(--fc-accent)]"
                 name="isStudentDiscount"
                 type="checkbox"
               />
               <span>Armer Student</span>
             </label>
-            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] md:col-span-2">
+            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] sm:col-span-2">
               <input
-                className="h-4 w-4 accent-[var(--fc-accent)]"
+                className="h-4 w-4 rounded accent-[var(--fc-accent)]"
                 name="isLightParticipant"
                 type="checkbox"
               />
               <span>Light-Variante</span>
             </label>
           </div>
-          <button
-            className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"
-            type="submit"
-          >
+          <Button className="w-full" type="submit">
             {hasInvite ? "Account anlegen" : "Registrierungsanfrage senden"}
-          </button>
+          </Button>
         </form>
       </div>
     </AuthShell>

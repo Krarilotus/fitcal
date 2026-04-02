@@ -194,11 +194,12 @@ export function DashboardTabs({
   }, []);
 
   return (
-    <div className="fitcal-tab-shell">
-      <nav className="fitcal-tab-bar">
+    <div className="grid gap-6 fc-has-bottom-nav">
+      {/* ── Tab navigation ── */}
+      <nav className="fc-tab-bar">
         {tabs.map((tab) => (
           <a
-            className={`fitcal-tab-trigger ${activeTab === tab.key ? "is-active" : ""}`}
+            className={`fc-tab ${activeTab === tab.key ? "is-active" : ""}`}
             href={`#${tab.key}`}
             key={tab.key}
           >
@@ -207,93 +208,108 @@ export function DashboardTabs({
         ))}
       </nav>
 
-      <section className="fitcal-scroll-section fitcal-rise" data-fitcal-section id="overview">
-        <div className="fitcal-section-head">
+      {/* ══════════════════════════════════════════════
+          OVERVIEW
+         ══════════════════════════════════════════════ */}
+      <section className="fc-section fc-rise" data-fitcal-section id="overview">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="fitcal-section-kicker">Übersicht</p>
-            <h2 className="fitcal-section-title">Heute zählt nur, was wirklich drinsteht.</h2>
+            <p className="fc-kicker">Übersicht</p>
+            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">
+              Heute zählt nur, was wirklich drinsteht.
+            </h2>
           </div>
         </div>
 
-        <div className="fitcal-target-panel">
-          <Badge variant="warm">Tag {overview.dayNumber}</Badge>
+        <div className="fc-card-lg">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant="warm">Tag {overview.dayNumber}</Badge>
+            {overview.isQualificationPhase && <Badge variant="accent">Quali-Phase</Badge>}
+          </div>
+
           <div className="mt-5 flex flex-wrap items-end gap-5">
             <div>
-              <p className="fitcal-soft-label">Heute pro Übung</p>
-              <p className="mt-2 text-6xl leading-none font-semibold tracking-[-0.06em] sm:text-7xl lg:text-8xl">
+              <p className="fc-kicker">Heute pro Übung</p>
+              <p className="fc-display fc-count-animated mt-2 text-[clamp(3.5rem,8vw,5.5rem)] text-[var(--fc-accent)]">
                 {overview.currentTarget}
               </p>
             </div>
           </div>
 
-          <div className="fitcal-status-strip">
-            <div className="fitcal-status-chip">
-              <span>{overview.isQualificationPhase ? "Quali-Tag" : "Qualifiziert"}</span>
-              <strong>
+          {/* Status chips grid */}
+          <div className="mt-5 grid grid-cols-2 gap-2.5 border-t border-[var(--fc-border)] pt-5 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="fc-stat">
+              <span className="fc-stat-label">
+                {overview.isQualificationPhase ? "Quali-Tag" : "Qualifiziert"}
+              </span>
+              <span className="fc-stat-value">
                 {overview.isQualificationPhase
                   ? `${overview.qualificationDay}/${overview.qualificationWindowDays}`
                   : `${overview.qualificationUploads}/${overview.qualificationRequiredUploads}`}
-              </strong>
+              </span>
             </div>
-            <div className="fitcal-status-chip">
-              <span>Uploads</span>
-              <strong>
+            <div className="fc-stat">
+              <span className="fc-stat-label">Uploads</span>
+              <span className="fc-stat-value">
                 {overview.qualificationUploads}/{overview.qualificationRequiredUploads}
-              </strong>
+              </span>
             </div>
-            <div className="fitcal-status-chip">
-              <span>{overview.isLightParticipant ? "Modus" : "Schulden offen"}</span>
-              <strong>{overview.isLightParticipant ? "Light" : overview.outstandingDebtLabel}</strong>
+            <div className="fc-stat">
+              <span className="fc-stat-label">{overview.isLightParticipant ? "Modus" : "Schulden"}</span>
+              <span className="fc-stat-value">{overview.isLightParticipant ? "Light" : overview.outstandingDebtLabel}</span>
             </div>
-            <div className="fitcal-status-chip">
-              <span>{overview.isLightParticipant ? "Pool" : "Review-Guthaben"}</span>
-              <strong>{overview.isLightParticipant ? "Aus" : overview.reviewBudgetLabel}</strong>
+            <div className="fc-stat">
+              <span className="fc-stat-label">{overview.isLightParticipant ? "Pool" : "Review"}</span>
+              <span className="fc-stat-value">{overview.isLightParticipant ? "Aus" : overview.reviewBudgetLabel}</span>
             </div>
-            <div className="fitcal-status-chip">
-              <span>{overview.isLightParticipant ? "Pool" : "Joker frei gesamt"}</span>
-              <strong>{overview.isLightParticipant ? "Aus" : overview.monthJokersRemaining}</strong>
+            <div className="fc-stat">
+              <span className="fc-stat-label">{overview.isLightParticipant ? "Pool" : "Joker frei"}</span>
+              <span className="fc-stat-value">{overview.isLightParticipant ? "Aus" : overview.monthJokersRemaining}</span>
             </div>
-            <div className="fitcal-status-chip">
-              <span>{overview.isLightParticipant ? "Review" : "Tage gesamt"}</span>
-              <strong>{overview.isLightParticipant ? "Aus" : overview.documentedDays}</strong>
+            <div className="fc-stat">
+              <span className="fc-stat-label">{overview.isLightParticipant ? "Review" : "Tage"}</span>
+              <span className="fc-stat-value">{overview.isLightParticipant ? "Aus" : overview.documentedDays}</span>
             </div>
           </div>
 
           {overview.dailyMessage ? (
-            <p className="fitcal-status-message">{overview.dailyMessage}</p>
+            <p className="fc-daily-message">{overview.dailyMessage}</p>
           ) : null}
         </div>
       </section>
 
-      <section className="fitcal-scroll-section fitcal-rise" data-fitcal-section id="uploads">
-        <div className="fitcal-section-head">
+      {/* ══════════════════════════════════════════════
+          UPLOADS
+         ══════════════════════════════════════════════ */}
+      <section className="fc-section fc-rise" data-fitcal-section id="uploads">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="fitcal-section-kicker">Uploads</p>
-            <h2 className="fitcal-section-title">Offene Tage</h2>
+            <p className="fc-kicker">Uploads</p>
+            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Offene Tage</h2>
           </div>
-          <p className="text-sm text-[var(--fc-muted)]">Maximal 4 Videos. Max. 100 MB pro Datei.</p>
+          <p className="text-sm text-[var(--fc-muted)]">Maximal 4 Videos · Max. 100 MB</p>
         </div>
 
-        <div className="fitcal-section-stack">
+        <div className="grid gap-4">
           {overview.isLightParticipant ? (
-            <div className="fitcal-empty-state">
+            <div className="fc-card text-sm text-[var(--fc-muted)]">
               In der Light-Variante sind Uploads und Joker ausgeblendet.
             </div>
           ) : openDays.length > 0 ? (
             openDays.map((day) => (
-              <article className="fitcal-upload-slab" key={day.challengeDate}>
+              <article className="fc-card" key={day.challengeDate}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="fitcal-soft-label">{day.dateLabel}</p>
-                    <h3 className="mt-2 text-xl font-semibold">
+                    <p className="fc-kicker">{day.dateLabel}</p>
+                    <h3 className="fc-heading mt-1.5 text-xl">
                       {day.targetReps} Liegestütze / {day.targetReps} Sit-ups
                     </h3>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="fitcal-status-pill">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="fc-chip fc-chip-accent">
                       {day.isCurrentDay ? "Heute" : "Gestern"}
                     </span>
-                    {day.isQualificationDay ? <span className="fitcal-status-pill">Quali</span> : null}
+                    {day.isQualificationDay ? <span className="fc-chip fc-chip-warm">Quali</span> : null}
                   </div>
                 </div>
 
@@ -305,22 +321,22 @@ export function DashboardTabs({
                 >
                   <input name="challengeDate" type="hidden" value={day.challengeDate} />
 
-                  <div className="fitcal-field-grid">
-                    <label className="fitcal-input-wrap">
-                      Liegestütze Set 1
-                      <input className="fitcal-input" min="0" name="pushupSet1" required type="number" />
+                  <div className="fc-grid-2">
+                    <label className="fc-input-group">
+                      <span className="fc-input-label">Liegestütze Set 1</span>
+                      <input className="fc-input" min="0" name="pushupSet1" required type="number" />
                     </label>
-                    <label className="fitcal-input-wrap">
-                      Liegestütze Set 2
-                      <input className="fitcal-input" min="0" name="pushupSet2" required type="number" />
+                    <label className="fc-input-group">
+                      <span className="fc-input-label">Liegestütze Set 2</span>
+                      <input className="fc-input" min="0" name="pushupSet2" required type="number" />
                     </label>
-                    <label className="fitcal-input-wrap">
-                      Sit-ups Set 1
-                      <input className="fitcal-input" min="0" name="situpSet1" required type="number" />
+                    <label className="fc-input-group">
+                      <span className="fc-input-label">Sit-ups Set 1</span>
+                      <input className="fc-input" min="0" name="situpSet1" required type="number" />
                     </label>
-                    <label className="fitcal-input-wrap">
-                      Sit-ups Set 2
-                      <input className="fitcal-input" min="0" name="situpSet2" required type="number" />
+                    <label className="fc-input-group">
+                      <span className="fc-input-label">Sit-ups Set 2</span>
+                      <input className="fc-input" min="0" name="situpSet2" required type="number" />
                     </label>
                   </div>
 
@@ -329,21 +345,21 @@ export function DashboardTabs({
                     Schulden angerechnet.
                   </p>
 
-                  <div className="fitcal-upload-grid">
-                    <label className="fitcal-input-wrap">
-                      Videos
+                  <div className="grid gap-3 sm:grid-cols-[1.1fr_0.9fr]">
+                    <label className="fc-input-group">
+                      <span className="fc-input-label">Videos</span>
                       <input
                         accept="video/*"
-                        className="fitcal-input"
+                        className="fc-input-file"
                         multiple
                         name="videos"
                         required
                         type="file"
                       />
                     </label>
-                    <label className="fitcal-input-wrap">
-                      Notiz
-                      <textarea className="fitcal-input min-h-28" name="notes" />
+                    <label className="fc-input-group">
+                      <span className="fc-input-label">Notiz</span>
+                      <textarea className="fc-input min-h-[5.5rem]" name="notes" />
                     </label>
                   </div>
 
@@ -363,42 +379,45 @@ export function DashboardTabs({
               </article>
             ))
           ) : (
-            <div className="fitcal-empty-state">Aktuell sind keine Uploads offen.</div>
+            <div className="fc-card text-sm text-[var(--fc-muted)]">Aktuell sind keine Uploads offen.</div>
           )}
         </div>
       </section>
 
-      <section className="fitcal-scroll-section fitcal-rise" data-fitcal-section id="timeline">
-        <div className="fitcal-section-head">
+      {/* ══════════════════════════════════════════════
+          TIMELINE
+         ══════════════════════════════════════════════ */}
+      <section className="fc-section fc-rise" data-fitcal-section id="timeline">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="fitcal-section-kicker">Timeline</p>
-            <h2 className="fitcal-section-title">Letzte Tage</h2>
+            <p className="fc-kicker">Timeline</p>
+            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Letzte Tage</h2>
           </div>
         </div>
 
-        <div className="fitcal-section-stack">
+        <div className="fc-card">
           {timelineEntries.map((day) => (
-            <div className="fitcal-timeline-row" key={day.challengeDate}>
-              <div className="space-y-3">
+            <div className="fc-timeline-row" key={day.challengeDate}>
+              <div className="space-y-2">
                 <p className="font-semibold">{day.dateLabel}</p>
                 <p className="text-sm text-[var(--fc-muted)]">Ziel {day.repsTarget} je Übung</p>
                 {day.videos.length ? (
-                  <div className="fitcal-video-admin-list">
+                  <div className="mt-2 grid gap-2">
                     {day.videos.map((video) => (
-                      <div className="fitcal-video-admin-row" key={video.id}>
+                      <div className="fc-video-row" key={video.id}>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">{video.originalName}</p>
                           <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button asChild className="px-3 py-2 text-xs" variant="ghost">
+                        <div className="flex items-center gap-1.5">
+                          <Button asChild variant="ghost" size="sm">
                             <a href={`/api/videos/${video.id}`} target="_blank">
                               Öffnen
                             </a>
                           </Button>
                           <form action="/api/videos/delete" method="post">
                             <input name="videoId" type="hidden" value={video.id} />
-                            <Button className="px-3 py-2 text-xs" type="submit" variant="secondary">
+                            <Button size="sm" type="submit" variant="secondary">
                               Löschen
                             </Button>
                           </form>
@@ -410,74 +429,77 @@ export function DashboardTabs({
               </div>
 
               <div className="text-right">
-                <span className="fitcal-tag">{day.statusLabel}</span>
+                <span className="fc-tag">{day.statusLabel}</span>
                 {day.pushupTotal != null && day.situpTotal != null ? (
-                  <div className="mt-2 space-y-1 text-sm text-[var(--fc-muted)]">
-                    <p>
+                  <div className="mt-2 space-y-0.5 text-sm text-[var(--fc-muted)]">
+                    <p className="font-medium text-[var(--fc-ink)]">
                       {day.pushupTotal} / {day.situpTotal}
                     </p>
                     <p>
-                      L {day.pushupSet1 ?? 0} + {day.pushupSet2 ?? 0} · S {day.situpSet1 ?? 0} +{" "}
-                      {day.situpSet2 ?? 0}
+                      L {day.pushupSet1 ?? 0}+{day.pushupSet2 ?? 0} · S {day.situpSet1 ?? 0}+{day.situpSet2 ?? 0}
                     </p>
                     {(day.pushupOverTarget ?? 0) > 0 || (day.situpOverTarget ?? 0) > 0 ? (
-                      <p>
-                        Über Soll: +{day.pushupOverTarget ?? 0} Liegestütze · +{day.situpOverTarget ?? 0} Sit-ups
+                      <p className="text-[var(--fc-accent)]">
+                        +{day.pushupOverTarget ?? 0} L · +{day.situpOverTarget ?? 0} S
                       </p>
                     ) : null}
                   </div>
                 ) : null}
-                {day.debtLabel ? <p className="mt-1 text-sm text-amber-900">{day.debtLabel}</p> : null}
+                {day.debtLabel ? <p className="mt-1 text-sm font-medium text-[var(--fc-warm)]">{day.debtLabel}</p> : null}
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="fitcal-scroll-section fitcal-rise" data-fitcal-section id="metastats">
-        <div className="fitcal-section-head">
+      {/* ══════════════════════════════════════════════
+          METASTATS
+         ══════════════════════════════════════════════ */}
+      <section className="fc-section fc-rise" data-fitcal-section id="metastats">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="fitcal-section-kicker">Metastats</p>
-            <h2 className="fitcal-section-title">Profil, Messdaten und Verlauf</h2>
+            <p className="fc-kicker">Metastats</p>
+            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Profil, Messdaten und Verlauf</h2>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="space-y-6">
-            <section className="fitcal-stream-panel">
+            {/* Profile */}
+            <section className="fc-card">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="fitcal-section-kicker">Profil</p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Basisdaten</h3>
+                  <p className="fc-kicker">Profil</p>
+                  <h3 className="fc-heading mt-1 text-xl">Basisdaten</h3>
                 </div>
                 {profile.motivation ? <Badge>{profile.motivation}</Badge> : null}
               </div>
 
-              <div className="mt-5 fitcal-profile-grid">
+              <div className="mt-4 grid grid-cols-2 gap-2">
                 {profile.birthDateLabel ? (
-                  <div>
-                    <span className="fitcal-soft-label">Geburtsdatum</span>
-                    <strong>{profile.birthDateLabel}</strong>
+                  <div className="fc-stat">
+                    <span className="fc-stat-label">Geburtsdatum</span>
+                    <span className="fc-stat-value text-base">{profile.birthDateLabel}</span>
                   </div>
                 ) : null}
                 {profile.heightLabel ? (
-                  <div>
-                    <span className="fitcal-soft-label">Körpergröße</span>
-                    <strong>{profile.heightLabel}</strong>
+                  <div className="fc-stat">
+                    <span className="fc-stat-label">Körpergröße</span>
+                    <span className="fc-stat-value text-base">{profile.heightLabel}</span>
                   </div>
                 ) : null}
               </div>
 
-              <form action="/api/profile" className="mt-6 space-y-4" method="post">
-                <div className="fitcal-field-grid">
-                  <label className="fitcal-input-wrap">
-                    Name
-                    <input className="fitcal-input" defaultValue={profile.name ?? ""} name="name" type="text" />
+              <form action="/api/profile" className="mt-5 space-y-4" method="post">
+                <div className="fc-grid-2">
+                  <label className="fc-input-group">
+                    <span className="fc-input-label">Name</span>
+                    <input className="fc-input" defaultValue={profile.name ?? ""} name="name" type="text" />
                   </label>
-                  <label className="fitcal-input-wrap">
-                    Geburtsdatum
+                  <label className="fc-input-group">
+                    <span className="fc-input-label">Geburtsdatum</span>
                     <input
-                      className="fitcal-input"
+                      className="fc-input"
                       defaultValue={profile.birthDateInput}
                       inputMode="numeric"
                       name="birthDate"
@@ -486,10 +508,10 @@ export function DashboardTabs({
                       type="text"
                     />
                   </label>
-                  <label className="fitcal-input-wrap">
-                    Körpergröße in cm
+                  <label className="fc-input-group">
+                    <span className="fc-input-label">Körpergröße in cm</span>
                     <input
-                      className="fitcal-input"
+                      className="fc-input"
                       defaultValue={profile.heightInput}
                       inputMode="decimal"
                       name="heightCm"
@@ -498,10 +520,10 @@ export function DashboardTabs({
                     />
                   </label>
                 </div>
-                <label className="fitcal-input-wrap">
-                  Warum machst du das?
+                <label className="fc-input-group">
+                  <span className="fc-input-label">Warum machst du das?</span>
                   <textarea
-                    className="fitcal-input min-h-24"
+                    className="fc-input min-h-20"
                     defaultValue={profile.motivation ?? ""}
                     maxLength={240}
                     name="motivation"
@@ -516,53 +538,54 @@ export function DashboardTabs({
           </div>
 
           <div className="space-y-6">
-            <section className="fitcal-stream-panel">
+            {/* Measurements */}
+            <section className="fc-card">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <p className="fitcal-section-kicker">Messdaten</p>
-                  <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Verlauf und Einträge</h3>
+                  <p className="fc-kicker">Messdaten</p>
+                  <h3 className="fc-heading mt-1 text-xl">Verlauf und Einträge</h3>
                 </div>
               </div>
 
-              <div className="mt-5 fitcal-profile-grid">
+              <div className="mt-4 grid grid-cols-2 gap-2">
                 {profile.weightLabel ? (
-                  <div>
-                    <span className="fitcal-soft-label">Gewicht</span>
-                    <strong>{profile.weightLabel}</strong>
+                  <div className="fc-stat">
+                    <span className="fc-stat-label">Gewicht</span>
+                    <span className="fc-stat-value text-base">{profile.weightLabel}</span>
                   </div>
                 ) : null}
                 {profile.waistLabel ? (
-                  <div>
-                    <span className="fitcal-soft-label">Bauchumfang</span>
-                    <strong>{profile.waistLabel}</strong>
+                  <div className="fc-stat">
+                    <span className="fc-stat-label">Bauchumfang</span>
+                    <span className="fc-stat-value text-base">{profile.waistLabel}</span>
                   </div>
                 ) : null}
               </div>
 
-              <form action="/api/measurements" className="mt-6 space-y-4" method="post">
-                <div className="fitcal-field-grid">
-                  <label className="fitcal-input-wrap">
-                    Gewicht in kg
-                    <input className="fitcal-input" inputMode="decimal" name="weightKg" step="0.1" type="number" />
+              <form action="/api/measurements" className="mt-5 space-y-4" method="post">
+                <div className="fc-grid-2">
+                  <label className="fc-input-group">
+                    <span className="fc-input-label">Gewicht in kg</span>
+                    <input className="fc-input" inputMode="decimal" name="weightKg" step="0.1" type="number" />
                   </label>
-                  <label className="fitcal-input-wrap">
-                    Bauchumfang in cm
+                  <label className="fc-input-group">
+                    <span className="fc-input-label">Bauchumfang in cm</span>
                     <input
-                      className="fitcal-input"
+                      className="fc-input"
                       inputMode="decimal"
                       name="waistCircumferenceCm"
                       step="0.1"
                       type="number"
                     />
                   </label>
-                  <label className="fitcal-input-wrap">
-                    Ruhepuls
-                    <input className="fitcal-input" inputMode="numeric" name="restingPulseBpm" type="number" />
+                  <label className="fc-input-group">
+                    <span className="fc-input-label">Ruhepuls</span>
+                    <input className="fc-input" inputMode="numeric" name="restingPulseBpm" type="number" />
                   </label>
                 </div>
-                <label className="fitcal-input-wrap">
-                  Notiz
-                  <textarea className="fitcal-input min-h-24" name="notes" />
+                <label className="fc-input-group">
+                  <span className="fc-input-label">Notiz</span>
+                  <textarea className="fc-input min-h-20" name="notes" />
                 </label>
                 <Button type="submit" variant="secondary">
                   Messpunkt speichern
@@ -575,38 +598,41 @@ export function DashboardTabs({
         </div>
       </section>
 
-      <section className="fitcal-scroll-section fitcal-rise" data-fitcal-section id="regeln">
-        <div className="fitcal-section-head">
+      {/* ══════════════════════════════════════════════
+          REGELN
+         ══════════════════════════════════════════════ */}
+      <section className="fc-section fc-rise" data-fitcal-section id="regeln">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="fitcal-section-kicker">Regeln</p>
-            <h2 className="fitcal-section-title">Der Rahmen</h2>
+            <p className="fc-kicker">Regeln</p>
+            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Der Rahmen</h2>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="fitcal-section-stack">
-            <ol className="fitcal-rule-list">
+          <div className="fc-card">
+            <ol className="fc-rule-list">
               {rules.map((rule) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ol>
           </div>
 
-          <section className="fitcal-proof-panel">
+          <div className="fc-card-dark">
             <div>
-              <p className="fitcal-section-kicker">Referenz</p>
-              <p className="mt-3 text-3xl leading-tight font-[var(--font-dm-serif-display)]">
+              <span className="fc-kicker" style={{ color: "rgba(250,249,246,0.5)" }}>Referenz</span>
+              <p className="fc-heading mt-2 text-2xl text-white/95">
                 Technik und Vergleichsvideos.
               </p>
             </div>
 
-            <p className="text-sm leading-7 text-[rgba(246,239,227,0.78)]">
+            <p className="mt-3 text-sm leading-relaxed text-white/50">
               Die Referenzvideos helfen nur bei der Einordnung. Für die Challenge zählen deine dokumentierten Sets.
             </p>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <a
-                className="fitcal-video-link"
+                className="fc-video-link"
                 href="https://www.youtube.com/watch?v=JvX0ilRCBrU"
                 rel="noreferrer"
                 target="_blank"
@@ -614,7 +640,7 @@ export function DashboardTabs({
                 Referenzvideo Liegestütze
               </a>
               <a
-                className="fitcal-video-link"
+                className="fc-video-link"
                 href="https://www.youtube.com/watch?v=czKvGbo5zAo"
                 rel="noreferrer"
                 target="_blank"
@@ -622,111 +648,115 @@ export function DashboardTabs({
                 Referenzvideo Sit-Ups
               </a>
             </div>
-          </section>
+          </div>
         </div>
       </section>
 
-      <section className="fitcal-scroll-section fitcal-rise" data-fitcal-section id="rechner">
-        <div className="fitcal-section-head">
+      {/* ══════════════════════════════════════════════
+          RECHNER
+         ══════════════════════════════════════════════ */}
+      <section className="fc-section fc-rise" data-fitcal-section id="rechner">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="fitcal-section-kicker">Rechner</p>
-            <h2 className="fitcal-section-title">Schnell überschlagen statt raten.</h2>
+            <p className="fc-kicker">Rechner</p>
+            <h2 className="fc-heading mt-1 text-[clamp(1.5rem,2.5vw,2rem)]">Schnell überschlagen statt raten.</h2>
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <section className="fitcal-stream-panel">
-            <p className="fitcal-section-kicker">Slack-Kosten</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Wie teuer werden weitere Slack-Tage?</h3>
-            <label className="fitcal-input-wrap mt-5">
-              Anzahl Slack-Tage
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* Slack costs */}
+          <section className="fc-card">
+            <p className="fc-kicker">Slack-Kosten</p>
+            <h3 className="fc-heading mt-1 text-lg">Wie teuer werden weitere Slack-Tage?</h3>
+            <label className="fc-input-group mt-4">
+              <span className="fc-input-label">Anzahl Slack-Tage</span>
               <input
-                className="fitcal-input"
+                className="fc-input"
                 inputMode="numeric"
                 onChange={(event) => setSlackDaysInput(event.target.value)}
                 type="number"
                 value={slackDaysInput}
               />
             </label>
-            <div className="mt-5 fitcal-profile-grid">
-              <div>
-                <span className="fitcal-soft-label">Gesamt</span>
-                <strong>{formatCurrency(totalSlackDebtCents)}</strong>
+            <div className="mt-4 grid gap-2">
+              <div className="fc-stat">
+                <span className="fc-stat-label">Gesamt</span>
+                <span className="fc-stat-value">{formatCurrency(totalSlackDebtCents)}</span>
               </div>
-              <div>
-                <span className="fitcal-soft-label">Staffelung</span>
-                <strong>{slackPreview.length ? slackPreview.join(" · ") : "—"}</strong>
+              <div className="fc-stat">
+                <span className="fc-stat-label">Staffelung</span>
+                <span className="fc-stat-value text-sm">{slackPreview.length ? slackPreview.join(" · ") : "—"}</span>
               </div>
             </div>
             {slackDays > 6 ? (
-              <p className="mt-4 text-sm text-[var(--fc-muted)]">
+              <p className="mt-3 text-sm text-[var(--fc-muted)]">
                 Danach geht es im selben Muster weiter: immer 2 € mehr pro zusätzlichem Slack-Tag.
               </p>
             ) : null}
           </section>
 
-          <section className="fitcal-stream-panel">
-            <p className="fitcal-section-kicker">Schuldabbau</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Wie viele Extras gleichen Schulden aus?</h3>
-            <label className="fitcal-input-wrap mt-5">
-              Schulden in €
+          {/* Debt reduction */}
+          <section className="fc-card">
+            <p className="fc-kicker">Schuldabbau</p>
+            <h3 className="fc-heading mt-1 text-lg">Wie viele Extras gleichen Schulden aus?</h3>
+            <label className="fc-input-group mt-4">
+              <span className="fc-input-label">Schulden in €</span>
               <input
-                className="fitcal-input"
+                className="fc-input"
                 inputMode="decimal"
                 onChange={(event) => setDebtInput(event.target.value)}
                 type="number"
                 value={debtInput}
               />
             </label>
-            <div className="mt-5 fitcal-profile-grid">
-              <div>
-                <span className="fitcal-soft-label">Nur Liegestütze</span>
-                <strong>{pushupsForDebt}</strong>
+            <div className="mt-4 grid gap-2">
+              <div className="fc-stat">
+                <span className="fc-stat-label">Nur Liegestütze</span>
+                <span className="fc-stat-value">{pushupsForDebt}</span>
               </div>
-              <div>
-                <span className="fitcal-soft-label">Nur Sit-ups</span>
-                <strong>{situpsForDebt}</strong>
+              <div className="fc-stat">
+                <span className="fc-stat-label">Nur Sit-ups</span>
+                <span className="fc-stat-value">{situpsForDebt}</span>
               </div>
-              <div>
-                <span className="fitcal-soft-label">Gemischt, grob</span>
-                <strong>
-                  {mixedPushups} Liegestütze + {mixedSitups} Sit-ups
-                </strong>
+              <div className="fc-stat">
+                <span className="fc-stat-label">Gemischt</span>
+                <span className="fc-stat-value text-sm">{mixedPushups} L + {mixedSitups} S</span>
               </div>
             </div>
-            <p className="mt-4 text-sm text-[var(--fc-muted)]">
-              Rechnet mit 10 ct pro extra Liegestütz und 5 ct pro extra Sit-up. Angerechnet wird nur auf offene Schulden.
+            <p className="mt-3 text-sm text-[var(--fc-muted)]">
+              Rechnet mit 10 ct pro extra Liegestütz und 5 ct pro extra Sit-up.
             </p>
           </section>
 
-          <section className="fitcal-stream-panel">
-            <p className="fitcal-section-kicker">Kalorien</p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Was verbrennt ein Satz ungefähr?</h3>
-            <div className="mt-5 fitcal-field-grid">
-              <label className="fitcal-input-wrap">
-                Liegestütze gesamt
+          {/* Calories */}
+          <section className="fc-card">
+            <p className="fc-kicker">Kalorien</p>
+            <h3 className="fc-heading mt-1 text-lg">Was verbrennt ein Satz ungefähr?</h3>
+            <div className="mt-4 fc-grid-2">
+              <label className="fc-input-group">
+                <span className="fc-input-label">Liegestütze gesamt</span>
                 <input
-                  className="fitcal-input"
+                  className="fc-input"
                   inputMode="numeric"
                   onChange={(event) => setPushupInput(event.target.value)}
                   type="number"
                   value={pushupInput}
                 />
               </label>
-              <label className="fitcal-input-wrap">
-                Sit-ups gesamt
+              <label className="fc-input-group">
+                <span className="fc-input-label">Sit-ups gesamt</span>
                 <input
-                  className="fitcal-input"
+                  className="fc-input"
                   inputMode="numeric"
                   onChange={(event) => setSitupInput(event.target.value)}
                   type="number"
                   value={situpInput}
                 />
               </label>
-              <label className="fitcal-input-wrap lg:col-span-2">
-                Gewicht in kg
+              <label className="fc-input-group col-span-full">
+                <span className="fc-input-label">Gewicht in kg</span>
                 <input
-                  className="fitcal-input"
+                  className="fc-input"
                   inputMode="decimal"
                   onChange={(event) => setWeightInput(event.target.value)}
                   type="number"
@@ -734,22 +764,22 @@ export function DashboardTabs({
                 />
               </label>
             </div>
-            <div className="mt-5 fitcal-profile-grid">
-              <div>
-                <span className="fitcal-soft-label">Liegestütze</span>
-                <strong>{pushupCalories.toFixed(1).replace(".", ",")} kcal</strong>
+            <div className="mt-4 grid gap-2">
+              <div className="fc-stat">
+                <span className="fc-stat-label">Liegestütze</span>
+                <span className="fc-stat-value">{pushupCalories.toFixed(1).replace(".", ",")} kcal</span>
               </div>
-              <div>
-                <span className="fitcal-soft-label">Sit-ups</span>
-                <strong>{situpCalories.toFixed(1).replace(".", ",")} kcal</strong>
+              <div className="fc-stat">
+                <span className="fc-stat-label">Sit-ups</span>
+                <span className="fc-stat-value">{situpCalories.toFixed(1).replace(".", ",")} kcal</span>
               </div>
-              <div>
-                <span className="fitcal-soft-label">Gesamt grob</span>
-                <strong>{totalCalories.toFixed(1).replace(".", ",")} kcal</strong>
+              <div className="fc-stat">
+                <span className="fc-stat-label">Gesamt</span>
+                <span className="fc-stat-value">{totalCalories.toFixed(1).replace(".", ",")} kcal</span>
               </div>
             </div>
-            <p className="mt-4 text-sm text-[var(--fc-muted)]">
-              Grobe Schätzung auf Basis von Wiederholungen und Körpergewicht, eher als Orientierung als als Wissenschaft.
+            <p className="mt-3 text-sm text-[var(--fc-muted)]">
+              Grobe Schätzung auf Basis von Wiederholungen und Körpergewicht.
             </p>
           </section>
         </div>

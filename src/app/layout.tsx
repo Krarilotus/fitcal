@@ -1,17 +1,24 @@
-import type { Metadata } from "next";
-import { DM_Serif_Display, Space_Grotesk } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const dmSerifDisplay = DM_Serif_Display({
-  variable: "--font-dm-serif-display",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: "400",
+  weight: ["400", "500", "600", "700", "800"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#059669",
+};
 
 export const metadata: Metadata = {
   title: "FitCal Challenge",
@@ -39,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="de"
-      className={`${spaceGrotesk.variable} ${dmSerifDisplay.variable} h-full antialiased`}
+      className={`${inter.variable} ${outfit.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

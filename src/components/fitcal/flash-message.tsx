@@ -11,13 +11,16 @@ export function FlashMessage({
 
   return (
     <div
-      className={`rounded-2xl border px-4 py-3 text-sm ${
+      className={`flex items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm font-medium fc-rise ${
         error
-          ? "border-amber-300 bg-amber-50 text-amber-900"
-          : "border-emerald-300 bg-emerald-50 text-emerald-900"
+          ? "border-red-200 bg-red-50 text-red-800"
+          : "border-emerald-200 bg-emerald-50 text-emerald-800"
       }`}
     >
-      {error || success}
+      <span className="mt-0.5 text-base leading-none" aria-hidden>
+        {error ? "⚠" : "✓"}
+      </span>
+      <span>{error || success}</span>
     </div>
   );
 }
