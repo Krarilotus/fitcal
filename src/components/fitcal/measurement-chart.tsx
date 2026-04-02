@@ -1,19 +1,24 @@
 "use client";
 
+import type { AppDictionary } from "@/i18n";
 import { MetaStatChart } from "@/components/fitcal/meta-stat-chart";
+import type { MeasurementPoint } from "@/components/fitcal/dashboard-types";
 
-type MeasurementPoint = {
-  measuredAt: string;
-  weightKg: number | null;
-  waistCircumferenceCm: number | null;
-  restingPulseBpm: number | null;
-};
+type ChartLabels = AppDictionary["dashboard"]["charts"];
 
-export function MeasurementChart({ points }: { points: MeasurementPoint[] }) {
+export function MeasurementChart({
+  points,
+  labels,
+}: {
+  points: MeasurementPoint[];
+  labels: ChartLabels;
+}) {
   return (
     <MetaStatChart
-      description="Optionale Messwerte wie Gewicht und Bauchumfang im Zeitverlauf."
-      emptyText="Noch keine Messwerte vorhanden. Trage unten einen ersten Messpunkt ein."
+      description={labels.measurementDescription}
+      emptyText={labels.measurementEmpty}
+      focusLabel={labels.focus}
+      noValueLabel={labels.noValue}
       points={points.map((point) => ({
         label: point.measuredAt,
         values: {
@@ -25,24 +30,24 @@ export function MeasurementChart({ points }: { points: MeasurementPoint[] }) {
       series={[
         {
           key: "weightKg",
-          label: "Gewicht",
+          label: labels.weight,
           color: "var(--fc-chart-blue)",
           formatter: (value) => `${value.toFixed(1)} kg`,
         },
         {
           key: "waistCircumferenceCm",
-          label: "Bauchumfang",
+          label: labels.waist,
           color: "var(--fc-chart-rose)",
           formatter: (value) => `${value.toFixed(1)} cm`,
         },
         {
           key: "restingPulseBpm",
-          label: "Ruhepuls",
+          label: labels.restingPulse,
           color: "var(--fc-chart-amber)",
           formatter: (value) => `${Math.round(value)} bpm`,
         },
       ]}
-      title="Messwerte"
+      title={labels.measurementTitle}
     />
   );
 }

@@ -1,137 +1,29 @@
-import {
-  RegistrationApprovalDecision,
-  RegistrationStatus,
-  WorkoutReviewStage,
-} from "@prisma/client";
+import { RegistrationStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { DashboardTabs } from "@/components/fitcal/dashboard-tabs";
 import { FlashMessage } from "@/components/fitcal/flash-message";
+import { PreferenceControls } from "@/components/fitcal/preference-controls";
 import { Button } from "@/components/ui/button";
+import { getDictionary } from "@/i18n";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
-  CHALLENGE_END_DATE,
-  CHALLENGE_FREE_DAYS,
   CHALLENGE_START_DATE,
-  formatCurrencyFromCents,
-  getChallengeDayIndex,
-  getChallengeOverview,
-  getRequiredReps,
-  isFreeChallengeDay,
+  CHALLENGE_END_DATE,
 } from "@/lib/challenge";
-import { prisma } from "@/lib/db";
-import { formatMeasurementDate } from "@/lib/measurements";
-import { getPreferredLocale } from "@/lib/preferences";
-import { getDailyMessage } from "@/lib/special-day";
-import { deserializeSets, getSubmissionTotals } from "@/lib/submission";
+import { getDashboardPageData } from "@/lib/dashboard-data";
+import { getPreferredLocale, getPreferredTheme } from "@/lib/preferences";
 
 interface DashboardPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-function statusLabel(status: string) {
-  switch (status) {
-    case "completed":
-      return "Erledigt";
-    case "partial":
-      return "Teilweise";
-    case "joker":
-      return "Joker";
-    case "slack":
-      return "Slack";
-    case "free":
-      return "Quali";
-    case "open":
-      return "Offen";
-    default:
-      return "Später";
-  }
-}
-
-function formatReviewStatus(reviewStatus: string | null | undefined) {
-  switch (reviewStatus) {
-    case "PENDING":
-      return "Review offen";
-    case "ESCALATED":
-      return "Prüf-Review offen";
-    case "APPROVED":
-      return "Bestätigt";
-    case "REVISION_REQUESTED":
-      return "Neue Prüfung angefordert";
-    default:
-      return null;
-  }
-}
-
-function formatBirthDate(value: Date | null | undefined) {
-  if (!value) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(value);
-}
-
-function formatBirthDateInput(value: Date | null | undefined) {
-  if (!value) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(value);
-}
-
-function formatHeightInput(value: number | null | undefined) {
-  if (value == null) {
-    return "";
-  }
-
-  return Number.isInteger(value) ? String(value) : String(value).replace(",", ".");
-}
-
-function formatNumber(value: number | null | undefined, digits = 1) {
-  if (value == null) {
-    return null;
-  }
-
-  return value.toFixed(digits).replace(".", ",");
-}
-
-function formatChallengeDate(value: string) {
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-  }).format(new Date(`${value}T00:00:00`));
-}
-
-function formatFileSize(sizeBytes: number) {
-  if (sizeBytes >= 1024 * 1024) {
-    return `${(sizeBytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-  }
-
-  return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
-}
-
-function getDayStatusLabel(status: string) {
-  switch (status) {
-    case "sickPending":
-      return "Krank · offen";
-    case "sick":
-      return "Krank bestätigt";
-    default:
-      return statusLabel(status);
-  }
-}
-
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const user = await getCurrentUser();
   const locale = await getPreferredLocale();
+  const theme = await getPreferredTheme();
+  const dictionary = getDictionary(locale);
+  const dashboardLabels = dictionary.dashboard;
+  const commonLabels = dictionary.common;
 
   if (!user) {
     redirect("/login");
@@ -144,500 +36,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const params = await searchParams;
   const error = typeof params.error === "string" ? params.error : undefined;
   const success = typeof params.success === "string" ? params.success : undefined;
-  const canReview = !user.isLightParticipant;
-
-  const pendingApprovals =
-    canReview
-      ? await prisma.registrationApproval.findMany({
-          where: {
-            reviewerUserId: user.id,
-            decision: RegistrationApprovalDecision.PENDING,
-            applicant: {
-              registrationStatus: RegistrationStatus.PENDING,
-            },
-          },
-          include: {
-            applicant: {
-              select: {
-                id: true,
-                email: true,
-                name: true,
-                motivation: true,
-                createdAt: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
-        })
-      : [];
-
-  const activeInvites =
-    canReview
-      ? await prisma.appInvite.findMany({
-          where: {
-            invitedByUserId: user.id,
-            acceptedAt: null,
-            expiresAt: {
-              gt: new Date(),
-            },
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 6,
-        })
-      : [];
-
-  const challengeRecords = user.dailySubmissions.map((submission) => {
-    const totals = getSubmissionTotals(submission);
-
-    return {
-      challengeDate: submission.challengeDate,
-      status: submission.status,
-      pushupTotal: totals.effectivePushupTotal,
-      situpTotal: totals.effectiveSitupTotal,
-    };
+  const {
+    activeInvites,
+    canReview,
+    escalationReviewItems,
+    measurementPoints,
+    openDays,
+    overview,
+    participantRows,
+    pendingApprovals,
+    performancePoints,
+    primaryReviewItems,
+    profile,
+    sicknessReviewItems,
+    timelineEntries,
+  } = await getDashboardPageData({
+    locale,
+    user,
+    labels: dashboardLabels,
   });
-
-  const overview = getChallengeOverview({
-    joinedChallengeDate: user.challengeEnrollment?.joinedChallengeDate ?? CHALLENGE_START_DATE,
-    records: challengeRecords,
-    hasStudentDiscount: user.isStudentDiscount && !user.isLightParticipant,
-    isLightParticipant: user.isLightParticipant,
-  });
-
-  const reviewCreditCents = user.reviewCreditCents ?? 0;
-  const effectiveOutstandingDebtCents = Math.max(
-    0,
-    overview.outstandingDebtCents - reviewCreditCents,
-  );
-  const availableReviewBudgetCents = Math.max(
-    0,
-    reviewCreditCents - overview.outstandingDebtCents,
-  );
-
-  const openDays = overview.days
-    .filter((day) => day.canUpload)
-    .map((day) => ({
-      challengeDate: day.challengeDate,
-      dateLabel: formatChallengeDate(day.challengeDate),
-      targetReps: getRequiredReps(day.challengeDate),
-      isCurrentDay: day.isCurrentDay,
-      isQualificationDay: isFreeChallengeDay(day.challengeDate),
-      canUseJoker: day.canUseJoker,
-    }));
-
-  const timelineEntries = overview.days.slice(-12).reverse().map((day) => {
-    const submission = user.dailySubmissions.find(
-      (entry) => entry.challengeDate === day.challengeDate,
-    );
-    const pushupSets = submission ? deserializeSets(submission.pushupSets) : [];
-    const situpSets = submission ? deserializeSets(submission.situpSets) : [];
-    const totals = submission ? getSubmissionTotals(submission) : null;
-
-    return {
-      challengeDate: day.challengeDate,
-      dateLabel: formatChallengeDate(day.challengeDate),
-      repsTarget: day.repsTarget,
-      statusLabel: getDayStatusLabel(day.status),
-      debtLabel: day.debtCents > 0 ? formatCurrencyFromCents(day.debtCents) : null,
-      pushupTotal: totals?.pushupTotal ?? null,
-      situpTotal: totals?.situpTotal ?? null,
-      verifiedPushupTotal:
-        submission?.verifiedPushupTotal != null ? submission.verifiedPushupTotal : null,
-      verifiedSitupTotal:
-        submission?.verifiedSitupTotal != null ? submission.verifiedSitupTotal : null,
-      reviewStatusLabel: submission ? formatReviewStatus(submission.reviewStatus) : null,
-      pushupSet1: submission ? (pushupSets[0] ?? 0) : null,
-      pushupSet2: submission ? (pushupSets[1] ?? 0) : null,
-      situpSet1: submission ? (situpSets[0] ?? 0) : null,
-      situpSet2: submission ? (situpSets[1] ?? 0) : null,
-      pushupOverTarget: submission ? Math.max(0, totals!.pushupTotal - day.repsTarget) : null,
-      situpOverTarget: submission ? Math.max(0, totals!.situpTotal - day.repsTarget) : null,
-      videos:
-        submission?.videos.map((video) => ({
-          id: video.id,
-          originalName: video.originalName,
-          sizeLabel: formatFileSize(video.sizeBytes),
-        })) ?? [],
-    };
-  });
-
-  const performancePoints = user.dailySubmissions
-    .filter((submission) => submission.status === "COMPLETED")
-    .map((submission) => {
-      const pushupSets = deserializeSets(submission.pushupSets);
-      const situpSets = deserializeSets(submission.situpSets);
-      const totals = getSubmissionTotals(submission);
-
-      return {
-        challengeDate: submission.challengeDate,
-        pushups: totals.effectivePushupTotal,
-        situps: totals.effectiveSitupTotal,
-        pushupSet1: pushupSets[0] ?? 0,
-        pushupSet2: pushupSets[1] ?? 0,
-        situpSet1: situpSets[0] ?? 0,
-        situpSet2: situpSets[1] ?? 0,
-        target: getRequiredReps(submission.challengeDate),
-      };
-    })
-    .slice(-24);
-
-  const participantRows = canReview
-    ? (
-        await prisma.user.findMany({
-          where: {
-            id: {
-              not: user.id,
-            },
-            registrationStatus: RegistrationStatus.APPROVED,
-          },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            isLightParticipant: true,
-            isStudentDiscount: true,
-            reviewCreditCents: true,
-            challengeEnrollment: {
-              select: {
-                joinedChallengeDate: true,
-              },
-            },
-            dailySubmissions: {
-              select: {
-                challengeDate: true,
-                status: true,
-                reviewStatus: true,
-                pushupSets: true,
-                situpSets: true,
-                verifiedPushupTotal: true,
-                verifiedSitupTotal: true,
-              },
-              orderBy: {
-                challengeDate: "asc",
-              },
-            },
-          },
-          orderBy: [
-            {
-              isLightParticipant: "asc",
-            },
-            {
-              createdAt: "asc",
-            },
-          ],
-        })
-      ).map((participant) => {
-        const participantRecords = participant.dailySubmissions.map((submission) => {
-          const totals = getSubmissionTotals(submission);
-
-          return {
-            challengeDate: submission.challengeDate,
-            status: submission.status,
-            pushupTotal: totals.effectivePushupTotal,
-            situpTotal: totals.effectiveSitupTotal,
-          };
-        });
-
-      const participantOverview = getChallengeOverview({
-        joinedChallengeDate:
-          participant.challengeEnrollment?.joinedChallengeDate ?? CHALLENGE_START_DATE,
-        records: participantRecords,
-        hasStudentDiscount: participant.isStudentDiscount && !participant.isLightParticipant,
-        isLightParticipant: participant.isLightParticipant,
-      });
-
-        const todayStatus = participantOverview.days.find(
-          (day) => day.challengeDate === overview.currentDate,
-        );
-        const yesterdayStatus = overview.previousDate
-          ? participantOverview.days.find((day) => day.challengeDate === overview.previousDate)
-          : null;
-        const pendingReviewCount = participant.isLightParticipant
-          ? 0
-          : participant.dailySubmissions.filter((submission) =>
-              ["PENDING", "ESCALATED", "REVISION_REQUESTED"].includes(submission.reviewStatus),
-            ).length;
-        const effectiveDebtCents = participant.isLightParticipant
-          ? 0
-          : Math.max(
-              0,
-              participantOverview.outstandingDebtCents - (participant.reviewCreditCents ?? 0),
-            );
-
-        return {
-          id: participant.id,
-          name: participant.name || participant.email,
-          modeLabel: participant.isLightParticipant ? "Light" : "Voll",
-          todayLabel: getDayStatusLabel(todayStatus?.status ?? "upcoming"),
-          yesterdayLabel: getDayStatusLabel(yesterdayStatus?.status ?? "upcoming"),
-          qualificationLabel: `${participantOverview.qualificationUploads}/${participantOverview.qualificationRequiredUploads}`,
-          documentedDays: participantOverview.documentedDays,
-          debtLabel: participant.isLightParticipant
-            ? null
-            : formatCurrencyFromCents(effectiveDebtCents),
-          reviewLabel: participant.isLightParticipant
-            ? "—"
-            : pendingReviewCount > 0
-              ? `${pendingReviewCount} offen`
-              : "Klar",
-        };
-      })
-    : [];
-
-  const primaryReviewItems = canReview
-    ? (
-        await prisma.dailySubmission.findMany({
-          where: {
-            userId: {
-              not: user.id,
-            },
-            status: "COMPLETED",
-            reviewStatus: {
-              in: ["PENDING", "REVISION_REQUESTED"],
-            },
-            user: {
-              registrationStatus: RegistrationStatus.APPROVED,
-              isLightParticipant: false,
-            },
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            videos: {
-              orderBy: {
-                orderIndex: "asc",
-              },
-            },
-            workoutReviews: {
-              include: {
-                reviewer: {
-                  select: {
-                    name: true,
-                    email: true,
-                  },
-                },
-              },
-              orderBy: {
-                createdAt: "asc",
-              },
-            },
-          },
-          orderBy: [
-            {
-              challengeDate: "asc",
-            },
-            {
-              submittedAt: "asc",
-            },
-          ],
-        })
-      )
-        .filter(
-          (submission) =>
-            !submission.workoutReviews.some(
-              (review) =>
-                review.stage === WorkoutReviewStage.PRIMARY &&
-                review.reviewerUserId === user.id,
-            ),
-        )
-        .map((submission) => {
-          const totals = getSubmissionTotals(submission);
-          const latestPrimary = [...submission.workoutReviews]
-            .reverse()
-            .find((review) => review.stage === WorkoutReviewStage.PRIMARY);
-
-          return {
-            id: submission.id,
-            challengeDate: submission.challengeDate,
-            dateLabel: formatChallengeDate(submission.challengeDate),
-            userLabel: submission.user.name || submission.user.email,
-            targetReps: getRequiredReps(submission.challengeDate),
-            claimedPushups: totals.pushupTotal,
-            claimedSitups: totals.situpTotal,
-            statusLabel: formatReviewStatus(submission.reviewStatus),
-            priorNote:
-              latestPrimary?.notes && submission.reviewStatus === "REVISION_REQUESTED"
-                ? `${latestPrimary.reviewer.name || latestPrimary.reviewer.email}: ${latestPrimary.notes}`
-                : null,
-            videos: submission.videos.map((video) => ({
-              id: video.id,
-              label: video.originalName,
-            })),
-          };
-        })
-    : [];
-
-  const escalationReviewItems = canReview
-    ? (
-        await prisma.dailySubmission.findMany({
-          where: {
-            userId: {
-              not: user.id,
-            },
-            status: "COMPLETED",
-            reviewStatus: "ESCALATED",
-            user: {
-              registrationStatus: RegistrationStatus.APPROVED,
-              isLightParticipant: false,
-            },
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            videos: {
-              orderBy: {
-                orderIndex: "asc",
-              },
-            },
-            workoutReviews: {
-              include: {
-                reviewer: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                  },
-                },
-              },
-              orderBy: {
-                createdAt: "asc",
-              },
-            },
-          },
-          orderBy: [
-            {
-              challengeDate: "asc",
-            },
-            {
-              submittedAt: "asc",
-            },
-          ],
-        })
-      )
-        .map((submission) => {
-          const primaryReview = [...submission.workoutReviews]
-            .reverse()
-            .find((review) => review.stage === WorkoutReviewStage.PRIMARY);
-
-          if (!primaryReview || primaryReview.reviewerUserId === user.id) {
-            return null;
-          }
-
-          const existingArbitration = submission.workoutReviews.find(
-            (review) =>
-              review.stage === WorkoutReviewStage.ARBITRATION &&
-              review.basedOnReviewId === primaryReview.id,
-          );
-
-          if (existingArbitration) {
-            return null;
-          }
-
-          const totals = getSubmissionTotals(submission);
-
-          return {
-            id: submission.id,
-            challengeDate: submission.challengeDate,
-            dateLabel: formatChallengeDate(submission.challengeDate),
-            userLabel: submission.user.name || submission.user.email,
-            targetReps: getRequiredReps(submission.challengeDate),
-            claimedPushups: totals.pushupTotal,
-            claimedSitups: totals.situpTotal,
-            reviewedPushups: primaryReview.countedPushups,
-            reviewedSitups: primaryReview.countedSitups,
-            reviewComment: primaryReview.notes,
-            reviewerLabel: primaryReview.reviewer.name || primaryReview.reviewer.email,
-            videos: submission.videos.map((video) => ({
-              id: video.id,
-              label: video.originalName,
-            })),
-          };
-        })
-        .filter((item): item is NonNullable<typeof item> => item != null)
-    : [];
-
-  const sicknessReviewItems = canReview
-    ? (
-        await prisma.sicknessVerification.findMany({
-          where: {
-            reviewerUserId: user.id,
-            decision: RegistrationApprovalDecision.PENDING,
-            dailySubmission: {
-              status: "SICK_PENDING",
-              user: {
-                registrationStatus: RegistrationStatus.APPROVED,
-                isLightParticipant: false,
-                id: {
-                  not: user.id,
-                },
-              },
-            },
-          },
-          include: {
-            dailySubmission: {
-              include: {
-                user: {
-                  select: {
-                    name: true,
-                    email: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
-        })
-      ).map((verification) => ({
-        id: verification.id,
-        challengeDate: verification.dailySubmission.challengeDate,
-        dateLabel: formatChallengeDate(verification.dailySubmission.challengeDate),
-        userLabel:
-          verification.dailySubmission.user.name || verification.dailySubmission.user.email,
-        notes: verification.dailySubmission.notes,
-      }))
-    : [];
-
-  const measurementPoints = user.measurements.slice(-18).map((entry) => ({
-    measuredAt: formatMeasurementDate(entry.measuredAt),
-    weightKg: entry.weightKg,
-    waistCircumferenceCm: entry.waistCircumferenceCm,
-    restingPulseBpm: entry.restingPulseBpm,
-  }));
-
-  const latestMeasurement = user.measurements.at(-1) ?? null;
-  const birthDateLabel = formatBirthDate(user.birthDate);
-  const currentDayIndex = Math.max(0, getChallengeDayIndex(overview.currentDate));
-  const qualificationDay = Math.min(CHALLENGE_FREE_DAYS, currentDayIndex + 1);
-  const isQualificationPhase = currentDayIndex < CHALLENGE_FREE_DAYS;
-
-  const dailyMessage = getDailyMessage({
-    currentDate: overview.currentDate,
-    currentTarget: overview.currentTarget,
-    name: user.name ?? null,
-    birthDate: user.birthDate ?? null,
-    heightCm: user.heightCm ?? null,
-    latestWeightKg: latestMeasurement?.weightKg ?? null,
-    latestWaistCm: latestMeasurement?.waistCircumferenceCm ?? null,
-    outstandingDebtCents: overview.outstandingDebtCents,
-    documentedDays: overview.documentedDays,
-    motivation: user.motivation ?? null,
-  }, locale);
 
   return (
     <div className="fc-shell min-h-screen px-4 py-5 text-[var(--fc-ink)] sm:px-6 sm:py-8">
@@ -653,18 +70,30 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </p>
           </div>
 
-          <form action="/api/auth/logout" method="post">
-            <Button type="submit" variant="ghost">
-              Logout
-            </Button>
-          </form>
+          <div className="flex items-center gap-3">
+            <PreferenceControls
+              initialLocale={locale}
+              initialTheme={theme}
+              labels={{
+                locale: commonLabels.locale,
+                theme: commonLabels.theme,
+                localeNames: commonLabels.localeNames,
+                themeNames: commonLabels.themeNames,
+              }}
+            />
+            <form action="/api/auth/logout" method="post">
+              <Button type="submit" variant="ghost">
+                {commonLabels.logout}
+              </Button>
+            </form>
+          </div>
         </header>
 
         <FlashMessage error={error} success={success} />
 
         {canReview ? (
           <section className="border-b border-[var(--fc-border)] pb-5">
-            <h2 className="fc-heading mb-3 text-lg">Einladen</h2>
+            <h2 className="fc-heading mb-3 text-lg">{dashboardLabels.invite.title}</h2>
 
             <form
               action="/api/invitations"
@@ -672,17 +101,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               method="post"
             >
               <label className="fc-input-group flex-1">
-                <span className="fc-input-label">E-Mail der Person</span>
+                <span className="fc-input-label">{dashboardLabels.invite.emailLabel}</span>
                 <input
                   className="fc-input"
                   name="email"
-                  placeholder="name@example.com"
+                  placeholder={dashboardLabels.invite.emailPlaceholder}
                   required
                   type="email"
                 />
               </label>
               <div className="flex items-end">
-                <Button type="submit">Einladung senden</Button>
+                <Button type="submit">{dashboardLabels.invite.submit}</Button>
               </div>
             </form>
 
@@ -701,8 +130,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         {canReview && pendingApprovals.length > 0 ? (
           <section className="border-b border-[var(--fc-border)] pb-5">
             <p className="mb-2 text-sm font-medium">
-              {pendingApprovals.length} Freigabe
-              {pendingApprovals.length > 1 ? "n" : ""} offen
+              {pendingApprovals.length}{" "}
+              {pendingApprovals.length > 1
+                ? dashboardLabels.approvals.plural
+                : dashboardLabels.approvals.single}
             </p>
 
             <div className="space-y-2">
@@ -727,14 +158,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       <input name="approvalId" type="hidden" value={approval.id} />
                       <input name="decision" type="hidden" value="approve" />
                       <Button size="sm" type="submit">
-                        Annehmen
+                        {dashboardLabels.approvals.approve}
                       </Button>
                     </form>
                     <form action="/api/registration-approvals" method="post">
                       <input name="approvalId" type="hidden" value={approval.id} />
                       <input name="decision" type="hidden" value="reject" />
                       <Button size="sm" type="submit" variant="secondary">
-                        Ablehnen
+                        {dashboardLabels.approvals.reject}
                       </Button>
                     </form>
                   </div>
@@ -745,51 +176,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         ) : null}
 
         <DashboardTabs
+          commonLabels={commonLabels}
           escalationReviewItems={escalationReviewItems}
+          labels={dashboardLabels}
+          locale={locale}
           measurementPoints={measurementPoints}
           openDays={openDays}
-          overview={{
-            dayNumber:
-              overview.days.at(-1)?.dayIndex != null ? overview.days.at(-1)!.dayIndex + 1 : 0,
-            currentTarget: overview.currentTarget,
-            isQualificationPhase,
-            qualificationDay,
-            qualificationWindowDays: CHALLENGE_FREE_DAYS,
-            qualificationUploads: overview.qualificationUploads,
-            qualificationRequiredUploads: overview.qualificationRequiredUploads,
-            outstandingDebtLabel: formatCurrencyFromCents(effectiveOutstandingDebtCents),
-            outstandingDebtCents: effectiveOutstandingDebtCents,
-            reviewBudgetLabel: formatCurrencyFromCents(availableReviewBudgetCents),
-            reviewBudgetCents: availableReviewBudgetCents,
-            hasStudentDiscount: user.isStudentDiscount && !user.isLightParticipant,
-            isLightParticipant: user.isLightParticipant,
-            existingSlackDays: overview.days.filter((day) =>
-              day.status === "slack" || day.status === "partial"
-            ).length,
-            monthJokersRemaining: overview.monthJokersRemaining,
-            documentedDays: overview.documentedDays,
-            dailyMessage,
-          }}
+          overview={overview}
           participantRows={participantRows}
           performancePoints={performancePoints}
           primaryReviewItems={primaryReviewItems}
-          profile={{
-            name: user.name ?? null,
-            motivation: user.motivation ?? null,
-            birthDateInput: formatBirthDateInput(user.birthDate),
-            birthDateLabel,
-            heightInput: formatHeightInput(user.heightCm),
-            heightLabel: user.heightCm != null ? `${formatNumber(user.heightCm, 0)} cm` : null,
-            latestWeightKg: latestMeasurement?.weightKg ?? null,
-            weightLabel:
-              latestMeasurement?.weightKg != null
-                ? `${formatNumber(latestMeasurement.weightKg)} kg`
-                : null,
-            waistLabel:
-              latestMeasurement?.waistCircumferenceCm != null
-                ? `${formatNumber(latestMeasurement.waistCircumferenceCm)} cm`
-                : null,
-          }}
+          profile={profile}
           sicknessReviewItems={sicknessReviewItems}
           timelineEntries={timelineEntries}
         />

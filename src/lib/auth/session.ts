@@ -1,32 +1,44 @@
 import crypto from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 
 const SESSION_COOKIE_NAME = "fitcal_session";
 const SESSION_DURATION_DAYS = 30;
 
+export const currentUserInclude = Prisma.validator<Prisma.UserInclude>()({
+  challengeEnrollment: true,
+  dailySubmissions: {
+    include: {
+      videos: true,
+      workoutReviews: {
+        include: {
+          reviewer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+    orderBy: {
+      challengeDate: "asc",
+    },
+  },
+  measurements: {
+    orderBy: {
+      measuredAt: "asc",
+    },
+  },
+});
+
 export type CurrentUser = Prisma.UserGetPayload<{
-  include: {
-    challengeEnrollment: true;
-    dailySubmissions: {
-      include: {
-        videos: true;
-        workoutReviews: {
-          include: {
-            reviewer: {
-              select: {
-                id: true;
-                name: true;
-                email: true;
-              };
-            };
-          };
-        };
-      };
-    };
-    measurements: true;
-  };
+  include: typeof currentUserInclude;
 }>;
 
 function addDays(date: Date, days: number) {
@@ -96,36 +108,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     },
     include: {
       user: {
-        include: {
-          challengeEnrollment: true,
-          dailySubmissions: {
-            include: {
-              videos: true,
-              workoutReviews: {
-                include: {
-                  reviewer: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true,
-                    },
-                  },
-                },
-                orderBy: {
-                  createdAt: "asc",
-                },
-              },
-            },
-            orderBy: {
-              challengeDate: "asc",
-            },
-          },
-          measurements: {
-            orderBy: {
-              measuredAt: "asc",
-            },
-          },
-        },
+        include: currentUserInclude,
       },
     },
   });

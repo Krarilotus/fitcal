@@ -10,6 +10,11 @@ UPLOAD_DIR="${APP_HOME}/uploads"
 SSH_DIR="${APP_HOME}/.ssh"
 REPO_SSH="git@github.com:Krarilotus/fitcal.git"
 
+if [ "${EUID}" -ne 0 ]; then
+  echo "Please run this script as root."
+  exit 1
+fi
+
 if ! id "${APP_USER}" >/dev/null 2>&1; then
   useradd \
     --system \
@@ -22,10 +27,11 @@ fi
 
 passwd -l "${APP_USER}" >/dev/null 2>&1 || true
 usermod -s /usr/sbin/nologin "${APP_USER}"
-usermod -aG docker "${APP_USER}"
+if getent group docker >/dev/null 2>&1; then
+  usermod -aG docker "${APP_USER}"
+fi
 
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${APP_HOME}"
-install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${APP_DIR}"
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${DATA_DIR}"
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${UPLOAD_DIR}"
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 700 "${SSH_DIR}"
@@ -35,7 +41,9 @@ if [ ! -f "${SSH_DIR}/id_ed25519" ]; then
 fi
 
 sudo -u "${APP_USER}" touch "${SSH_DIR}/known_hosts"
-sudo -u "${APP_USER}" ssh-keyscan github.com >> "${SSH_DIR}/known_hosts"
+if ! sudo -u "${APP_USER}" ssh-keygen -F github.com >/dev/null 2>&1; then
+  sudo -u "${APP_USER}" ssh-keyscan github.com >> "${SSH_DIR}/known_hosts"
+fi
 chown "${APP_USER}:${APP_GROUP}" "${SSH_DIR}/known_hosts"
 chmod 600 "${SSH_DIR}/known_hosts"
 

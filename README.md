@@ -40,6 +40,8 @@ Aktueller bekannter Resthinweis:
 - Docker: [`docker-compose.yml`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/docker-compose.yml)
 - Nginx: [`deploy/nginx-fitcal.conf`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/nginx-fitcal.conf)
 - Server-Setup: [`deploy/setup-fitcal-server.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/setup-fitcal-server.sh)
+- Bootstrap: [`deploy/bootstrap-fitcal.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/bootstrap-fitcal.sh)
+- Install/Deploy: [`deploy/install-fitcal-service.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/install-fitcal-service.sh)
 - Update-Skript: [`deploy/update-fitcal.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/update-fitcal.sh)
 
 ## Resend + STRATO
@@ -136,6 +138,13 @@ chmod +x deploy/setup-fitcal-server.sh
 sudo ./deploy/setup-fitcal-server.sh
 ```
 
+Schneller fuer den echten Erstlauf:
+
+```bash
+chmod +x deploy/setup-fitcal-server.sh deploy/bootstrap-fitcal.sh deploy/install-fitcal-service.sh deploy/update-fitcal.sh
+sudo ./deploy/bootstrap-fitcal.sh
+```
+
 Das Setup sorgt fuer:
 - eigenen System-User `fitcal`
 - kein Passwort
@@ -181,6 +190,20 @@ Damit zieht der Server den Code read-only per SSH.
 
 ### Clone
 
+Einfachster Weg nach dem Deploy-Key:
+
+```bash
+sudo ./deploy/bootstrap-fitcal.sh
+```
+
+Das Skript:
+- legt den `fitcal`-Systemuser an
+- erzeugt das Deploy-Key-Paar
+- klont oder updated `/opt/fitcal/app`
+- legt bei Bedarf `.env.production` aus der Example-Datei an
+
+Manuell geht auch:
+
 ```bash
 sudo -u fitcal git clone git@github.com:Krarilotus/fitcal.git /opt/fitcal/app
 ```
@@ -199,6 +222,19 @@ sudo -u fitcal nano .env.production
 ```
 
 ## Docker starten
+
+Schnellster Weg:
+
+```bash
+sudo ./deploy/install-fitcal-service.sh
+```
+
+Das Skript:
+- aktiviert die Nginx-Site
+- testet/reloadet Nginx
+- startet den Container via Docker Compose
+
+Manuell:
 
 ```bash
 cd /opt/fitcal/app
@@ -255,6 +291,27 @@ sudo systemctl reload nginx
 ```bash
 chmod +x deploy/update-fitcal.sh
 sudo ./deploy/update-fitcal.sh
+```
+
+## Schnellablauf fuer PuTTY
+
+1. Repo auf den Server holen, z. B. in `/root/fitcal`
+2. Im Repo:
+
+```bash
+chmod +x deploy/setup-fitcal-server.sh deploy/bootstrap-fitcal.sh deploy/install-fitcal-service.sh deploy/update-fitcal.sh
+./deploy/setup-fitcal-server.sh
+cat /opt/fitcal/.ssh/id_ed25519.pub
+```
+
+3. Deploy Key in GitHub als read-only Deploy Key hinterlegen
+4. Danach:
+
+```bash
+./deploy/bootstrap-fitcal.sh
+nano /opt/fitcal/app/.env.production
+./deploy/install-fitcal-service.sh
+certbot --nginx -d fitcal.hisqu.de
 ```
 
 ## Hinweise

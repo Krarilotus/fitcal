@@ -32,7 +32,6 @@ function getResendClient(): Resend | null {
   }
 
   cachedClient = new Resend(process.env.RESEND_API_KEY);
-
   return cachedClient;
 }
 

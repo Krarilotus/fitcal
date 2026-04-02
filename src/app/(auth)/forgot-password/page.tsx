@@ -1,16 +1,25 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/fitcal/auth-shell";
 import { FlashMessage } from "@/components/fitcal/flash-message";
+import { PreferenceControls } from "@/components/fitcal/preference-controls";
 import { Button } from "@/components/ui/button";
+import { getDictionary } from "@/i18n";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getPreferredLocale, getPreferredTheme } from "@/lib/preferences";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function ForgotPasswordPage({ searchParams }: PageProps) {
-  const user = await getCurrentUser();
+  const [user, locale, theme] = await Promise.all([
+    getCurrentUser(),
+    getPreferredLocale(),
+    getPreferredTheme(),
+  ]);
+  const dictionary = getDictionary(locale);
+  const labels = dictionary.auth.forgotPassword;
 
   if (user) {
     redirect("/dashboard");
@@ -22,25 +31,32 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps) {
 
   return (
     <AuthShell
-      eyebrow="Reset"
-      title="Passwort-Link anfordern"
-      description="Wir senden einen Reset-Link an die angegebene E-Mail-Adresse."
-      footer={
-        <p>
-          Zurück zum <Link href="/login">Login</Link>.
-        </p>
+      backHomeLabel={dictionary.authShell.backHome}
+      controls={
+        <PreferenceControls
+          initialLocale={locale}
+          initialTheme={theme}
+          labels={{
+            locale: dictionary.common.locale,
+            theme: dictionary.common.theme,
+            localeNames: dictionary.common.localeNames,
+            themeNames: dictionary.common.themeNames,
+          }}
+        />
       }
+      eyebrow={labels.eyebrow}
+      title={labels.title}
+      description={labels.description}
+      footer={<p>{labels.backToLogin} <Link href="/login">{dictionary.common.login}</Link>.</p>}
     >
       <div className="space-y-3">
         <FlashMessage error={error} success={success} />
         <form action="/api/auth/forgot-password" className="space-y-4" method="post">
           <label className="fc-input-group">
-            <span className="fc-input-label">E-Mail</span>
+            <span className="fc-input-label">{dictionary.common.email}</span>
             <input className="fc-input" name="email" required type="email" />
           </label>
-          <Button className="w-full" type="submit">
-            Reset-Link senden
-          </Button>
+          <Button className="w-full" type="submit">{labels.submit}</Button>
         </form>
       </div>
     </AuthShell>

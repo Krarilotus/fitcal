@@ -1,17 +1,26 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RegistrationStatus } from "@prisma/client";
 import { AuthShell } from "@/components/fitcal/auth-shell";
 import { FlashMessage } from "@/components/fitcal/flash-message";
+import { PreferenceControls } from "@/components/fitcal/preference-controls";
 import { Button } from "@/components/ui/button";
+import { getDictionary } from "@/i18n";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getPreferredLocale, getPreferredTheme } from "@/lib/preferences";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function LoginPage({ searchParams }: PageProps) {
-  const user = await getCurrentUser();
+  const [user, locale, theme] = await Promise.all([
+    getCurrentUser(),
+    getPreferredLocale(),
+    getPreferredTheme(),
+  ]);
+  const dictionary = getDictionary(locale);
+  const labels = dictionary.auth.login;
 
   if (user?.registrationStatus === RegistrationStatus.APPROVED) {
     redirect("/dashboard");
@@ -23,13 +32,26 @@ export default async function LoginPage({ searchParams }: PageProps) {
 
   return (
     <AuthShell
-      eyebrow="Login"
-      title="Anmelden"
-      description="Mit E-Mail und Passwort zum Dashboard."
+      backHomeLabel={dictionary.authShell.backHome}
+      controls={
+        <PreferenceControls
+          initialLocale={locale}
+          initialTheme={theme}
+          labels={{
+            locale: dictionary.common.locale,
+            theme: dictionary.common.theme,
+            localeNames: dictionary.common.localeNames,
+            themeNames: dictionary.common.themeNames,
+          }}
+        />
+      }
+      eyebrow={labels.eyebrow}
+      title={labels.title}
+      description={labels.description}
       footer={
         <p>
-          Noch kein Zugang? <Link href="/register">Jetzt registrieren</Link>. Passwort
-          vergessen? <Link href="/forgot-password">Reset-Link anfordern</Link>.
+          {labels.noAccess} <Link href="/register">{labels.registerNow}</Link>. {labels.forgot}{" "}
+          <Link href="/forgot-password">{labels.requestReset}</Link>.
         </p>
       }
     >
@@ -37,16 +59,14 @@ export default async function LoginPage({ searchParams }: PageProps) {
         <FlashMessage error={error} success={success} />
         <form action="/api/auth/login" className="space-y-4" method="post">
           <label className="fc-input-group">
-            <span className="fc-input-label">E-Mail</span>
+            <span className="fc-input-label">{dictionary.common.email}</span>
             <input className="fc-input" name="email" required type="email" />
           </label>
           <label className="fc-input-group">
-            <span className="fc-input-label">Passwort</span>
+            <span className="fc-input-label">{dictionary.common.password}</span>
             <input className="fc-input" name="password" required type="password" />
           </label>
-          <Button className="w-full" type="submit">
-            Einloggen
-          </Button>
+          <Button className="w-full" type="submit">{labels.submit}</Button>
         </form>
       </div>
     </AuthShell>

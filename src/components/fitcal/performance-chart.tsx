@@ -1,23 +1,24 @@
 "use client";
 
+import type { AppDictionary } from "@/i18n";
 import { MetaStatChart } from "@/components/fitcal/meta-stat-chart";
+import type { PerformancePoint } from "@/components/fitcal/dashboard-types";
 
-type PerformancePoint = {
-  challengeDate: string;
-  pushups: number;
-  situps: number;
-  pushupSet1: number;
-  pushupSet2: number;
-  situpSet1: number;
-  situpSet2: number;
-  target: number;
-};
+type ChartLabels = AppDictionary["dashboard"]["charts"];
 
-export function PerformanceChart({ points }: { points: PerformancePoint[] }) {
+export function PerformanceChart({
+  points,
+  labels,
+}: {
+  points: PerformancePoint[];
+  labels: ChartLabels;
+}) {
   return (
     <MetaStatChart
-      description={`Verlauf der letzten ${points.length || 0} dokumentierten Workout-Tage mit Gesamtwerten und Set-Aufteilung.`}
-      emptyText="Noch keine Workout-Tage vorhanden. Sobald Einträge da sind, erscheint hier die Verlaufsgrafik."
+      description={labels.performanceDescription}
+      emptyText={labels.performanceEmpty}
+      focusLabel={labels.focus}
+      noValueLabel={labels.noValue}
       points={points.map((point) => ({
         label: point.challengeDate,
         values: {
@@ -33,49 +34,49 @@ export function PerformanceChart({ points }: { points: PerformancePoint[] }) {
       series={[
         {
           key: "pushups",
-          label: "Liegestütze gesamt",
+          label: labels.totalPushups,
           color: "var(--fc-accent)",
-          formatter: (value) => `${value} Wdh.`,
+          formatter: (value) => `${value} ${labels.repetitions}`,
         },
         {
           key: "situps",
-          label: "Sit-ups gesamt",
+          label: labels.totalSitups,
           color: "var(--fc-accent-2)",
-          formatter: (value) => `${value} Wdh.`,
+          formatter: (value) => `${value} ${labels.repetitions}`,
         },
         {
           key: "pushupSet1",
-          label: "Liegestütze Set 1",
+          label: labels.pushupSet1,
           color: "#00d4aa",
-          formatter: (value) => `${value} Wdh.`,
+          formatter: (value) => `${value} ${labels.repetitions}`,
         },
         {
           key: "pushupSet2",
-          label: "Liegestütze Set 2",
+          label: labels.pushupSet2,
           color: "#66e8d0",
-          formatter: (value) => `${value} Wdh.`,
+          formatter: (value) => `${value} ${labels.repetitions}`,
         },
         {
           key: "situpSet1",
-          label: "Sit-ups Set 1",
+          label: labels.situpSet1,
           color: "#ff8c42",
-          formatter: (value) => `${value} Wdh.`,
+          formatter: (value) => `${value} ${labels.repetitions}`,
         },
         {
           key: "situpSet2",
-          label: "Sit-ups Set 2",
+          label: labels.situpSet2,
           color: "#ffba80",
-          formatter: (value) => `${value} Wdh.`,
+          formatter: (value) => `${value} ${labels.repetitions}`,
         },
         {
           key: "target",
-          label: "Ziel",
+          label: labels.target,
           color: "#8896a7",
           dashed: true,
-          formatter: (value) => `${value} Wdh.`,
+          formatter: (value) => `${value} ${labels.repetitions}`,
         },
       ]}
-      title="Leistung"
+      title={labels.performanceTitle}
     />
   );
 }

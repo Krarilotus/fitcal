@@ -22,6 +22,8 @@ type MetaStatChartProps = {
   points: ChartPoint[];
   series: ChartSeries[];
   emptyText: string;
+  focusLabel: string;
+  noValueLabel: string;
 };
 
 function buildSeriesCoordinates(
@@ -51,6 +53,8 @@ export function MetaStatChart({
   points,
   series,
   emptyText,
+  focusLabel,
+  noValueLabel,
 }: MetaStatChartProps) {
   const [activeIndex, setActiveIndex] = useState(points.length - 1);
   const [hiddenSeries, setHiddenSeries] = useState<string[]>([]);
@@ -178,7 +182,7 @@ export function MetaStatChart({
 
         <div className="fc-chart-readout">
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
-            Fokus
+            {focusLabel}
           </p>
           <p className="mt-2 text-lg font-semibold">{activePoint.label}</p>
           <div className="mt-4 space-y-3">
@@ -186,7 +190,7 @@ export function MetaStatChart({
               const value = activePoint.values[item.key];
               const formatted =
                 value == null
-                  ? "kein Wert"
+                  ? noValueLabel
                   : item.formatter
                     ? item.formatter(value)
                     : String(value);
