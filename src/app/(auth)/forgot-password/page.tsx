@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/fitcal/auth-shell";
 import { FlashMessage } from "@/components/fitcal/flash-message";
+import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/session";
 
 interface PageProps {
@@ -33,16 +34,13 @@ export default async function ForgotPasswordPage({ searchParams }: PageProps) {
       <div className="space-y-3">
         <FlashMessage error={error} success={success} />
         <form action="/api/auth/forgot-password" className="space-y-4" method="post">
-          <label className="fitcal-input-wrap">
-            E-Mail
-            <input className="fitcal-input" name="email" required type="email" />
+          <label className="fc-input-group">
+            <span className="fc-input-label">E-Mail</span>
+            <input className="fc-input" name="email" required type="email" />
           </label>
-          <button
-            className="w-full rounded-full bg-[var(--fc-ink)] px-5 py-3 text-sm font-medium text-[var(--fc-bg)] transition hover:bg-[#2d352f]"
-            type="submit"
-          >
+          <Button className="w-full" type="submit">
             Reset-Link senden
-          </button>
+          </Button>
         </form>
       </div>
     </AuthShell>

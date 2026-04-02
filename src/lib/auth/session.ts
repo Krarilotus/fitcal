@@ -77,6 +77,20 @@ export async function getCurrentUser() {
           dailySubmissions: {
             include: {
               videos: true,
+              workoutReviews: {
+                include: {
+                  reviewer: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+                orderBy: {
+                  createdAt: "asc",
+                },
+              },
             },
             orderBy: {
               challengeDate: "asc",

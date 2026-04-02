@@ -21,12 +21,6 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user.isLightParticipant) {
-    return NextResponse.redirect(
-      new URL("/dashboard?error=Die%20Light-Variante%20hat%20keinen%20Upload-Zugang", request.url),
-    );
-  }
-
   try {
     const formData = await request.formData();
     const parsed = parseSubmissionInput(formData);
@@ -35,42 +29,46 @@ export async function POST(request: Request) {
       throw new Error("Uploads sind nur für heute und gestern erlaubt.");
     }
 
-    assertSubmissionMatchesRules(parsed);
-
-    const files = getVideoFiles(formData);
-    const { folderPath, safeUserLabel } = await ensureDailyUploadDirectory(
-      user.name || user.email,
-      parsed.challengeDate,
-    );
-
-    await rm(folderPath, { recursive: true, force: true });
-    const freshDirectory = await ensureDailyUploadDirectory(
-      user.name || user.email,
-      parsed.challengeDate,
-    );
+    if (!user.isLightParticipant) {
+      assertSubmissionMatchesRules(parsed);
+    }
 
     const persistedFiles = [];
 
-    for (const [index, file] of files.entries()) {
-      const storedName = buildStoredVideoFileName({
-        challengeDate: parsed.challengeDate,
-        safeUserLabel,
-        partIndex: index,
-        originalName: file.name,
-      });
-      const storedPath = path.join(freshDirectory.folderPath, storedName);
-      const bytes = Buffer.from(await file.arrayBuffer());
+    if (!user.isLightParticipant) {
+      const files = getVideoFiles(formData);
+      const { folderPath, safeUserLabel } = await ensureDailyUploadDirectory(
+        user.name || user.email,
+        parsed.challengeDate,
+      );
 
-      await writeFile(storedPath, bytes);
+      await rm(folderPath, { recursive: true, force: true });
+      const freshDirectory = await ensureDailyUploadDirectory(
+        user.name || user.email,
+        parsed.challengeDate,
+      );
 
-      persistedFiles.push({
-        originalName: file.name,
-        storedName,
-        storedPath,
-        mimeType: file.type || "application/octet-stream",
-        sizeBytes: file.size,
-        orderIndex: index,
-      });
+      for (const [index, file] of files.entries()) {
+        const storedName = buildStoredVideoFileName({
+          challengeDate: parsed.challengeDate,
+          safeUserLabel,
+          partIndex: index,
+          originalName: file.name,
+        });
+        const storedPath = path.join(freshDirectory.folderPath, storedName);
+        const bytes = Buffer.from(await file.arrayBuffer());
+
+        await writeFile(storedPath, bytes);
+
+        persistedFiles.push({
+          originalName: file.name,
+          storedName,
+          storedPath,
+          mimeType: file.type || "application/octet-stream",
+          sizeBytes: file.size,
+          orderIndex: index,
+        });
+      }
     }
 
     const existing = await prisma.dailySubmission.findUnique({
@@ -91,6 +89,11 @@ export async function POST(request: Request) {
           dailySubmissionId: existing.id,
         },
       });
+      await prisma.workoutReview.deleteMany({
+        where: {
+          dailySubmissionId: existing.id,
+        },
+      });
       await prisma.dailyVideo.deleteMany({
         where: {
           dailySubmissionId: existing.id,
@@ -107,6 +110,10 @@ export async function POST(request: Request) {
       },
       update: {
         status: "COMPLETED",
+        reviewStatus: user.isLightParticipant ? "NOT_REQUIRED" : "PENDING",
+        verifiedPushupTotal: null,
+        verifiedSitupTotal: null,
+        reviewedAt: null,
         pushupSets: serializeSets(parsed.pushupSets),
         situpSets: serializeSets(parsed.situpSets),
         notes: parsed.notes || null,
@@ -121,6 +128,7 @@ export async function POST(request: Request) {
         userId: user.id,
         challengeDate: parsed.challengeDate,
         status: "COMPLETED",
+        reviewStatus: user.isLightParticipant ? "NOT_REQUIRED" : "PENDING",
         pushupSets: serializeSets(parsed.pushupSets),
         situpSets: serializeSets(parsed.situpSets),
         notes: parsed.notes || null,
@@ -133,7 +141,14 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.redirect(new URL("/dashboard?success=Trainingstag%20gespeichert", request.url));
+    return NextResponse.redirect(
+      new URL(
+        user.isLightParticipant
+          ? "/dashboard?success=Eintrag%20gespeichert"
+          : "/dashboard?success=Trainingstag%20gespeichert",
+        request.url,
+      ),
+    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Submission konnte nicht gespeichert werden.";

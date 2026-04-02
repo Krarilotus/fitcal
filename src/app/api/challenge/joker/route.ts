@@ -81,6 +81,11 @@ export async function POST(request: Request) {
         dailySubmissionId: existingSubmission.id,
       },
     });
+    await prisma.workoutReview.deleteMany({
+      where: {
+        dailySubmissionId: existingSubmission.id,
+      },
+    });
   }
 
   await prisma.dailySubmission.upsert({
@@ -92,6 +97,10 @@ export async function POST(request: Request) {
     },
     update: {
       status: "JOKER",
+      reviewStatus: "NOT_REQUIRED",
+      verifiedPushupTotal: null,
+      verifiedSitupTotal: null,
+      reviewedAt: null,
       pushupSets: "[0,0]",
       situpSets: "[0,0]",
       notes: "Joker genutzt",
@@ -101,6 +110,7 @@ export async function POST(request: Request) {
       userId: user.id,
       challengeDate,
       status: "JOKER",
+      reviewStatus: "NOT_REQUIRED",
       pushupSets: "[0,0]",
       situpSets: "[0,0]",
       notes: "Joker genutzt",

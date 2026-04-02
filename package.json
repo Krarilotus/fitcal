@@ -7,6 +7,11 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test:sim": "tsx --test tests/sim/**/*.test.ts",
+    "e2e:prepare": "node scripts/e2e-prepare.mjs",
+    "e2e:seed": "node scripts/e2e-seed.mjs",
+    "test:e2e": "playwright test --config=playwright.config.mts",
+    "test:e2e:headed": "playwright test --config=playwright.config.mts --headed",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev"
@@ -26,6 +31,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25.5.0",
     "@types/react": "^19",
@@ -34,6 +40,7 @@
     "eslint-config-next": "16.2.2",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
 }

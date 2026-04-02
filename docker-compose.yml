@@ -1,10 +1,12 @@
+name: fitcal
+
 services:
   fitcal:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fitcal:latest
-    container_name: fitcal
+    image: fitcal-app:latest
+    container_name: fitcal-app
     restart: unless-stopped
     env_file:
       - .env.production

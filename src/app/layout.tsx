@@ -1,17 +1,28 @@
-import type { Metadata } from "next";
-import { DM_Serif_Display, Space_Grotesk } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Syne, Figtree } from "next/font/google";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { buildThemeCss } from "@/config/themes";
+import { getPreferredLocale, getPreferredTheme } from "@/lib/preferences";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const syne = Syne({
+  variable: "--font-syne",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const dmSerifDisplay = DM_Serif_Display({
-  variable: "--font-dm-serif-display",
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
-  weight: "400",
+  weight: ["400", "500", "600", "700"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0f0f11",
+};
 
 export const metadata: Metadata = {
   title: "FitCal Challenge",
@@ -31,17 +42,25 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeCss = buildThemeCss();
+  const locale = await getPreferredLocale();
+  const theme = await getPreferredTheme();
+
   return (
     <html
-      lang="de"
-      className={`${spaceGrotesk.variable} ${dmSerifDisplay.variable} h-full antialiased`}
+      lang={locale}
+      className={`${syne.variable} ${figtree.variable} h-full antialiased`}
+      data-theme={theme}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <style>{themeCss}</style>
+        <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

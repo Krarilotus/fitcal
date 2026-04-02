@@ -19,9 +19,24 @@ export async function GET(
   const video = await prisma.dailyVideo.findFirst({
     where: {
       id: videoId,
-      dailySubmission: {
-        userId: user.id,
-      },
+      dailySubmission: user.isLightParticipant
+        ? {
+            userId: user.id,
+          }
+        : {
+            OR: [
+              {
+                userId: user.id,
+              },
+              {
+                status: "COMPLETED",
+                user: {
+                  registrationStatus: "APPROVED",
+                  isLightParticipant: false,
+                },
+              },
+            ],
+          },
     },
     select: {
       originalName: true,

@@ -17,6 +17,7 @@ export type DayCompletionState =
   | "free"
   | "open"
   | "completed"
+  | "partial"
   | "joker"
   | "sickPending"
   | "sick"
@@ -25,6 +26,7 @@ export type DayCompletionState =
 export type PersistedDayStatus =
   | "COMPLETED"
   | "JOKER"
+  | "SLACK"
   | "SICK_PENDING"
   | "SICK_VERIFIED";
 
@@ -69,7 +71,11 @@ function pad(value: number) {
   return value.toString().padStart(2, "0");
 }
 
-export function getBerlinDateKey(date = new Date()) {
+export function getBerlinDateKey(date?: Date) {
+  if (date == null && process.env.FITCAL_TODAY_OVERRIDE) {
+    return process.env.FITCAL_TODAY_OVERRIDE;
+  }
+
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: CHALLENGE_TIME_ZONE,
     year: "numeric",
@@ -77,7 +83,7 @@ export function getBerlinDateKey(date = new Date()) {
     day: "2-digit",
   });
 
-  return formatter.format(date);
+  return formatter.format(date ?? new Date());
 }
 
 export function addDaysToDateKey(dateKey: string, amount: number) {
@@ -146,6 +152,14 @@ export function getMonthKey(dateKey: string) {
 function getMonthIndex(dateKey: string) {
   const { year, month } = parseDateKey(dateKey);
   return year * 12 + (month - 1);
+}
+
+function getCompletionRatio(record: Pick<DailyRecordLike, "challengeDate" | "pushupTotal" | "situpTotal">) {
+  const target = getRequiredReps(record.challengeDate);
+  const completedUnits =
+    Math.min(target, record.pushupTotal) + Math.min(target, record.situpTotal);
+
+  return Math.max(0, Math.min(1, completedUnits / (target * 2)));
 }
 
 export function countJokersForMonth(
@@ -279,7 +293,19 @@ export function getChallengeOverview({
     let dayDebtCents = 0;
 
     if (record?.status === "COMPLETED") {
-      status = "completed";
+      const completionRatio = getCompletionRatio(record);
+
+      if (!isLightParticipant && completionRatio < 1) {
+        const fullDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
+        dayDebtCents = Math.round(fullDebtCents * (1 - completionRatio));
+        slackCount += 1;
+        totalDebtCents += dayDebtCents;
+        outstandingDebtCents += dayDebtCents;
+        status = completionRatio > 0 ? "partial" : "slack";
+      } else {
+        status = "completed";
+      }
+
       if (!isLightParticipant) {
         debtReductionCents = Math.min(rawDebtReductionCents, outstandingDebtCents);
         outstandingDebtCents -= debtReductionCents;
@@ -287,6 +313,15 @@ export function getChallengeOverview({
       }
     } else if (record?.status === "JOKER") {
       status = "joker";
+    } else if (record?.status === "SLACK") {
+      status = "slack";
+
+      if (!isLightParticipant) {
+        dayDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
+        slackCount += 1;
+        totalDebtCents += dayDebtCents;
+        outstandingDebtCents += dayDebtCents;
+      }
     } else if (record?.status === "SICK_VERIFIED") {
       status = "sick";
     } else if (record?.status === "SICK_PENDING") {
@@ -312,11 +347,11 @@ export function getChallengeOverview({
       status,
       canUpload:
         !isLightParticipant &&
-        (status === "open" || status === "free" || status === "sickPending") &&
+        (status === "open" || status === "free" || status === "sickPending" || status === "slack") &&
         canSubmitForDate(cursor, now),
       canUseJoker:
         !isLightParticipant &&
-        (status === "open" || status === "sickPending") &&
+        (status === "open" || status === "sickPending" || status === "slack") &&
         jokerBalance > 0 &&
         canSubmitForDate(cursor, now),
       isCurrentDay,

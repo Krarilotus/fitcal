@@ -44,6 +44,10 @@ next-env.d.ts
 prisma/dev.db
 prisma/dev.db-journal
 
+# local uploaded runtime data
+data/uploads/
+data/e2e-uploads/
+
 # local AI/tooling notes
 AGENTS.md
 CLAUDE.md
@@ -51,3 +55,10 @@ CLAUDE.md
 # local runtime logs
 .dev-server.log
 .dev-server.err.log
+
+# e2e artifacts
+playwright-report/
+test-results/
+blob-report/
+prisma/e2e.db
+prisma/e2e.db-journal

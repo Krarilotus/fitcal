@@ -1,6 +1,6 @@
 # FitCal
 
-Next.js-App fuer die FitCal-Challenge. Deployment-Ziel ist `fitcal.hisqu.de` hinter Nginx, in Docker, mit SQLite, Uploads auf Disk und Passwort-Reset ueber Resend.
+Next.js-App fuer die FitCal-Challenge. Das Ziel-Setup ist `fitcal.hisqu.de` hinter Nginx, in Docker, mit SQLite, Uploads auf Disk und Passwort-Reset ueber Resend.
 
 ## Lokal starten
 
@@ -17,29 +17,44 @@ npx prisma db push
 npm run dev
 ```
 
-Danach:
+Dann:
 - App: `http://localhost:3000`
+
+## Lokale Checks vor Deployment
+
+```bash
+npm run lint
+npm run build
+npm run test:sim
+npm run test:e2e
+```
+
+Aktueller bekannter Resthinweis:
+- Turbopack traced `src/lib/storage.ts` in der Build-Ausgabe zu weit. Das ist aktuell nicht blockierend fuer das Deployment.
 
 ## Wichtige Dateien
 
 - lokale Vorlage: [`.env.example`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.example)
 - Server-Vorlage: [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server)
+- Produktionsvorlage: [`.env.production.example`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.production.example)
 - Docker: [`docker-compose.yml`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/docker-compose.yml)
-- Nginx fertig: [`deploy/nginx-fitcal.conf`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/nginx-fitcal.conf)
+- Nginx: [`deploy/nginx-fitcal.conf`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/nginx-fitcal.conf)
+- Server-Setup: [`deploy/setup-fitcal-server.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/setup-fitcal-server.sh)
+- Update-Skript: [`deploy/update-fitcal.sh`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/update-fitcal.sh)
 
 ## Resend + STRATO
 
 Ziel:
 - Versand ueber Resend
-- Absender: `fitcal@mail.hisqu.de`
+- Absender: `fitcal@hisqu.de`
 - Antworten an `fitcal@hisqu.de`
-- Empfang der Antworten ueber STRATO-Postfach/Alias
+- Empfang der Antworten ueber STRATO-Postfach oder Alias
 
 Wichtig:
 - Resend macht den Versand.
 - STRATO macht das echte Postfach bzw. den Alias.
 - In deinem Fall reicht es, wenn `fitcal@hisqu.de` als Alias auf das vorhandene `webmaster@[Alle Domains]`-Postfach zeigt.
-- Die Sending-Domain in Resend ist `mail.hisqu.de`.
+- Die Domain `hisqu.de` muss im Resend-Account bereits verifiziert sein.
 
 ### 1. STRATO Mail vorbereiten
 
@@ -55,47 +70,37 @@ Nicht noetig:
 
 ### 2. Resend vorbereiten
 
-Im neuen Resend-Account:
+Im Resend-Account:
 1. `Domains`
-2. `Add Domain`
-3. `mail.hisqu.de` eintragen
-4. speichern
-5. die angezeigten DNS-Records offen lassen
+2. pruefen, dass `hisqu.de` verifiziert ist
+3. `API Keys`
+4. `Create API Key`
+5. Name: `fitcal-production`
+6. Permission: `Sending`
+7. Key kopieren
 
-### 3. DNS in STRATO setzen
+### 3. DNS fuer die App in STRATO setzen
 
 In STRATO:
 - `Domains`
 - `hisqu.de`
-- `Subdomains`
-- Subdomain `mail`
 - `DNS-Verwaltung`
 
 Dann:
-- alle von Resend angezeigten Records 1:1 eintragen
-- speichern
-- in Resend `Verify` / `Refresh`
+- `A`-Record fuer `fitcal` auf die Server-IPv4 setzen
+- optional `AAAA`-Record fuer `fitcal` auf die Server-IPv6 setzen
 
 Wichtig:
-- die Resend-Records werden auf der Subdomain `mail` gesetzt
-- keine eigenen TXT-Werte erfinden
+- nur `fitcal.hisqu.de` muss auf den Server zeigen
+- bestehende funktionierende Resend-Eintraege fuer `hisqu.de` nicht ueberschreiben
 
-### 4. API Key in Resend erzeugen
+## `.env.production`
 
-In Resend:
-1. `API Keys`
-2. `Create API Key`
-3. Name: `fitcal-production`
-4. Permission: `Sending`
-5. Key kopieren
+Die Datei [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) ist fuer deinen lokalen Rechner gedacht. Auf dem Server benennst du sie in `.env.production` um.
 
-## `.env.server`
+Alternativ kannst du [`.env.production.example`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.production.example) als Vorlage nehmen.
 
-Die vorbereitete Datei [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) ist fuer deinen lokalen Rechner gedacht, damit du sie spaeter einfach auf den Server kopieren kannst. Auf dem Server selbst benennst du sie in `.env.production` um.
-
-Alternativ kannst du direkt [`.env.production.example`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.production.example) als Vorlage benutzen.
-
-Inhalt fuer `.env.production`:
+Minimal:
 
 ```env
 NODE_ENV=production
@@ -113,25 +118,38 @@ APP_TIMEZONE=Europe/Berlin
 AUTH_URL=https://fitcal.hisqu.de
 
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
-RESEND_FROM="FitCal <fitcal@mail.hisqu.de>"
+RESEND_FROM="FitCal <fitcal@hisqu.de>"
 RESEND_REPLY_TO="fitcal@hisqu.de"
 ```
 
-Wenn `3107` belegt ist, nimm einen anderen freien Port und passe dann auch Nginx an.
+Wenn `3107` belegt ist:
+- freien Port suchen
+- `FITCAL_HOST_PORT` anpassen
+- in Nginx `proxy_pass` auf denselben Port setzen
 
 ## Server vorbereiten
 
 Als Root oder sudo-User:
 
 ```bash
-sudo adduser --system --group --home /opt/fitcal --shell /usr/sbin/nologin fitcal
-sudo mkdir -p /opt/fitcal/app
-sudo mkdir -p /opt/fitcal/data
-sudo mkdir -p /opt/fitcal/uploads
-sudo chown -R fitcal:fitcal /opt/fitcal
-sudo chmod 750 /opt/fitcal /opt/fitcal/data /opt/fitcal/uploads
-sudo usermod -aG docker fitcal
+chmod +x deploy/setup-fitcal-server.sh
+sudo ./deploy/setup-fitcal-server.sh
 ```
+
+Das Setup sorgt fuer:
+- eigenen System-User `fitcal`
+- kein Passwort
+- kein interaktiver Login (`/usr/sbin/nologin`)
+- eigene Verzeichnisse unter `/opt/fitcal`
+- eigenes SSH-Keypair nur fuer Repo-Zugriff
+- Docker-Zugriff nur fuer diesen Dienst
+
+Damit FitCal deine anderen Apps nicht stoert:
+- eigener Host-Port
+- eigener Nginx-VHost nur fuer `fitcal.hisqu.de`
+- eigener Compose-Projektname `fitcal`
+- eigener Containername `fitcal-app`
+- eigene Daten- und Upload-Verzeichnisse
 
 Freien Port pruefen:
 
@@ -142,15 +160,35 @@ ss -ltn | grep ':3107 '
 
 ## Code auf den Server
 
+### GitHub Deploy Key
+
+Nach `sudo ./deploy/setup-fitcal-server.sh`:
+
 ```bash
-cd /opt/fitcal/app
-sudo -u fitcal git clone <repo-url> .
+sudo cat /opt/fitcal/.ssh/id_ed25519.pub
+```
+
+Dann in GitHub:
+1. Repo `Krarilotus/fitcal`
+2. `Settings`
+3. `Deploy keys`
+4. `Add deploy key`
+5. Titel z. B. `fitcal-server`
+6. Public Key einfuegen
+7. `Allow write access` deaktiviert lassen
+
+Damit zieht der Server den Code read-only per SSH.
+
+### Clone
+
+```bash
+sudo -u fitcal git clone git@github.com:Krarilotus/fitcal.git /opt/fitcal/app
 ```
 
 Dann entweder:
 
 Option A:
-- deine lokale [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) per SCP/WinSCP nach `/opt/fitcal/app/.env.production` hochladen
+- deine lokale [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) per SCP/WinSCP nach `/opt/fitcal/app/.env.production` kopieren
 
 Option B:
 
@@ -177,10 +215,7 @@ curl -I http://127.0.0.1:3107
 
 ## Nginx fuer `fitcal.hisqu.de`
 
-Die fertige Datei liegt hier:
-- [`deploy/nginx-fitcal.conf`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/nginx-fitcal.conf)
-
-Wenn dein Host-Port nicht `3107` ist, in der Datei `proxy_pass` anpassen.
+Wenn dein Host-Port nicht `3107` ist, in [`deploy/nginx-fitcal.conf`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/deploy/nginx-fitcal.conf) `proxy_pass` anpassen.
 
 Auf dem Server:
 
@@ -192,27 +227,14 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## DNS fuer die App
-
-In STRATO:
-- `A`-Record: `fitcal` -> `<SERVER_IPV4>`
-- optional `AAAA`-Record: `fitcal` -> `<SERVER_IPV6>`
-
-Dann zeigt `fitcal.hisqu.de` auf deinen Server.
-
 ## TLS / HTTPS
 
-Wenn Nginx steht und DNS aufloest:
+Wenn Nginx steht und `fitcal.hisqu.de` schon aufloest:
 
 ```bash
 sudo apt update
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d fitcal.hisqu.de
-```
-
-Danach:
-
-```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -222,18 +244,17 @@ sudo systemctl reload nginx
 1. `https://fitcal.hisqu.de` im Browser oeffnen
 2. Account registrieren
 3. Passwort-Reset anfordern
-4. prüfen:
+4. pruefen:
 - kommt die Mail an?
-- ist der Absender `fitcal@mail.hisqu.de`?
+- ist der Absender `fitcal@hisqu.de`?
 - kommen Antworten im STRATO-Postfach an?
+5. Test-Upload und Review pruefen
 
 ## Update spaeter
 
 ```bash
-cd /opt/fitcal/app
-sudo -u fitcal git pull
-sudo -u fitcal docker compose --env-file .env.production up -d --build
-sudo -u fitcal docker compose logs -f fitcal
+chmod +x deploy/update-fitcal.sh
+sudo ./deploy/update-fitcal.sh
 ```
 
 ## Hinweise

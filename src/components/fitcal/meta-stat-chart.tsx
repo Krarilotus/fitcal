@@ -56,7 +56,7 @@ export function MetaStatChart({
   const [hiddenSeries, setHiddenSeries] = useState<string[]>([]);
 
   if (points.length === 0) {
-    return <div className="fitcal-stream-panel">{emptyText}</div>;
+    return <div className="fc-card text-sm text-[var(--fc-muted)]">{emptyText}</div>;
   }
 
   const width = 100;
@@ -72,12 +72,11 @@ export function MetaStatChart({
   const activePoint = points[safeActiveIndex];
 
   return (
-    <section className="fitcal-stream-panel">
+    <section className="fc-card">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="fitcal-section-kicker">Metastats</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">{title}</h2>
-          <p className="mt-2 max-w-xl text-sm leading-7 text-[var(--fc-muted)]">
+          <h2 className="fc-heading text-lg">{title}</h2>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--fc-muted)]">
             {description}
           </p>
         </div>
@@ -87,7 +86,7 @@ export function MetaStatChart({
 
             return (
               <button
-                className={`fitcal-toggle-chip ${isHidden ? "is-off" : ""}`}
+                className={`fc-toggle-chip ${isHidden ? "is-off" : ""}`}
                 key={item.key}
                 onClick={() =>
                   setHiddenSeries((current) =>
@@ -99,7 +98,7 @@ export function MetaStatChart({
                 style={{ "--chip-color": item.color } as CSSProperties}
                 type="button"
               >
-                <span className="fitcal-toggle-dot" />
+                <span className="fc-toggle-dot" />
                 {item.label}
               </button>
             );
@@ -108,7 +107,7 @@ export function MetaStatChart({
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_0.5fr]">
-        <div className="fitcal-chart-stage overflow-hidden">
+        <div className="fc-chart-area overflow-hidden">
           <svg
             aria-label={title}
             className="h-64 w-full sm:h-72"
@@ -120,7 +119,7 @@ export function MetaStatChart({
               return (
                 <line
                   key={step}
-                  stroke="rgba(54, 65, 58, 0.12)"
+                  stroke="var(--fc-border)"
                   strokeDasharray="1.4 1.8"
                   strokeWidth="0.35"
                   x1="0"
@@ -177,7 +176,7 @@ export function MetaStatChart({
           </div>
         </div>
 
-        <div className="fitcal-chart-readout">
+        <div className="fc-chart-readout">
           <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
             Fokus
           </p>
@@ -193,10 +192,10 @@ export function MetaStatChart({
                     : String(value);
 
               return (
-                <div className="fitcal-chart-readout-row" key={item.key}>
-                  <span className="fitcal-chart-readout-label">
+                <div className="fc-chart-readout-row" key={item.key}>
+                  <span className="fc-chart-readout-label">
                     <span
-                      className="fitcal-toggle-dot"
+                      className="fc-toggle-dot"
                       style={{ background: item.color }}
                     />
                     {item.label}

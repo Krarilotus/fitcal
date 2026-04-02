@@ -23,20 +23,22 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const challengeDate = String(formData.get("challengeDate") || "");
-    const reviewerUserId = String(formData.get("reviewerUserId") || "");
+    const consent = String(formData.get("consent") || "");
     const notes = String(formData.get("notes") || "").trim();
 
     if (!challengeDate || challengeDate < CHALLENGE_START_DATE || !canSubmitForDate(challengeDate)) {
       throw new Error("Die Krankmeldung ist nur für heute oder gestern möglich.");
     }
 
-    if (!reviewerUserId || reviewerUserId === user.id) {
-      throw new Error("Bitte wähle einen anderen Nutzer für die Bestätigung.");
+    if (consent !== "on") {
+      throw new Error("Bitte bestätige die Männergrippe-Erklärung.");
     }
 
-    const reviewer = await prisma.user.findFirst({
+    const reviewers = await prisma.user.findMany({
       where: {
-        id: reviewerUserId,
+        id: {
+          not: user.id,
+        },
         registrationStatus: RegistrationStatus.APPROVED,
         isLightParticipant: false,
       },
@@ -45,8 +47,8 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!reviewer) {
-      throw new Error("Der ausgewählte Nutzer kann die Krankmeldung nicht bestätigen.");
+    if (reviewers.length === 0) {
+      throw new Error("Es gibt aktuell keine anderen Vollteilnehmer für die Bestätigung.");
     }
 
     const existingSubmission = await prisma.dailySubmission.findUnique({
@@ -74,6 +76,10 @@ export async function POST(request: Request) {
       },
       update: {
         status: "SICK_PENDING",
+        reviewStatus: "NOT_REQUIRED",
+        verifiedPushupTotal: null,
+        verifiedSitupTotal: null,
+        reviewedAt: null,
         pushupSets: "[0,0]",
         situpSets: "[0,0]",
         notes: notes || "Männer-Grippe gemeldet",
@@ -83,6 +89,7 @@ export async function POST(request: Request) {
         userId: user.id,
         challengeDate,
         status: "SICK_PENDING",
+        reviewStatus: "NOT_REQUIRED",
         pushupSets: "[0,0]",
         situpSets: "[0,0]",
         notes: notes || "Männer-Grippe gemeldet",
@@ -93,26 +100,24 @@ export async function POST(request: Request) {
       },
     });
 
-    await prisma.sicknessVerification.upsert({
+    await prisma.sicknessVerification.deleteMany({
       where: {
         dailySubmissionId: submission.id,
       },
-      update: {
-        reviewerUserId,
-        decision: RegistrationApprovalDecision.PENDING,
-        notes: notes || null,
-        decidedAt: null,
-      },
-      create: {
+    });
+
+    await prisma.sicknessVerification.createMany({
+      data: reviewers.map((reviewer) => ({
         dailySubmissionId: submission.id,
-        reviewerUserId,
+        reviewerUserId: reviewer.id,
         decision: RegistrationApprovalDecision.PENDING,
-        notes: notes || null,
-      },
+        notes: null,
+        decidedAt: null,
+      })),
     });
 
     return NextResponse.redirect(
-      new URL("/dashboard?success=M%C3%A4nner-Grippe%20zur%20Best%C3%A4tigung%20eingereicht", request.url),
+      new URL("/dashboard?success=M%C3%A4nner-Grippe%20zur%20Abstimmung%20eingereicht", request.url),
     );
   } catch (error) {
     const message =
