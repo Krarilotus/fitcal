@@ -24,10 +24,13 @@ import type {
 } from "@/components/fitcal/dashboard-types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DateTextInput } from "@/components/ui/date-text-input";
 import type { Locale } from "@/lib/preferences";
 import {
   CHALLENGE_END_DATE,
   CHALLENGE_START_DATE,
+  MAX_VIDEO_FILES_PER_DAY,
+  MAX_VIDEO_SIZE_BYTES,
   getChallengeDayIndex,
   getRequiredReps,
   isWithinChallenge,
@@ -96,6 +99,9 @@ function isCompletedLikeStatus(status: ParticipantRow["todayStatus"]) {
 async function handleTrackedUploadSubmit(
   event: FormEvent<HTMLFormElement>,
   setUploadingDays: Dispatch<SetStateAction<Record<string, boolean>>>,
+  setUploadErrors: Dispatch<SetStateAction<Record<string, string | null>>>,
+  labels: DashboardLabels["uploads"],
+  isLightParticipant: boolean,
 ) {
   event.preventDefault();
   const form = event.currentTarget;
@@ -103,20 +109,73 @@ async function handleTrackedUploadSubmit(
   const challengeDateValue = formData.get("challengeDate");
   const challengeDate =
     typeof challengeDateValue === "string" ? challengeDateValue : "unknown";
+  const files = formData
+    .getAll("videos")
+    .filter((value): value is File => value instanceof File && value.size > 0);
+
+  if (!isLightParticipant) {
+    if (files.length < 1 || files.length > MAX_VIDEO_FILES_PER_DAY) {
+      setUploadErrors((current) => ({
+        ...current,
+        [challengeDate]: labels.uploadTooMany,
+      }));
+      return;
+    }
+
+    if (files.some((file) => file.size > MAX_VIDEO_SIZE_BYTES)) {
+      setUploadErrors((current) => ({
+        ...current,
+        [challengeDate]: labels.uploadTooLarge,
+      }));
+      return;
+    }
+  }
 
   setUploadingDays((current) => ({
     ...current,
     [challengeDate]: true,
   }));
+  setUploadErrors((current) => ({
+    ...current,
+    [challengeDate]: null,
+  }));
 
-  const response = await fetch("/api/submissions", {
-    method: "POST",
-    body: formData,
-    credentials: "same-origin",
-    redirect: "follow",
-  });
+  try {
+    const response = await fetch("/api/submissions", {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+      redirect: "follow",
+    });
 
-  window.location.assign(response.url || "/dashboard?error=Upload%20failed");
+    if (!response.ok) {
+      const errorMessage =
+        response.status === 413
+          ? labels.uploadTooLargeRequest
+          : labels.uploadUnexpected;
+
+      setUploadingDays((current) => ({
+        ...current,
+        [challengeDate]: false,
+      }));
+      setUploadErrors((current) => ({
+        ...current,
+        [challengeDate]: errorMessage,
+      }));
+      return;
+    }
+
+    window.location.assign(response.url || "/dashboard?error=Upload%20failed");
+  } catch {
+    setUploadingDays((current) => ({
+      ...current,
+      [challengeDate]: false,
+    }));
+    setUploadErrors((current) => ({
+      ...current,
+      [challengeDate]: labels.uploadUnexpected,
+    }));
+  }
 }
 
 function handleVideoReplaceSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -200,6 +259,7 @@ export function DashboardTabs({
   const [targetDateInput, setTargetDateInput] = useState(formatDateKeyForInput(CHALLENGE_START_DATE));
   const [selectedUploadVideos, setSelectedUploadVideos] = useState<Record<string, SelectedUploadVideo[]>>({});
   const [uploadingDays, setUploadingDays] = useState<Record<string, boolean>>({});
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
 
   const additionalSlackDays = Math.max(0, Math.floor(parseNumberInput(slackDaysInput)));
   const totalSlackDebtCents = Array.from({ length: additionalSlackDays }, (_, index) => slackBaseCents + (overview.existingSlackDays + index) * slackIncrementCents).reduce((sum, value) => sum + value, 0);
@@ -234,15 +294,28 @@ export function DashboardTabs({
     challengeDate: string,
     event: ChangeEvent<HTMLInputElement>,
   ) {
-    const nextVideos = Array.from(event.currentTarget.files ?? []).map((file, index) => ({
+    const files = Array.from(event.currentTarget.files ?? []);
+    const nextVideos = files.map((file, index) => ({
       id: buildUploadVideoId(file, index),
       originalName: file.name,
       displayName: file.name.replace(/\.[^.]+$/, ""),
     }));
 
+    let nextError: string | null = null;
+
+    if (files.length > MAX_VIDEO_FILES_PER_DAY) {
+      nextError = labels.uploads.uploadTooMany;
+    } else if (files.some((file) => file.size > MAX_VIDEO_SIZE_BYTES)) {
+      nextError = labels.uploads.uploadTooLarge;
+    }
+
     setSelectedUploadVideos((current) => ({
       ...current,
       [challengeDate]: nextVideos,
+    }));
+    setUploadErrors((current) => ({
+      ...current,
+      [challengeDate]: nextError,
     }));
   }
 
@@ -314,6 +387,7 @@ export function DashboardTabs({
               <article className="fc-card" key={day.challengeDate}>
                 {(() => {
                   const isUploading = uploadingDays[day.challengeDate] === true;
+                  const uploadError = uploadErrors[day.challengeDate];
 
                   return (
                     <>
@@ -327,7 +401,7 @@ export function DashboardTabs({
                     {day.isQualificationDay ? <span className="fc-chip fc-chip-warm">{labels.uploads.qualification}</span> : null}
                   </div>
                 </div>
-                <form className="mt-5 space-y-4" encType="multipart/form-data" onSubmit={(event) => handleTrackedUploadSubmit(event, setUploadingDays)}>
+                <form className="mt-5 space-y-4" encType="multipart/form-data" onSubmit={(event) => handleTrackedUploadSubmit(event, setUploadingDays, setUploadErrors, labels.uploads, overview.isLightParticipant)}>
                   <input name="challengeDate" type="hidden" value={day.challengeDate} />
                   <div className="fc-grid-2">
                     <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" disabled={isUploading} min="0" name="pushupSet1" placeholder="0" type="number" /></label>
@@ -358,6 +432,7 @@ export function DashboardTabs({
                     ) : null}
                     <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.notes}</span><textarea className="fc-input min-h-[5.5rem]" disabled={isUploading} name="notes" /></label>
                   </div>
+                  {uploadError ? <p className="text-sm font-medium text-[var(--fc-warm)]">{uploadError}</p> : null}
                   {isUploading ? <p className="text-sm text-[var(--fc-muted)]">{labels.uploads.uploadPendingHint}</p> : null}
                   <div className="flex flex-wrap gap-3"><Button disabled={isUploading} type="submit">{isUploading ? (overview.isLightParticipant ? labels.uploads.uploadingEntry : labels.uploads.uploadingWorkout) : (overview.isLightParticipant ? labels.uploads.saveEntry : labels.uploads.saveWorkout)}</Button></div>
                 </form>
@@ -451,7 +526,7 @@ export function DashboardTabs({
             <form action="/api/profile" className="mt-5 space-y-4" method="post">
               <div className="fc-grid-2">
                 <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.name}</span><input className="fc-input" defaultValue={profile.name ?? ""} name="name" type="text" /></label>
-                <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.birthDate}</span><input className="fc-input" defaultValue={profile.birthDateInput} inputMode="numeric" name="birthDate" pattern="\d{2}\.\d{2}\.\d{4}" placeholder={commonLabels.datePlaceholder} type="text" /></label>
+                <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.birthDate}</span><DateTextInput className="fc-input" defaultValue={profile.birthDateInput} name="birthDate" placeholder={commonLabels.datePlaceholder} /></label>
                 <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.heightCm}</span><input className="fc-input" defaultValue={profile.heightInput} inputMode="decimal" name="heightCm" step="0.1" type="number" /></label>
               </div>
               <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.motivation}</span><textarea className="fc-input min-h-20" defaultValue={profile.motivation ?? ""} maxLength={240} name="motivation" placeholder={labels.metastats.notes} /></label>
@@ -712,7 +787,7 @@ export function DashboardTabs({
         <div className={`grid gap-4 md:grid-cols-2 ${overview.isLightParticipant ? "xl:grid-cols-2" : "xl:grid-cols-4"}`}>
           <section className="fc-card">
             <h3 className="fc-heading text-base">{labels.calculator.targetTitle}</h3>
-            <label className="fc-input-group mt-4"><span className="fc-input-label">{labels.calculator.date}</span><input className="fc-input" inputMode="numeric" onChange={(event) => setTargetDateInput(event.target.value)} pattern="\d{2}\.\d{2}\.\d{4}" placeholder={commonLabels.datePlaceholder} type="text" value={targetDateInput} /></label>
+            <label className="fc-input-group mt-4"><span className="fc-input-label">{labels.calculator.date}</span><DateTextInput className="fc-input" onValueChange={setTargetDateInput} placeholder={commonLabels.datePlaceholder} value={targetDateInput} /></label>
             <div className="mt-4 grid gap-2">
               <StatBox label={labels.calculator.challengeDay} value={selectedChallengeDay ?? "-"} />
               <StatBox label={labels.calculator.perExercise} value={selectedDateTarget ?? "-"} />

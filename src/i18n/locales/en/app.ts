@@ -231,6 +231,11 @@
       uploadingWorkout: "Uploading ...",
       uploadPendingHint:
         "Upload in progress. Phone videos can take a bit, so it is best to keep the page open.",
+      uploadTooMany: "Please choose at most 4 videos.",
+      uploadTooLarge: "A video is too large. Each file may be at most 100 MB.",
+      uploadTooLargeRequest:
+        "The server rejected this upload. Please trim or compress the video significantly.",
+      uploadUnexpected: "The upload could not be completed. Please try again.",
       sicknessToggle: "Man flu?",
       sicknessConsent:
         "I consent to having it reviewed that I was sick today and therefore could not do a workout. I request that today should not count as a slack day.",

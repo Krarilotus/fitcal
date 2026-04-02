@@ -4,6 +4,7 @@ import { AuthShell } from "@/components/fitcal/auth-shell";
 import { FlashMessage } from "@/components/fitcal/flash-message";
 import { PreferenceControls } from "@/components/fitcal/preference-controls";
 import { Button } from "@/components/ui/button";
+import { DateTextInput } from "@/components/ui/date-text-input";
 import { getDictionary } from "@/i18n";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPreferredLocale, getPreferredTheme } from "@/lib/preferences";
@@ -57,7 +58,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
           <div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-sm font-medium">{labels.profile}</p></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="fc-input-group"><span className="fc-input-label">{labels.name}</span><input className="fc-input" name="name" type="text" /></label>
-            <label className="fc-input-group"><span className="fc-input-label">{labels.birthDate}</span><input className="fc-input" inputMode="numeric" name="birthDate" pattern="\d{2}\.\d{2}\.\d{4}" placeholder={dictionary.common.datePlaceholder} type="text" /></label>
+            <label className="fc-input-group"><span className="fc-input-label">{labels.birthDate}</span><DateTextInput className="fc-input" name="birthDate" placeholder={dictionary.common.datePlaceholder} /></label>
             <label className="fc-input-group"><span className="fc-input-label">{labels.heightCm}</span><input className="fc-input" inputMode="decimal" name="heightCm" placeholder={labels.heightPlaceholder} step="0.1" type="number" /></label>
             <label className="fc-input-group sm:col-span-2"><span className="fc-input-label">{labels.email}</span><input className="fc-input" name="email" required type="email" /></label>
             <label className="fc-input-group sm:col-span-2"><span className="fc-input-label">{labels.password}</span><input className="fc-input" name="password" required type="password" /></label>

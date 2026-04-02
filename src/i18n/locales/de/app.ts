@@ -231,6 +231,11 @@
       uploadingWorkout: "Upload läuft ...",
       uploadPendingHint:
         "Upload läuft. Gerade bei Handy-Videos kann das etwas dauern, also die Seite am besten offen lassen.",
+      uploadTooMany: "Bitte wähle höchstens 4 Videos aus.",
+      uploadTooLarge: "Ein Video ist zu groß. Pro Datei sind maximal 100 MB erlaubt.",
+      uploadTooLargeRequest:
+        "Der Upload wurde vom Server abgewiesen. Bitte kürze oder komprimiere das Video deutlich.",
+      uploadUnexpected: "Der Upload konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
       sicknessToggle: "M\u00e4nnergrippe?",
       sicknessConsent:
         "Ich willige ein und lasse reviewen, dass ich heute leider krank war und deshalb kein Workout machen konnte. Ich beantrage daher, dass heute kein Slack Day war.",
