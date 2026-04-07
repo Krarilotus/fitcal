@@ -458,8 +458,20 @@ export function DashboardTabs({
                   <div className="flex flex-wrap gap-1.5">
                     <span className="fc-chip fc-chip-accent">{day.isCurrentDay ? labels.uploads.today : labels.uploads.yesterday}</span>
                     {day.isQualificationDay ? <span className="fc-chip fc-chip-warm">{labels.uploads.qualification}</span> : null}
+                    {day.reviewStatusLabel ? <span className="fc-chip fc-chip-muted">{day.reviewStatusLabel}</span> : null}
                   </div>
                 </div>
+                {day.latestReviewComment ? (
+                  <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+                    <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.timeline.reviewFeedback}</p>
+                    {day.latestReviewReviewerLabel ? (
+                      <p className="mt-2 text-sm font-medium text-[var(--fc-ink)]">
+                        {labels.timeline.reviewedBy} {day.latestReviewReviewerLabel}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{day.latestReviewComment}</p>
+                  </div>
+                ) : null}
                 <form
                   className="mt-5 space-y-4"
                   encType="multipart/form-data"

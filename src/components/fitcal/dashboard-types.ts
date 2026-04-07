@@ -7,6 +7,9 @@ export type OpenDay = {
   isCurrentDay: boolean;
   isQualificationDay: boolean;
   canUseJoker: boolean;
+  reviewStatusLabel: string | null;
+  latestReviewComment: string | null;
+  latestReviewReviewerLabel: string | null;
 };
 
 export type TimelineVideo = {

@@ -91,17 +91,40 @@ function buildChallengeRecords(user: CurrentUser) {
   });
 }
 
-function buildOpenDays(locale: Locale, overview: ReturnType<typeof getChallengeOverview>): OpenDay[] {
+function buildOpenDays(
+  user: CurrentUser,
+  locale: Locale,
+  labels: DashboardLabels,
+  overview: ReturnType<typeof getChallengeOverview>,
+): OpenDay[] {
   return overview.days
     .filter((day) => day.canUpload)
-    .map((day) => ({
-      challengeDate: day.challengeDate,
-      dateLabel: formatChallengeDate(locale, day.challengeDate),
-      targetReps: getRequiredReps(day.challengeDate),
-      isCurrentDay: day.isCurrentDay,
-      isQualificationDay: isFreeChallengeDay(day.challengeDate),
-      canUseJoker: day.canUseJoker,
-    }));
+    .map((day) => {
+      const submission = user.dailySubmissions.find(
+        (entry) => entry.challengeDate === day.challengeDate,
+      );
+      const latestReviewWithNote = submission
+        ? [...submission.workoutReviews]
+            .reverse()
+            .find((review) => review.notes?.trim())
+        : null;
+
+      return {
+        challengeDate: day.challengeDate,
+        dateLabel: formatChallengeDate(locale, day.challengeDate),
+        targetReps: getRequiredReps(day.challengeDate),
+        isCurrentDay: day.isCurrentDay,
+        isQualificationDay: isFreeChallengeDay(day.challengeDate),
+        canUseJoker: day.canUseJoker,
+        reviewStatusLabel: submission
+          ? formatReviewStatus(submission.reviewStatus, labels.reviewStatusLabels)
+          : null,
+        latestReviewComment: latestReviewWithNote?.notes ?? null,
+        latestReviewReviewerLabel: latestReviewWithNote
+          ? latestReviewWithNote.reviewer.name || latestReviewWithNote.reviewer.email
+          : null,
+      };
+    });
 }
 
 function buildTimelineEntries(
@@ -694,7 +717,7 @@ export async function getDashboardPageData(params: {
     canReview,
     escalationReviewItems,
     measurementPoints: buildMeasurementPoints(user),
-    openDays: buildOpenDays(locale, challengeOverview),
+    openDays: buildOpenDays(user, locale, labels, challengeOverview),
     overview: buildOverviewSummary(
       user,
       challengeOverview,
