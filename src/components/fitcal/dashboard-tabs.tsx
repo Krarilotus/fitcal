@@ -357,6 +357,9 @@ export function DashboardTabs({
   const [selectedUploadVideos, setSelectedUploadVideos] = useState<Record<string, SelectedUploadVideo[]>>({});
   const [uploadingDays, setUploadingDays] = useState<Record<string, boolean>>({});
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
+  const [selectedTimelineDate, setSelectedTimelineDate] = useState(
+    timelineEntries[0]?.challengeDate ?? "",
+  );
 
   const additionalSlackDays = Math.max(0, Math.floor(parseNumberInput(slackDaysInput)));
   const totalSlackDebtCents = Array.from({ length: additionalSlackDays }, (_, index) => slackBaseCents + (overview.existingSlackDays + index) * slackIncrementCents).reduce((sum, value) => sum + value, 0);
@@ -386,6 +389,11 @@ export function DashboardTabs({
     (sum, row) => sum + (row.isSelf ? 0 : row.pendingReviewCount),
     0,
   );
+  const selectedTimelineEntry =
+    timelineEntries.find((entry) => entry.challengeDate === selectedTimelineDate) ??
+    timelineEntries[0] ??
+    null;
+  const recentTimelineEntries = timelineEntries.slice(0, 3);
 
   function handleUploadVideoSelection(
     challengeDate: string,
@@ -592,53 +600,146 @@ export function DashboardTabs({
 
       <section className="fc-section fc-rise" data-fitcal-section id="timeline">
         <SectionHeader title={labels.timeline.title} />
-        <div className="space-y-0">
-          {timelineEntries.map((day) => (
-            <div className="fc-timeline-row" key={day.challengeDate}>
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold">{day.dateLabel}</p>
-                  {day.reviewStatusLabel ? <span className="fc-chip fc-chip-muted">{day.reviewStatusLabel}</span> : null}
-                </div>
-                <p className="text-sm text-[var(--fc-muted)]">{labels.timeline.targetPrefix} {day.repsTarget} {labels.timeline.perExercise}</p>
-                {day.videos.length ? (
-                  <div className="mt-2 grid gap-2">
-                    {day.videos.map((video) => (
-                      <div className="fc-video-row" key={video.id}>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{video.originalName}</p>
-                          <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
-                        </div>
-                        <div className="fc-video-actions">
-                          <Button asChild className="fc-video-button" size="sm" variant="ghost"><a href={`/api/videos/${video.id}`} target="_blank">{commonLabels.open}</a></Button>
-                          <form action="/api/videos/replace" className="fc-video-replace-form" encType="multipart/form-data" method="post">
-                            <input name="videoId" type="hidden" value={video.id} />
-                            <label className="fc-video-action-button" htmlFor={`replacement-video-${video.id}`}>{labels.timeline.videoReplace}</label>
-                            <input accept="video/*" className="sr-only" id={`replacement-video-${video.id}`} name="replacementVideo" onChange={handleVideoReplaceSelection} required type="file" />
-                          </form>
-                          <form action="/api/videos/delete" method="post"><input name="videoId" type="hidden" value={video.id} /><Button className="fc-video-button" size="sm" type="submit" variant="secondary">{labels.timeline.videoDelete}</Button></form>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : <p className="mt-2 text-xs text-[var(--fc-muted)]">{labels.timeline.noVideos}</p>}
+        {selectedTimelineEntry ? (
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+            <div className="grid gap-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {recentTimelineEntries.map((day) => (
+                  <button
+                    className={`fc-card text-left transition-colors ${selectedTimelineEntry.challengeDate === day.challengeDate ? "border-[var(--fc-accent)] shadow-[0_0_0_1px_var(--fc-accent)]" : ""}`}
+                    key={day.challengeDate}
+                    onClick={() => setSelectedTimelineDate(day.challengeDate)}
+                    type="button"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold">{day.dateLabel}</p>
+                      <span className="fc-tag">{day.statusLabel}</span>
+                    </div>
+                    <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+                      {labels.timeline.recentTitle}
+                    </p>
+                    {day.pushupTotal != null && day.situpTotal != null ? (
+                      <p className="mt-1 text-sm text-[var(--fc-ink)]">
+                        {day.pushupTotal} / {day.situpTotal}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>
+                    )}
+                  </button>
+                ))}
               </div>
-              <div className="text-right">
-                <span className="fc-tag">{day.statusLabel}</span>
-                {day.pushupTotal != null && day.situpTotal != null ? (
-                  <div className="mt-2 space-y-0.5 text-sm text-[var(--fc-muted)]">
-                    <p className="font-medium text-[var(--fc-ink)]">{day.pushupTotal} / {day.situpTotal}</p>
-                    <p>{labels.timeline.sets} L {day.pushupSet1 ?? 0}+{day.pushupSet2 ?? 0} · S {day.situpSet1 ?? 0}+{day.situpSet2 ?? 0}</p>
-                    {day.verifiedPushupTotal != null && day.verifiedSitupTotal != null ? <p className="text-[var(--fc-accent)]">{labels.timeline.countsPrefix} {day.verifiedPushupTotal} / {day.verifiedSitupTotal}</p> : null}
-                    {(day.pushupOverTarget ?? 0) > 0 ? <p className="text-[var(--fc-accent)]">+{day.pushupOverTarget} {labels.timeline.pushupOverTarget}</p> : null}
-                    {(day.situpOverTarget ?? 0) > 0 ? <p className="text-[var(--fc-accent)]">+{day.situpOverTarget} {labels.timeline.situpOverTarget}</p> : null}
-                  </div>
-                ) : <p className="mt-2 text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>}
-                {day.debtLabel ? <p className="mt-1 text-sm font-medium text-[var(--fc-warm)]">{day.debtLabel}</p> : null}
+
+              <div className="fc-card">
+                <p className="text-xs uppercase tracking-[0.18em] text-[var(--fc-muted)]">
+                  {labels.timeline.catalogTitle}
+                </p>
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {timelineEntries.map((day) => (
+                    <button
+                      className={`shrink-0 rounded-[var(--fc-radius-sm)] border px-3 py-2 text-left text-sm transition-colors ${
+                        selectedTimelineEntry.challengeDate === day.challengeDate
+                          ? "border-[var(--fc-accent)] bg-[var(--fc-accent-soft)] text-[var(--fc-ink)]"
+                          : "border-[var(--fc-border)] bg-[var(--fc-bg-raised)] text-[var(--fc-muted)] hover:text-[var(--fc-ink)]"
+                      }`}
+                      key={day.challengeDate}
+                      onClick={() => setSelectedTimelineDate(day.challengeDate)}
+                      type="button"
+                    >
+                      <span className="block font-medium">{day.dateLabel}</span>
+                      <span className="mt-1 block text-xs">{day.statusLabel}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+
+            <article className="fc-card">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="fc-heading text-lg">{selectedTimelineEntry.dateLabel}</h3>
+                    <span className="fc-tag">{selectedTimelineEntry.statusLabel}</span>
+                    {selectedTimelineEntry.reviewStatusLabel ? (
+                      <span className="fc-chip fc-chip-muted">{selectedTimelineEntry.reviewStatusLabel}</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-sm text-[var(--fc-muted)]">
+                    {labels.timeline.targetPrefix} {selectedTimelineEntry.repsTarget} {labels.timeline.perExercise}
+                  </p>
+                </div>
+                {selectedTimelineEntry.debtLabel ? (
+                  <p className="text-sm font-medium text-[var(--fc-warm)]">{selectedTimelineEntry.debtLabel}</p>
+                ) : null}
+              </div>
+
+              {selectedTimelineEntry.pushupTotal != null && selectedTimelineEntry.situpTotal != null ? (
+                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  <StatBox label={`${labels.review.stats.totalPushups} / ${labels.review.stats.totalSitups}`} value={`${selectedTimelineEntry.pushupTotal} / ${selectedTimelineEntry.situpTotal}`} />
+                  <StatBox label={labels.timeline.sets} value={`L ${selectedTimelineEntry.pushupSet1 ?? 0}+${selectedTimelineEntry.pushupSet2 ?? 0} · S ${selectedTimelineEntry.situpSet1 ?? 0}+${selectedTimelineEntry.situpSet2 ?? 0}`} />
+                  <StatBox label={labels.timeline.countsPrefix} value={selectedTimelineEntry.verifiedPushupTotal != null && selectedTimelineEntry.verifiedSitupTotal != null ? `${selectedTimelineEntry.verifiedPushupTotal} / ${selectedTimelineEntry.verifiedSitupTotal}` : "-"} />
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>
+              )}
+
+              {((selectedTimelineEntry.pushupOverTarget ?? 0) > 0 || (selectedTimelineEntry.situpOverTarget ?? 0) > 0) ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(selectedTimelineEntry.pushupOverTarget ?? 0) > 0 ? (
+                    <span className="fc-chip fc-chip-accent">+{selectedTimelineEntry.pushupOverTarget} {labels.timeline.pushupOverTarget}</span>
+                  ) : null}
+                  {(selectedTimelineEntry.situpOverTarget ?? 0) > 0 ? (
+                    <span className="fc-chip fc-chip-accent">+{selectedTimelineEntry.situpOverTarget} {labels.timeline.situpOverTarget}</span>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {selectedTimelineEntry.notes ? (
+                <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.timeline.workoutNote}</p>
+                  <p className="mt-2 text-sm text-[var(--fc-ink-secondary)]">{selectedTimelineEntry.notes}</p>
+                </div>
+              ) : null}
+
+              {selectedTimelineEntry.latestReviewComment ? (
+                <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.timeline.reviewFeedback}</p>
+                  {selectedTimelineEntry.latestReviewReviewerLabel ? (
+                    <p className="mt-2 text-sm font-medium text-[var(--fc-ink)]">
+                      {labels.timeline.reviewedBy} {selectedTimelineEntry.latestReviewReviewerLabel}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{selectedTimelineEntry.latestReviewComment}</p>
+                </div>
+              ) : null}
+
+              {selectedTimelineEntry.videos.length ? (
+                <div className="mt-4 grid gap-2">
+                  {selectedTimelineEntry.videos.map((video) => (
+                    <div className="fc-video-row" key={video.id}>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{video.originalName}</p>
+                        <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
+                      </div>
+                      <div className="fc-video-actions">
+                        <Button asChild className="fc-video-button" size="sm" variant="ghost"><a href={`/api/videos/${video.id}`} target="_blank">{commonLabels.open}</a></Button>
+                        <form action="/api/videos/replace" className="fc-video-replace-form" encType="multipart/form-data" method="post">
+                          <input name="videoId" type="hidden" value={video.id} />
+                          <label className="fc-video-action-button" htmlFor={`replacement-video-${video.id}`}>{labels.timeline.videoReplace}</label>
+                          <input accept="video/*" className="sr-only" id={`replacement-video-${video.id}`} name="replacementVideo" onChange={handleVideoReplaceSelection} required type="file" />
+                        </form>
+                        <form action="/api/videos/delete" method="post"><input name="videoId" type="hidden" value={video.id} /><Button className="fc-video-button" size="sm" type="submit" variant="secondary">{labels.timeline.videoDelete}</Button></form>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-xs text-[var(--fc-muted)]">{labels.timeline.noVideos}</p>
+              )}
+            </article>
+          </div>
+        ) : (
+          <div className="fc-card text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</div>
+        )}
       </section>
 
       <section className="fc-section fc-rise" data-fitcal-section id="metastats">
@@ -844,6 +945,12 @@ export function DashboardTabs({
                       <h4 className="fc-heading text-lg">{item.userLabel} · {item.dateLabel}</h4>
                       <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.claimPrefix} {item.claimedPushups} / {item.claimedSitups} · {labels.review.targetPrefix} {item.targetReps}</p>
                       {item.statusLabel ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{item.statusLabel}</p> : null}
+                      {item.workoutNote ? (
+                        <div className="mt-3 rounded-[var(--fc-radius-sm)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-3 py-2">
+                          <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.review.workoutNote}</p>
+                          <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{item.workoutNote}</p>
+                        </div>
+                      ) : null}
                       {item.priorNote ? <p className="mt-2 text-sm text-[var(--fc-muted)]">{item.priorNote}</p> : null}
                     </div>
                     <div className="mt-4 grid gap-3 md:grid-cols-2">{item.videos.map((video) => <video className="w-full rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-black" controls key={video.id} preload="metadata" src={`/api/videos/${video.id}`} />)}</div>
@@ -874,6 +981,12 @@ export function DashboardTabs({
                     <div>
                       <h4 className="fc-heading text-lg">{item.userLabel} · {item.dateLabel}</h4>
                       <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.claimPrefix} {item.claimedPushups} / {item.claimedSitups} · {labels.review.targetPrefix} {item.targetReps}</p>
+                      {item.workoutNote ? (
+                        <div className="mt-3 rounded-[var(--fc-radius-sm)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-3 py-2">
+                          <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.review.workoutNote}</p>
+                          <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{item.workoutNote}</p>
+                        </div>
+                      ) : null}
                       <p className="mt-2 text-sm text-[var(--fc-muted)]">{item.reviewerLabel} {labels.review.countsLabel} {item.reviewedPushups} / {item.reviewedSitups}.</p>
                       {item.reviewComment ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.commentPrefix} {item.reviewComment}</p> : null}
                     </div>

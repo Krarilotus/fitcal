@@ -253,6 +253,8 @@
     },
     timeline: {
       title: "Letzte Tage",
+      recentTitle: "Zuletzt",
+      catalogTitle: "Verlauf auswählen",
       targetPrefix: "Ziel",
       perExercise: "je \u00dcbung",
       countsPrefix: "Z\u00e4hlt:",
@@ -262,6 +264,9 @@
       replaceVideoInput: "Neues Video ausw\u00e4hlen",
       videoDelete: "Video l\u00f6schen",
       deleteKeepClaim: "Nur nach abgeschlossenem Review",
+      workoutNote: "Deine Notiz",
+      reviewFeedback: "Review-Feedback",
+      reviewedBy: "Review von",
       noVideos: "Keine Videos",
       sets: "Sets",
       noEntry: "Kein Eintrag",
@@ -330,6 +335,7 @@
       sicknessBody:
         "Ich willige ein und lasse reviewen, dass ich heute leider krank war und deshalb kein Workout machen konnte. Ich beantrage daher, dass heute kein Slack Day war.",
       commentLabel: "Kommentar",
+      workoutNote: "Workout-Notiz",
       claimPrefix: "Claim",
       targetPrefix: "Ziel",
       countsLabel: "z\u00e4hlt",

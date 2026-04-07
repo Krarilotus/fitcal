@@ -253,6 +253,8 @@
     },
     timeline: {
       title: "Recent days",
+      recentTitle: "Recent",
+      catalogTitle: "Choose from history",
       targetPrefix: "Target",
       perExercise: "per exercise",
       countsPrefix: "Counts:",
@@ -262,6 +264,9 @@
       replaceVideoInput: "Choose a new video",
       videoDelete: "Delete video",
       deleteKeepClaim: "Only after review is complete",
+      workoutNote: "Your note",
+      reviewFeedback: "Review feedback",
+      reviewedBy: "Review by",
       noVideos: "No videos",
       sets: "Sets",
       noEntry: "No entry",
@@ -330,6 +335,7 @@
       sicknessBody:
         "I consent to having it reviewed that I was sick today and therefore could not do a workout. I request that today should not count as a slack day.",
       commentLabel: "Comment",
+      workoutNote: "Workout note",
       claimPrefix: "Claim",
       targetPrefix: "Target",
       countsLabel: "counts",

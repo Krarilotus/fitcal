@@ -117,6 +117,11 @@ function buildTimelineEntries(
     const pushupSets = submission ? deserializeSets(submission.pushupSets) : [];
     const situpSets = submission ? deserializeSets(submission.situpSets) : [];
     const totals = submission ? getSubmissionTotals(submission) : null;
+    const latestReviewWithNote = submission
+      ? [...submission.workoutReviews]
+          .reverse()
+          .find((review) => review.notes?.trim())
+      : null;
 
     return {
       challengeDate: day.challengeDate,
@@ -139,6 +144,11 @@ function buildTimelineEntries(
       situpSet2: submission ? (situpSets[1] ?? 0) : null,
       pushupOverTarget: submission ? Math.max(0, totals!.pushupTotal - day.repsTarget) : null,
       situpOverTarget: submission ? Math.max(0, totals!.situpTotal - day.repsTarget) : null,
+      notes: submission?.notes ?? null,
+      latestReviewComment: latestReviewWithNote?.notes ?? null,
+      latestReviewReviewerLabel: latestReviewWithNote
+        ? latestReviewWithNote.reviewer.name || latestReviewWithNote.reviewer.email
+        : null,
       videos:
         submission?.videos.map((video) => ({
           id: video.id,
@@ -371,6 +381,7 @@ async function buildPrimaryReviewItems(
           submission.reviewStatus,
           labels.reviewStatusLabels,
         ),
+        workoutNote: submission.notes,
         priorNote:
           latestPrimary?.notes && submission.reviewStatus === "REVISION_REQUESTED"
             ? `${latestPrimary.reviewer.name || latestPrimary.reviewer.email}: ${latestPrimary.notes}`
@@ -462,6 +473,7 @@ async function buildEscalationReviewItems(
         reviewedSitups: primaryReview.countedSitups,
         reviewComment: primaryReview.notes,
         reviewerLabel: primaryReview.reviewer.name || primaryReview.reviewer.email,
+        workoutNote: submission.notes,
         videos: submission.videos.map((video) => ({
           id: video.id,
           label: video.originalName,

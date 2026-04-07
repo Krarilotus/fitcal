@@ -32,6 +32,9 @@ export type TimelineEntry = {
   situpSet2: number | null;
   pushupOverTarget: number | null;
   situpOverTarget: number | null;
+  notes: string | null;
+  latestReviewComment: string | null;
+  latestReviewReviewerLabel: string | null;
   videos: TimelineVideo[];
 };
 
@@ -120,6 +123,7 @@ export type PrimaryReviewItem = {
   claimedSitups: number;
   statusLabel: string | null;
   priorNote: string | null;
+  workoutNote: string | null;
   videos: ReviewVideo[];
 };
 
@@ -135,6 +139,7 @@ export type EscalationReviewItem = {
   reviewedSitups: number;
   reviewComment: string | null;
   reviewerLabel: string;
+  workoutNote: string | null;
   videos: ReviewVideo[];
 };
 
