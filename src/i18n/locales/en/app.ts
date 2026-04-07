@@ -62,6 +62,10 @@
       weightKg: "Weight in kg",
       weightPlaceholder: "e.g. 81.5",
       motivation: "Why are you joining?",
+      planTitle: "Participation mode",
+      standard: "Standard",
+      standardHint:
+        "Full participation with review and normal cost rules.",
       student: "Broke student",
       studentHint:
         "Half price for slack days. Cannot be combined with the light plan.",

@@ -62,6 +62,10 @@
       weightKg: "Gewicht in kg",
       weightPlaceholder: "z. B. 81,5",
       motivation: "Warum machst du mit?",
+      planTitle: "Teilnahme-Modell",
+      standard: "Standard",
+      standardHint:
+        "Volle Teilnahme mit Review und normaler Kostenlogik.",
       student: "Armer Student",
       studentHint:
         "Halber Preis bei Slack-Tagen. Nicht mit der Light-Variante kombinierbar.",

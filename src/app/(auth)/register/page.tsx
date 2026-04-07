@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/fitcal/auth-shell";
 import { FlashMessage } from "@/components/fitcal/flash-message";
 import { PreferenceControls } from "@/components/fitcal/preference-controls";
+import { RegisterPlanSelector } from "@/components/fitcal/register-plan-selector";
 import { Button } from "@/components/ui/button";
 import { DateTextInput } from "@/components/ui/date-text-input";
 import { getDictionary } from "@/i18n";
@@ -65,10 +66,7 @@ export default async function RegisterPage({ searchParams }: PageProps) {
             <label className="fc-input-group"><span className="fc-input-label">{labels.waistCm}</span><input className="fc-input" inputMode="decimal" name="waistCircumferenceCm" placeholder={labels.waistPlaceholder} step="0.1" type="number" /></label>
             <label className="fc-input-group"><span className="fc-input-label">{labels.weightKg}</span><input className="fc-input" inputMode="decimal" name="weightKg" placeholder={labels.weightPlaceholder} step="0.1" type="number" /></label>
             <label className="fc-input-group sm:col-span-2"><span className="fc-input-label">{labels.motivation}</span><textarea className="fc-input min-h-24" maxLength={240} name="motivation" placeholder={dictionary.common.optional} /></label>
-            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] sm:col-span-2"><input className="h-4 w-4 rounded accent-[var(--fc-accent)]" name="isStudentDiscount" type="checkbox" /><span>{labels.student}</span></label>
-            <p className="-mt-2 text-sm text-[var(--fc-muted)] sm:col-span-2">{labels.studentHint}</p>
-            <label className="flex items-center gap-3 text-sm font-medium text-[var(--fc-ink)] sm:col-span-2"><input className="h-4 w-4 rounded accent-[var(--fc-accent)]" name="isLightParticipant" type="checkbox" /><span>{labels.light}</span></label>
-            <p className="-mt-2 text-sm text-[var(--fc-muted)] sm:col-span-2">{labels.lightHint}</p>
+            <RegisterPlanSelector labels={labels} />
           </div>
           <Button className="w-full" type="submit">{hasInvite ? labels.submitInvite : labels.submitRequest}</Button>
         </form>

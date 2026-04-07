@@ -94,7 +94,13 @@ export const registerSchema = z.object({
   motivation: optionalTrimmedString(240),
   isStudentDiscount: checkboxSchema.default(false),
   isLightParticipant: checkboxSchema.default(false),
-});
+}).refine(
+  (value) => !(value.isStudentDiscount && value.isLightParticipant),
+  {
+    message: "Bitte waehle entweder Armer Student oder Light, nicht beides.",
+    path: ["isStudentDiscount"],
+  },
+);
 
 export const inviteSchema = z.object({
   email: emailSchema,
