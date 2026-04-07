@@ -258,8 +258,8 @@ export function DashboardReviewSection({
                     <input name="submissionId" type="hidden" value={item.id} />
                     <input name="mode" type="hidden" value="primary" />
                     <div className="fc-grid-2">
-                      <label className="fc-input-group"><span className="fc-input-label">{labels.review.countedPushups}</span><input className="fc-input" defaultValue={item.claimedPushups} max={item.claimedPushups} min="0" name="countedPushups" type="number" /></label>
-                      <label className="fc-input-group"><span className="fc-input-label">{labels.review.countedSitups}</span><input className="fc-input" defaultValue={item.claimedSitups} max={item.claimedSitups} min="0" name="countedSitups" type="number" /></label>
+                      <label className="fc-input-group"><span className="fc-input-label">{labels.review.countedPushups}</span><input className="fc-input" defaultValue={item.claimedPushups} min="0" name="countedPushups" type="number" /></label>
+                      <label className="fc-input-group"><span className="fc-input-label">{labels.review.countedSitups}</span><input className="fc-input" defaultValue={item.claimedSitups} min="0" name="countedSitups" type="number" /></label>
                     </div>
                     <label className="fc-input-group"><span className="fc-input-label">{labels.review.feedback}</span><textarea className="fc-input min-h-20" name="notes" placeholder={commonLabels.optional} /></label>
                     <div className="flex flex-wrap gap-3">

@@ -11,8 +11,9 @@ import { prisma } from "@/lib/db";
 import { getSetsTotal } from "@/lib/submission";
 
 const REVIEW_REWARD_CENTS = 5;
+const MAX_REVIEW_COUNT = 5000;
 
-function clampCount(value: FormDataEntryValue | null, max: number) {
+function parseCount(value: FormDataEntryValue | null, max = MAX_REVIEW_COUNT) {
   const parsed = Number(value);
 
   if (!Number.isFinite(parsed)) {
@@ -117,8 +118,8 @@ export async function POST(request: Request) {
         let decision: WorkoutReviewDecision = WorkoutReviewDecision.APPROVE;
 
         if (decisionValue !== "approve") {
-          countedPushups = clampCount(formData.get("countedPushups"), rawPushups);
-          countedSitups = clampCount(formData.get("countedSitups"), rawSitups);
+          countedPushups = parseCount(formData.get("countedPushups"));
+          countedSitups = parseCount(formData.get("countedSitups"));
           decision =
             countedPushups === 0 && countedSitups === 0
               ? WorkoutReviewDecision.REJECT
