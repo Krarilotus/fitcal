@@ -16,10 +16,52 @@ import {
 
 export const runtime = "nodejs";
 
+function wantsJsonResponse(request: Request) {
+  return request.headers.get("x-fitcal-response-format") === "json";
+}
+
+function successRedirectUrl(user: { isLightParticipant: boolean }, request: Request) {
+  return getAppUrl(
+    user.isLightParticipant
+      ? "/dashboard?success=Eintrag%20gespeichert"
+      : "/dashboard?success=Trainingstag%20gespeichert",
+    request,
+  );
+}
+
+function errorRedirectUrl(message: string, request: Request) {
+  return getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request);
+}
+
+function inferSubmissionErrorCode(message: string) {
+  if (
+    message.includes("100 MB") ||
+    message.includes("Videodatei") ||
+    message.includes("zu groß") ||
+    message.includes("zu gross")
+  ) {
+    return "too_large";
+  }
+
+  return "submission_failed";
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
+    if (wantsJsonResponse(request)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Nicht eingeloggt.",
+          errorCode: "unauthorized",
+          redirectUrl: getAppUrl("/login", request),
+        },
+        { status: 401 },
+      );
+    }
+
     return NextResponse.redirect(getAppUrl("/login", request));
   }
 
@@ -145,20 +187,35 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.redirect(
-      getAppUrl(
-        user.isLightParticipant
-          ? "/dashboard?success=Eintrag%20gespeichert"
-          : "/dashboard?success=Trainingstag%20gespeichert",
-        request,
-      ),
-    );
+    const redirectUrl = successRedirectUrl(user, request);
+
+    if (wantsJsonResponse(request)) {
+      return NextResponse.json({
+        ok: true,
+        redirectUrl,
+      });
+    }
+
+    return NextResponse.redirect(redirectUrl);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Submission konnte nicht gespeichert werden.";
+    const redirectUrl = errorRedirectUrl(message, request);
 
-    return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
-    );
+    if (wantsJsonResponse(request)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: message,
+          errorCode: inferSubmissionErrorCode(message),
+          redirectUrl,
+        },
+        {
+          status: inferSubmissionErrorCode(message) === "too_large" ? 413 : 400,
+        },
+      );
+    }
+
+    return NextResponse.redirect(redirectUrl);
   }
 }

@@ -46,6 +46,13 @@ type SelectedUploadVideo = {
   sizeLabel: string;
 };
 
+type SubmissionResponsePayload = {
+  ok: boolean;
+  redirectUrl?: string;
+  error?: string;
+  errorCode?: string;
+};
+
 function formatCurrency(locale: Locale, cents: number) {
   return formatDashboardCurrency(locale, cents);
 }
@@ -113,6 +120,7 @@ async function submitTrackedUpload(
   isLightParticipant: boolean,
 ) {
   const formData = new FormData(form);
+  const requestStartedAt = Date.now();
   const challengeDateValue = formData.get("challengeDate");
   const challengeDate =
     typeof challengeDateValue === "string" ? challengeDateValue : "unknown";
@@ -152,13 +160,35 @@ async function submitTrackedUpload(
       method: "POST",
       body: formData,
       credentials: "same-origin",
-      redirect: "follow",
+      headers: {
+        Accept: "application/json",
+        "x-fitcal-response-format": "json",
+      },
     });
 
+    const payload = (await response.json().catch(() => null)) as SubmissionResponsePayload | null;
+
+    if (response.ok && payload?.ok && payload.redirectUrl) {
+      window.location.assign(payload.redirectUrl);
+      return;
+    }
+
     if (!response.ok) {
+      const confirmedRedirectUrl = await confirmRecentSubmission(
+        challengeDate,
+        requestStartedAt,
+      );
+
+      if (confirmedRedirectUrl) {
+        window.location.assign(confirmedRedirectUrl);
+        return;
+      }
+
       const errorMessage =
-        response.status === 413
+        response.status === 413 || payload?.errorCode === "too_large"
           ? labels.uploadTooLargeRequest
+          : payload?.error || payload?.errorCode === "submission_failed"
+            ? labels.uploadUnexpected
           : labels.uploadUnexpected;
 
       setUploadingDays((current) => ({
@@ -172,8 +202,16 @@ async function submitTrackedUpload(
       return;
     }
 
-    window.location.assign(response.url || "/dashboard?error=Upload%20failed");
-  } catch {
+    const confirmedRedirectUrl = await confirmRecentSubmission(
+      challengeDate,
+      requestStartedAt,
+    );
+
+    if (confirmedRedirectUrl) {
+      window.location.assign(confirmedRedirectUrl);
+      return;
+    }
+
     setUploadingDays((current) => ({
       ...current,
       [challengeDate]: false,
@@ -182,6 +220,58 @@ async function submitTrackedUpload(
       ...current,
       [challengeDate]: labels.uploadUnexpected,
     }));
+  } catch {
+    const confirmedRedirectUrl = await confirmRecentSubmission(
+      challengeDate,
+      requestStartedAt,
+    );
+
+    if (confirmedRedirectUrl) {
+      window.location.assign(confirmedRedirectUrl);
+      return;
+    }
+
+    setUploadingDays((current) => ({
+      ...current,
+      [challengeDate]: false,
+    }));
+    setUploadErrors((current) => ({
+      ...current,
+      [challengeDate]: labels.uploadUnexpected,
+    }));
+  }
+}
+
+async function confirmRecentSubmission(challengeDate: string, requestStartedAt: number) {
+  try {
+    const response = await fetch(
+      `/api/submissions/status?challengeDate=${encodeURIComponent(challengeDate)}&since=${requestStartedAt}`,
+      {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      ok?: boolean;
+      recentlySaved?: boolean;
+      redirectUrl?: string;
+    };
+
+    if (!payload.ok || !payload.recentlySaved || !payload.redirectUrl) {
+      return null;
+    }
+
+    return payload.redirectUrl;
+  } catch {
+    return null;
   }
 }
 
