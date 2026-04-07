@@ -9,6 +9,7 @@ import type {
   SicknessReviewItem,
 } from "@/components/fitcal/dashboard-types";
 import { DashboardSectionHeader, DashboardStatBox } from "@/components/fitcal/dashboard/dashboard-primitives";
+import { ReviewVideoPlayer } from "@/components/fitcal/dashboard/review-video-player";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -253,7 +254,11 @@ export function DashboardReviewSection({
                   {item.priorNote ? <p className="mt-2 text-sm text-[var(--fc-muted)]">{item.priorNote}</p> : null}
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 md:grid-cols-2">{item.videos.map((video) => <video className="w-full rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-black" controls key={video.id} preload="metadata" src={`/api/videos/${video.id}`} />)}</div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {item.videos.map((video) => (
+                      <ReviewVideoPlayer key={video.id} videoId={video.id} />
+                    ))}
+                  </div>
                   <form action="/api/workout-reviews" className="mt-5 space-y-4" method="post">
                     <input name="submissionId" type="hidden" value={item.id} />
                     <input name="mode" type="hidden" value="primary" />
@@ -296,7 +301,11 @@ export function DashboardReviewSection({
                   {item.reviewComment ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.commentPrefix} {item.reviewComment}</p> : null}
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 md:grid-cols-2">{item.videos.map((video) => <video className="w-full rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-black" controls key={video.id} preload="metadata" src={`/api/videos/${video.id}`} />)}</div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {item.videos.map((video) => (
+                      <ReviewVideoPlayer key={video.id} videoId={video.id} />
+                    ))}
+                  </div>
                   <form action="/api/workout-reviews" className="mt-5 space-y-4" method="post">
                     <input name="submissionId" type="hidden" value={item.id} />
                     <input name="mode" type="hidden" value="arbitration" />
