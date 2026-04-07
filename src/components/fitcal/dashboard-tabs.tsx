@@ -602,7 +602,7 @@ export function DashboardTabs({
         <SectionHeader title={labels.timeline.title} />
         {selectedTimelineEntry ? (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-            <div className="grid gap-4">
+            <div className="grid min-w-0 gap-4">
               <div className="grid gap-3 sm:grid-cols-3">
                 {recentTimelineEntries.map((day) => (
                   <button
@@ -629,11 +629,11 @@ export function DashboardTabs({
                 ))}
               </div>
 
-              <div className="fc-card">
+              <div className="fc-card min-w-0 overflow-hidden">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--fc-muted)]">
                   {labels.timeline.catalogTitle}
                 </p>
-                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                <div className="mt-3 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
                   {timelineEntries.map((day) => (
                     <button
                       className={`shrink-0 rounded-[var(--fc-radius-sm)] border px-3 py-2 text-left text-sm transition-colors ${
@@ -653,7 +653,7 @@ export function DashboardTabs({
               </div>
             </div>
 
-            <article className="fc-card">
+            <article className="fc-card min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
