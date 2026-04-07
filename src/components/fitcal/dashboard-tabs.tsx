@@ -2,6 +2,12 @@
 
 import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import type { AppDictionary } from "@/i18n";
+import { DashboardHistorySection } from "@/components/fitcal/dashboard/history-section";
+import {
+  DashboardSectionHeader as SectionHeader,
+  DashboardStatBox as StatBox,
+} from "@/components/fitcal/dashboard/dashboard-primitives";
+import { DashboardReviewSection } from "@/components/fitcal/dashboard/review-section";
 import {
   formatDashboardCurrency,
   formatDateKeyForInput,
@@ -38,7 +44,6 @@ import {
 
 type DashboardLabels = AppDictionary["dashboard"];
 type TabKey = "overview" | "uploads" | "timeline" | "metastats" | "review" | "regeln" | "rechner";
-type ReviewSubtabKey = "progress" | "pending";
 type SelectedUploadVideo = {
   id: string;
   originalName: string;
@@ -77,39 +82,6 @@ function formatFileSizeLabel(locale: Locale, sizeBytes: number) {
   }
 
   return `${formatLocalizedNumber(locale, sizeBytes / (1024 * 1024), 1)} MB`;
-}
-
-function SectionHeader({
-  title,
-  subtitle,
-  actions,
-}: {
-  title: string;
-  subtitle?: string;
-  actions?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h2 className="fc-heading text-xl">{title}</h2>
-        {subtitle ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{subtitle}</p> : null}
-      </div>
-      {actions}
-    </div>
-  );
-}
-
-function StatBox({ label, value, valueClassName }: { label: string; value: React.ReactNode; valueClassName?: string }) {
-  return (
-    <div className="fc-stat">
-      <span className="fc-stat-label">{label}</span>
-      <span className={`fc-stat-value ${valueClassName ?? ""}`.trim()}>{value}</span>
-    </div>
-  );
-}
-
-function isCompletedLikeStatus(status: ParticipantRow["todayStatus"]) {
-  return ["completed", "partial", "joker", "sick"].includes(status);
 }
 
 async function submitTrackedUpload(
@@ -343,7 +315,6 @@ export function DashboardTabs({
   );
 
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [reviewSubtab, setReviewSubtab] = useState<ReviewSubtabKey>("progress");
   const hasStudentPricing = overview.hasStudentDiscount && !overview.isLightParticipant;
   const slackBaseCents = hasStudentPricing ? 500 : 1000;
   const slackIncrementCents = hasStudentPricing ? 100 : 200;
@@ -357,9 +328,6 @@ export function DashboardTabs({
   const [selectedUploadVideos, setSelectedUploadVideos] = useState<Record<string, SelectedUploadVideo[]>>({});
   const [uploadingDays, setUploadingDays] = useState<Record<string, boolean>>({});
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
-  const [selectedTimelineDate, setSelectedTimelineDate] = useState(
-    timelineEntries[0]?.challengeDate ?? "",
-  );
 
   const additionalSlackDays = Math.max(0, Math.floor(parseNumberInput(slackDaysInput)));
   const totalSlackDebtCents = Array.from({ length: additionalSlackDays }, (_, index) => slackBaseCents + (overview.existingSlackDays + index) * slackIncrementCents).reduce((sum, value) => sum + value, 0);
@@ -379,21 +347,6 @@ export function DashboardTabs({
   const selectedDateInChallenge = selectedDateKey ? isWithinChallenge(selectedDateKey) : false;
   const selectedDateTarget = selectedDateKey && selectedDateInChallenge ? getRequiredReps(selectedDateKey) : null;
   const selectedChallengeDay = selectedDateKey && selectedDateInChallenge ? getChallengeDayIndex(selectedDateKey) + 1 : null;
-  const reviewParticipants = participantRows;
-  const reviewSelfRow = reviewParticipants.find((row) => row.isSelf) ?? null;
-  const activeTodayCount = reviewParticipants.filter((row) => isCompletedLikeStatus(row.todayStatus)).length;
-  const qualifiedCount = reviewParticipants.filter(
-    (row) => row.qualificationUploads >= row.qualificationRequiredUploads,
-  ).length;
-  const openReviewCount = reviewParticipants.reduce(
-    (sum, row) => sum + (row.isSelf ? 0 : row.pendingReviewCount),
-    0,
-  );
-  const selectedTimelineEntry =
-    timelineEntries.find((entry) => entry.challengeDate === selectedTimelineDate) ??
-    timelineEntries[0] ??
-    null;
-  const recentTimelineEntries = timelineEntries.slice(0, 3);
 
   function handleUploadVideoSelection(
     challengeDate: string,
@@ -598,149 +551,12 @@ export function DashboardTabs({
         </div>
       </section>
 
-      <section className="fc-section fc-rise" data-fitcal-section id="timeline">
-        <SectionHeader title={labels.timeline.title} />
-        {selectedTimelineEntry ? (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-            <div className="grid min-w-0 gap-4">
-              <div className="grid gap-3 sm:grid-cols-3">
-                {recentTimelineEntries.map((day) => (
-                  <button
-                    className={`fc-card text-left transition-colors ${selectedTimelineEntry.challengeDate === day.challengeDate ? "border-[var(--fc-accent)] shadow-[0_0_0_1px_var(--fc-accent)]" : ""}`}
-                    key={day.challengeDate}
-                    onClick={() => setSelectedTimelineDate(day.challengeDate)}
-                    type="button"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold">{day.dateLabel}</p>
-                      <span className="fc-tag">{day.statusLabel}</span>
-                    </div>
-                    <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
-                      {labels.timeline.recentTitle}
-                    </p>
-                    {day.pushupTotal != null && day.situpTotal != null ? (
-                      <p className="mt-1 text-sm text-[var(--fc-ink)]">
-                        {day.pushupTotal} / {day.situpTotal}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              <div className="fc-card min-w-0 overflow-hidden">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--fc-muted)]">
-                  {labels.timeline.catalogTitle}
-                </p>
-                <div className="mt-3 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
-                  {timelineEntries.map((day) => (
-                    <button
-                      className={`shrink-0 rounded-[var(--fc-radius-sm)] border px-3 py-2 text-left text-sm transition-colors ${
-                        selectedTimelineEntry.challengeDate === day.challengeDate
-                          ? "border-[var(--fc-accent)] bg-[var(--fc-accent-soft)] text-[var(--fc-ink)]"
-                          : "border-[var(--fc-border)] bg-[var(--fc-bg-raised)] text-[var(--fc-muted)] hover:text-[var(--fc-ink)]"
-                      }`}
-                      key={day.challengeDate}
-                      onClick={() => setSelectedTimelineDate(day.challengeDate)}
-                      type="button"
-                    >
-                      <span className="block font-medium">{day.dateLabel}</span>
-                      <span className="mt-1 block text-xs">{day.statusLabel}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <article className="fc-card min-w-0">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="fc-heading text-lg">{selectedTimelineEntry.dateLabel}</h3>
-                    <span className="fc-tag">{selectedTimelineEntry.statusLabel}</span>
-                    {selectedTimelineEntry.reviewStatusLabel ? (
-                      <span className="fc-chip fc-chip-muted">{selectedTimelineEntry.reviewStatusLabel}</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 text-sm text-[var(--fc-muted)]">
-                    {labels.timeline.targetPrefix} {selectedTimelineEntry.repsTarget} {labels.timeline.perExercise}
-                  </p>
-                </div>
-                {selectedTimelineEntry.debtLabel ? (
-                  <p className="text-sm font-medium text-[var(--fc-warm)]">{selectedTimelineEntry.debtLabel}</p>
-                ) : null}
-              </div>
-
-              {selectedTimelineEntry.pushupTotal != null && selectedTimelineEntry.situpTotal != null ? (
-                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  <StatBox label={`${labels.review.stats.totalPushups} / ${labels.review.stats.totalSitups}`} value={`${selectedTimelineEntry.pushupTotal} / ${selectedTimelineEntry.situpTotal}`} />
-                  <StatBox label={labels.timeline.sets} value={`L ${selectedTimelineEntry.pushupSet1 ?? 0}+${selectedTimelineEntry.pushupSet2 ?? 0} · S ${selectedTimelineEntry.situpSet1 ?? 0}+${selectedTimelineEntry.situpSet2 ?? 0}`} />
-                  <StatBox label={labels.timeline.countsPrefix} value={selectedTimelineEntry.verifiedPushupTotal != null && selectedTimelineEntry.verifiedSitupTotal != null ? `${selectedTimelineEntry.verifiedPushupTotal} / ${selectedTimelineEntry.verifiedSitupTotal}` : "-"} />
-                </div>
-              ) : (
-                <p className="mt-4 text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>
-              )}
-
-              {((selectedTimelineEntry.pushupOverTarget ?? 0) > 0 || (selectedTimelineEntry.situpOverTarget ?? 0) > 0) ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {(selectedTimelineEntry.pushupOverTarget ?? 0) > 0 ? (
-                    <span className="fc-chip fc-chip-accent">+{selectedTimelineEntry.pushupOverTarget} {labels.timeline.pushupOverTarget}</span>
-                  ) : null}
-                  {(selectedTimelineEntry.situpOverTarget ?? 0) > 0 ? (
-                    <span className="fc-chip fc-chip-accent">+{selectedTimelineEntry.situpOverTarget} {labels.timeline.situpOverTarget}</span>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {selectedTimelineEntry.notes ? (
-                <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.timeline.workoutNote}</p>
-                  <p className="mt-2 text-sm text-[var(--fc-ink-secondary)]">{selectedTimelineEntry.notes}</p>
-                </div>
-              ) : null}
-
-              {selectedTimelineEntry.latestReviewComment ? (
-                <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.timeline.reviewFeedback}</p>
-                  {selectedTimelineEntry.latestReviewReviewerLabel ? (
-                    <p className="mt-2 text-sm font-medium text-[var(--fc-ink)]">
-                      {labels.timeline.reviewedBy} {selectedTimelineEntry.latestReviewReviewerLabel}
-                    </p>
-                  ) : null}
-                  <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{selectedTimelineEntry.latestReviewComment}</p>
-                </div>
-              ) : null}
-
-              {selectedTimelineEntry.videos.length ? (
-                <div className="mt-4 grid gap-2">
-                  {selectedTimelineEntry.videos.map((video) => (
-                    <div className="fc-video-row" key={video.id}>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{video.originalName}</p>
-                        <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
-                      </div>
-                      <div className="fc-video-actions">
-                        <Button asChild className="fc-video-button" size="sm" variant="ghost"><a href={`/api/videos/${video.id}`} target="_blank">{commonLabels.open}</a></Button>
-                        <form action="/api/videos/replace" className="fc-video-replace-form" encType="multipart/form-data" method="post">
-                          <input name="videoId" type="hidden" value={video.id} />
-                          <label className="fc-video-action-button" htmlFor={`replacement-video-${video.id}`}>{labels.timeline.videoReplace}</label>
-                          <input accept="video/*" className="sr-only" id={`replacement-video-${video.id}`} name="replacementVideo" onChange={handleVideoReplaceSelection} required type="file" />
-                        </form>
-                        <form action="/api/videos/delete" method="post"><input name="videoId" type="hidden" value={video.id} /><Button className="fc-video-button" size="sm" type="submit" variant="secondary">{labels.timeline.videoDelete}</Button></form>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-4 text-xs text-[var(--fc-muted)]">{labels.timeline.noVideos}</p>
-              )}
-            </article>
-          </div>
-        ) : (
-          <div className="fc-card text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</div>
-        )}
-      </section>
+      <DashboardHistorySection
+        commonLabels={commonLabels}
+        labels={labels}
+        onVideoReplaceSelection={handleVideoReplaceSelection}
+        timelineEntries={timelineEntries}
+      />
 
       <section className="fc-section fc-rise" data-fitcal-section id="metastats">
         <SectionHeader subtitle={labels.metastats.profileTitle} title={labels.metastats.title} />
@@ -795,217 +611,14 @@ export function DashboardTabs({
       </section>
 
       {!overview.isLightParticipant ? (
-        <section className="fc-section fc-rise" data-fitcal-section id="review">
-          <SectionHeader
-            title={labels.review.title}
-            actions={
-              <div className="flex flex-wrap gap-2">
-                <button className={`fc-chip ${reviewSubtab === "progress" ? "fc-chip-accent" : "fc-chip-muted"}`} onClick={() => setReviewSubtab("progress")} type="button">{labels.reviewSubtabs.progress}</button>
-                <button className={`fc-chip ${reviewSubtab === "pending" ? "fc-chip-accent" : "fc-chip-muted"}`} onClick={() => setReviewSubtab("pending")} type="button">{labels.reviewSubtabs.pending}</button>
-              </div>
-            }
-          />
-
-          {reviewSubtab === "progress" ? (
-            <div className="grid gap-4">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="fc-card"><StatBox label={labels.review.summary.participants} value={reviewParticipants.length} /></div>
-                <div className="fc-card"><StatBox label={labels.review.summary.activeToday} value={activeTodayCount} /></div>
-                <div className="fc-card"><StatBox label={labels.review.summary.qualified} value={qualifiedCount} /></div>
-                <div className="fc-card"><StatBox label={labels.review.summary.pendingReviews} value={openReviewCount} /></div>
-              </div>
-
-              {reviewSelfRow ? (
-                <article className="fc-card">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="fc-heading text-lg">{reviewSelfRow.name}</h3>
-                        <span className="fc-chip fc-chip-accent">{labels.review.you}</span>
-                        <span className="fc-chip fc-chip-muted">{reviewSelfRow.modeLabel}</span>
-                      </div>
-                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.selfHint}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className="fc-chip fc-chip-muted">{labels.review.todayStat} {reviewSelfRow.todayLabel}</span>
-                      <span className="fc-chip fc-chip-muted">{labels.review.yesterdayStat} {reviewSelfRow.yesterdayLabel}</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                    <StatBox label={labels.review.stats.totalPushups} value={reviewSelfRow.totalPushups} />
-                    <StatBox label={labels.review.stats.totalSitups} value={reviewSelfRow.totalSitups} />
-                    <StatBox label={labels.review.stats.days} value={reviewSelfRow.documentedDays} />
-                    <StatBox label={labels.review.stats.qualification} value={reviewSelfRow.qualificationLabel} />
-                    <StatBox label={labels.review.stats.debt} value={reviewSelfRow.debtLabel ?? labels.participantReview.off} />
-                  </div>
-                </article>
-              ) : null}
-
-              <div className="grid gap-3 md:hidden">
-                {reviewParticipants.map((row) => (
-                  <article className="fc-card" key={row.id}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="fc-heading text-base">{row.name}</h3>
-                          {row.isSelf ? <span className="fc-chip fc-chip-accent">{labels.review.you}</span> : null}
-                          <span className="fc-chip fc-chip-muted">{row.modeLabel}</span>
-                        </div>
-                        <p className="mt-1 text-sm text-[var(--fc-muted)]">
-                          {labels.review.todayStat} {row.todayLabel} · {labels.review.yesterdayStat} {row.yesterdayLabel}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <StatBox label={labels.review.stats.totalPushups} value={row.totalPushups} />
-                      <StatBox label={labels.review.stats.totalSitups} value={row.totalSitups} />
-                      <StatBox label={labels.review.stats.days} value={row.documentedDays} />
-                      <StatBox label={labels.review.stats.qualification} value={row.qualificationLabel} />
-                      <StatBox label={labels.review.stats.debt} value={row.debtLabel ?? labels.participantReview.off} />
-                      <StatBox label={labels.review.stats.reviews} value={row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel} />
-                    </div>
-                  </article>
-                ))}
-              </div>
-
-              <div className="fc-card hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[980px] text-left text-sm">
-                  <thead className="border-b border-[var(--fc-border)] text-[var(--fc-muted)]">
-                    <tr>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.name}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.mode}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.today}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.yesterday}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.totalPushups}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.totalSitups}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.qualification}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.days}</th>
-                      <th className="pb-3 pr-4 font-medium">{labels.review.table.debt}</th>
-                      <th className="pb-3 font-medium">{labels.review.table.reviews}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reviewParticipants.map((row) => (
-                      <tr className="border-b border-[var(--fc-border)]/70 last:border-b-0" key={row.id}>
-                        <td className="py-3 pr-4 font-medium">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span>{row.name}</span>
-                            {row.isSelf ? <span className="fc-chip fc-chip-accent">{labels.review.you}</span> : null}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4">{row.modeLabel}</td>
-                        <td className="py-3 pr-4">{row.todayLabel}</td>
-                        <td className="py-3 pr-4">{row.yesterdayLabel}</td>
-                        <td className="py-3 pr-4">{row.totalPushups}</td>
-                        <td className="py-3 pr-4">{row.totalSitups}</td>
-                        <td className="py-3 pr-4">{row.qualificationLabel}</td>
-                        <td className="py-3 pr-4">{row.documentedDays}</td>
-                        <td className="py-3 pr-4">{row.debtLabel ?? labels.participantReview.off}</td>
-                        <td className="py-3">{row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-6">
-              <div className="grid gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="fc-heading text-lg">{labels.review.sicknessTitle}</h3>
-                  <span className="fc-chip fc-chip-muted">{sicknessReviewItems.length} {labels.review.openCount}</span>
-                </div>
-                {sicknessReviewItems.length ? sicknessReviewItems.map((item) => (
-                  <article className="fc-card" key={item.id}>
-                    <div>
-                      <h4 className="fc-heading text-lg">{item.userLabel} · {item.dateLabel}</h4>
-                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.sicknessBody}</p>
-                      {item.notes ? <p className="mt-2 text-sm text-[var(--fc-muted)]">{labels.review.commentPrefix} {item.notes}</p> : null}
-                    </div>
-                    <form action="/api/challenge/sickness-reviews" className="mt-5 space-y-4" method="post">
-                      <input name="verificationId" type="hidden" value={item.id} />
-                      <label className="fc-input-group"><span className="fc-input-label">{labels.review.commentLabel}</span><textarea className="fc-input min-h-20" name="notes" placeholder={commonLabels.optional} /></label>
-                      <div className="flex flex-wrap gap-3">
-                        <Button name="decision" type="submit" value="approve">{labels.review.approveSickness}</Button>
-                        <Button name="decision" type="submit" value="reject" variant="secondary">{labels.review.rejectSickness}</Button>
-                      </div>
-                    </form>
-                  </article>
-                )) : <div className="fc-card text-sm text-[var(--fc-muted)]">{labels.review.noSickness}</div>}
-              </div>
-
-              <div className="grid gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="fc-heading text-lg">{labels.review.primaryTitle}</h3>
-                  <span className="fc-chip fc-chip-muted">{primaryReviewItems.length} {labels.review.openCount}</span>
-                </div>
-                {primaryReviewItems.length ? primaryReviewItems.map((item) => (
-                  <article className="fc-card" key={item.id}>
-                    <div>
-                      <h4 className="fc-heading text-lg">{item.userLabel} · {item.dateLabel}</h4>
-                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.claimPrefix} {item.claimedPushups} / {item.claimedSitups} · {labels.review.targetPrefix} {item.targetReps}</p>
-                      {item.statusLabel ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{item.statusLabel}</p> : null}
-                      {item.workoutNote ? (
-                        <div className="mt-3 rounded-[var(--fc-radius-sm)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-3 py-2">
-                          <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.review.workoutNote}</p>
-                          <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{item.workoutNote}</p>
-                        </div>
-                      ) : null}
-                      {item.priorNote ? <p className="mt-2 text-sm text-[var(--fc-muted)]">{item.priorNote}</p> : null}
-                    </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">{item.videos.map((video) => <video className="w-full rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-black" controls key={video.id} preload="metadata" src={`/api/videos/${video.id}`} />)}</div>
-                    <form action="/api/workout-reviews" className="mt-5 space-y-4" method="post">
-                      <input name="submissionId" type="hidden" value={item.id} />
-                      <input name="mode" type="hidden" value="primary" />
-                      <div className="fc-grid-2">
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.review.countedPushups}</span><input className="fc-input" defaultValue={item.claimedPushups} max={item.claimedPushups} min="0" name="countedPushups" type="number" /></label>
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.review.countedSitups}</span><input className="fc-input" defaultValue={item.claimedSitups} max={item.claimedSitups} min="0" name="countedSitups" type="number" /></label>
-                      </div>
-                      <label className="fc-input-group"><span className="fc-input-label">{labels.review.feedback}</span><textarea className="fc-input min-h-20" name="notes" placeholder={commonLabels.optional} /></label>
-                      <div className="flex flex-wrap gap-3">
-                        <Button name="decision" type="submit" value="approve">{labels.review.approveWorkout}</Button>
-                        <Button name="decision" type="submit" value="adjust" variant="secondary">{labels.review.adjustWorkout}</Button>
-                      </div>
-                    </form>
-                  </article>
-                )) : <div className="fc-card text-sm text-[var(--fc-muted)]">{labels.review.noPrimary}</div>}
-              </div>
-
-              <div className="grid gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="fc-heading text-lg">{labels.review.escalationTitle}</h3>
-                  <span className="fc-chip fc-chip-muted">{escalationReviewItems.length} {labels.review.openCount}</span>
-                </div>
-                {escalationReviewItems.length ? escalationReviewItems.map((item) => (
-                  <article className="fc-card" key={item.id}>
-                    <div>
-                      <h4 className="fc-heading text-lg">{item.userLabel} · {item.dateLabel}</h4>
-                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.claimPrefix} {item.claimedPushups} / {item.claimedSitups} · {labels.review.targetPrefix} {item.targetReps}</p>
-                      {item.workoutNote ? (
-                        <div className="mt-3 rounded-[var(--fc-radius-sm)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-3 py-2">
-                          <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.review.workoutNote}</p>
-                          <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{item.workoutNote}</p>
-                        </div>
-                      ) : null}
-                      <p className="mt-2 text-sm text-[var(--fc-muted)]">{item.reviewerLabel} {labels.review.countsLabel} {item.reviewedPushups} / {item.reviewedSitups}.</p>
-                      {item.reviewComment ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.commentPrefix} {item.reviewComment}</p> : null}
-                    </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">{item.videos.map((video) => <video className="w-full rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-black" controls key={video.id} preload="metadata" src={`/api/videos/${video.id}`} />)}</div>
-                    <form action="/api/workout-reviews" className="mt-5 space-y-4" method="post">
-                      <input name="submissionId" type="hidden" value={item.id} />
-                      <input name="mode" type="hidden" value="arbitration" />
-                      <label className="fc-input-group"><span className="fc-input-label">{labels.review.commentLabel}</span><textarea className="fc-input min-h-20" name="notes" placeholder={commonLabels.optional} /></label>
-                      <div className="flex flex-wrap gap-3">
-                        <Button name="decision" type="submit" value="accept">{labels.review.acceptReview}</Button>
-                        <Button name="decision" type="submit" value="reject" variant="secondary">{labels.review.rejectReview}</Button>
-                      </div>
-                    </form>
-                  </article>
-                )) : <div className="fc-card text-sm text-[var(--fc-muted)]">{labels.review.noEscalation}</div>}
-              </div>
-            </div>
-          )}
-        </section>
+        <DashboardReviewSection
+          commonLabels={commonLabels}
+          escalationReviewItems={escalationReviewItems}
+          labels={labels}
+          participantRows={participantRows}
+          primaryReviewItems={primaryReviewItems}
+          sicknessReviewItems={sicknessReviewItems}
+        />
       ) : null}
 
       <section className="fc-section fc-rise" data-fitcal-section id="regeln">
