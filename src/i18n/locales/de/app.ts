@@ -39,6 +39,8 @@
       registerNow: "Jetzt registrieren",
       forgot: "Passwort vergessen?",
       requestReset: "Reset-Link anfordern",
+      unverified: "E-Mail noch nicht bestätigt?",
+      requestVerification: "Bestätigungslink senden",
       submit: "Einloggen",
     },
     register: {
@@ -81,6 +83,13 @@
       description: "Wir senden einen Reset-Link an die angegebene E-Mail-Adresse.",
       backToLogin: "Zur\u00fcck zum",
       submit: "Reset-Link senden",
+    },
+    verifyEmail: {
+      eyebrow: "E-Mail",
+      title: "Bestätigungslink anfordern",
+      description: "Wir senden einen Bestätigungslink an die angegebene E-Mail-Adresse.",
+      backToLogin: "Zur\u00fcck zum",
+      submit: "Bestätigungslink senden",
     },
     resetPassword: {
       eyebrow: "Neues Passwort",

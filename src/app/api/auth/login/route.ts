@@ -40,9 +40,7 @@ export async function POST(request: Request) {
     }
 
     if (!user.emailVerified) {
-      throw new Error(
-        "Bitte bestaetige zuerst deine E-Mail-Adresse. Ueber Passwort vergessen kannst du dir notfalls eine neue Bestaetigungs-Mail zusenden.",
-      );
+      throw new Error("Bitte bestaetige zuerst deine E-Mail-Adresse.");
     }
 
     await createUserSession(user.id);

@@ -39,6 +39,8 @@
       registerNow: "Register now",
       forgot: "Forgot your password?",
       requestReset: "Request reset link",
+      unverified: "Email not verified yet?",
+      requestVerification: "Send verification link",
       submit: "Sign in",
     },
     register: {
@@ -81,6 +83,13 @@
       description: "We will send a reset link to the provided email address.",
       backToLogin: "Back to",
       submit: "Send reset link",
+    },
+    verifyEmail: {
+      eyebrow: "Email",
+      title: "Request verification link",
+      description: "We will send a verification link to the provided email address.",
+      backToLogin: "Back to",
+      submit: "Send verification link",
     },
     resetPassword: {
       eyebrow: "New password",

@@ -1,11 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import {
-  sendEmailVerificationMail,
-  sendPasswordResetMail,
-} from "@/lib/auth/email";
-import { createEmailVerificationToken } from "@/lib/auth/email-verification";
+import { sendPasswordResetMail } from "@/lib/auth/email";
 import { createRandomToken, hashToken } from "@/lib/auth/token";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
 import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
@@ -62,14 +58,6 @@ export async function POST(request: Request) {
         data: {
           emailDelivered: delivered,
         },
-      });
-    } else if (user) {
-      const verificationToken = await createEmailVerificationToken(user.email);
-      const verifyLink = `${getAppBaseUrl(request)}/api/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
-
-      await sendEmailVerificationMail({
-        to: user.email,
-        verifyLink,
       });
     }
 
