@@ -170,7 +170,7 @@ export function DashboardHistorySection({
                 </div>
               ) : null}
 
-              {(selectedTimelineEntry.notes || selectedTimelineEntry.latestReviewComment) ? (
+              {(selectedTimelineEntry.notes || selectedTimelineEntry.reviewNotes.length > 0) ? (
                 <Separator className="bg-[var(--fc-border)]" />
               ) : null}
 
@@ -183,19 +183,23 @@ export function DashboardHistorySection({
                 </div>
               ) : null}
 
-              {selectedTimelineEntry.latestReviewComment ? (
+              {selectedTimelineEntry.reviewNotes.length > 0 ? (
                 <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
                   <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
                     {labels.timeline.reviewFeedback}
                   </p>
-                  {selectedTimelineEntry.latestReviewReviewerLabel ? (
-                    <p className="mt-2 text-sm font-medium text-[var(--fc-ink)]">
-                      {labels.timeline.reviewedBy} {selectedTimelineEntry.latestReviewReviewerLabel}
-                    </p>
-                  ) : null}
-                  <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">
-                    {selectedTimelineEntry.latestReviewComment}
-                  </p>
+                  <div className="mt-2 grid gap-3">
+                    {selectedTimelineEntry.reviewNotes.map((reviewNote) => (
+                      <div key={reviewNote.id}>
+                        <p className="text-sm font-medium text-[var(--fc-ink)]">
+                          {labels.timeline.reviewedBy} {reviewNote.reviewerLabel}
+                        </p>
+                        <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">
+                          {reviewNote.note}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 

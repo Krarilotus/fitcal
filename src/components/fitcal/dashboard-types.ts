@@ -1,5 +1,11 @@
 import type { DayCompletionState } from "@/lib/challenge";
 
+export type ReviewFeedbackNote = {
+  id: string;
+  reviewerLabel: string;
+  note: string;
+};
+
 export type OpenDay = {
   challengeDate: string;
   dateLabel: string;
@@ -8,8 +14,7 @@ export type OpenDay = {
   isQualificationDay: boolean;
   canUseJoker: boolean;
   reviewStatusLabel: string | null;
-  latestReviewComment: string | null;
-  latestReviewReviewerLabel: string | null;
+  reviewNotes: ReviewFeedbackNote[];
 };
 
 export type TimelineVideo = {
@@ -36,8 +41,7 @@ export type TimelineEntry = {
   pushupOverTarget: number | null;
   situpOverTarget: number | null;
   notes: string | null;
-  latestReviewComment: string | null;
-  latestReviewReviewerLabel: string | null;
+  reviewNotes: ReviewFeedbackNote[];
   videos: TimelineVideo[];
 };
 

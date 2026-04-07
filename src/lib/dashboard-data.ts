@@ -103,11 +103,15 @@ function buildOpenDays(
       const submission = user.dailySubmissions.find(
         (entry) => entry.challengeDate === day.challengeDate,
       );
-      const latestReviewWithNote = submission
+      const reviewNotes = submission
         ? [...submission.workoutReviews]
-            .reverse()
-            .find((review) => review.notes?.trim())
-        : null;
+            .filter((review) => review.notes?.trim())
+            .map((review) => ({
+              id: review.id,
+              reviewerLabel: review.reviewer.name || review.reviewer.email,
+              note: review.notes!.trim(),
+            }))
+        : [];
 
       return {
         challengeDate: day.challengeDate,
@@ -119,10 +123,7 @@ function buildOpenDays(
         reviewStatusLabel: submission
           ? formatReviewStatus(submission.reviewStatus, labels.reviewStatusLabels)
           : null,
-        latestReviewComment: latestReviewWithNote?.notes ?? null,
-        latestReviewReviewerLabel: latestReviewWithNote
-          ? latestReviewWithNote.reviewer.name || latestReviewWithNote.reviewer.email
-          : null,
+        reviewNotes,
       };
     });
 }
@@ -140,11 +141,15 @@ function buildTimelineEntries(
     const pushupSets = submission ? deserializeSets(submission.pushupSets) : [];
     const situpSets = submission ? deserializeSets(submission.situpSets) : [];
     const totals = submission ? getSubmissionTotals(submission) : null;
-    const latestReviewWithNote = submission
+    const reviewNotes = submission
       ? [...submission.workoutReviews]
-          .reverse()
-          .find((review) => review.notes?.trim())
-      : null;
+          .filter((review) => review.notes?.trim())
+          .map((review) => ({
+            id: review.id,
+            reviewerLabel: review.reviewer.name || review.reviewer.email,
+            note: review.notes!.trim(),
+          }))
+      : [];
 
     return {
       challengeDate: day.challengeDate,
@@ -168,10 +173,7 @@ function buildTimelineEntries(
       pushupOverTarget: submission ? Math.max(0, totals!.pushupTotal - day.repsTarget) : null,
       situpOverTarget: submission ? Math.max(0, totals!.situpTotal - day.repsTarget) : null,
       notes: submission?.notes ?? null,
-      latestReviewComment: latestReviewWithNote?.notes ?? null,
-      latestReviewReviewerLabel: latestReviewWithNote
-        ? latestReviewWithNote.reviewer.name || latestReviewWithNote.reviewer.email
-        : null,
+      reviewNotes,
       videos:
         submission?.videos.map((video) => ({
           id: video.id,

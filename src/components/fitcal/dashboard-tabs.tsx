@@ -461,15 +461,19 @@ export function DashboardTabs({
                     {day.reviewStatusLabel ? <span className="fc-chip fc-chip-muted">{day.reviewStatusLabel}</span> : null}
                   </div>
                 </div>
-                {day.latestReviewComment ? (
+                {day.reviewNotes.length > 0 ? (
                   <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.timeline.reviewFeedback}</p>
-                    {day.latestReviewReviewerLabel ? (
-                      <p className="mt-2 text-sm font-medium text-[var(--fc-ink)]">
-                        {labels.timeline.reviewedBy} {day.latestReviewReviewerLabel}
-                      </p>
-                    ) : null}
-                    <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{day.latestReviewComment}</p>
+                    <div className="mt-2 grid gap-3">
+                      {day.reviewNotes.map((reviewNote) => (
+                        <div key={reviewNote.id}>
+                          <p className="text-sm font-medium text-[var(--fc-ink)]">
+                            {labels.timeline.reviewedBy} {reviewNote.reviewerLabel}
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{reviewNote.note}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
                 <form
