@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
 export function FlashMessage({
   error,
   success,
@@ -5,7 +10,25 @@ export function FlashMessage({
   error?: string;
   success?: string;
 }) {
-  if (!error && !success) {
+  const [dismissed, setDismissed] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  function dismissMessage() {
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("error");
+    nextParams.delete("success");
+
+    const nextUrl = nextParams.toString()
+      ? `${pathname}?${nextParams.toString()}`
+      : pathname;
+
+    setDismissed(true);
+    router.replace(nextUrl, { scroll: false });
+  }
+
+  if ((!error && !success) || dismissed) {
     return null;
   }
 
@@ -18,9 +41,17 @@ export function FlashMessage({
       }`}
     >
       <span className="mt-0.5 text-base leading-none" aria-hidden>
-        {error ? "⚠" : "✓"}
+        {error ? "!" : "✓"}
       </span>
-      <span>{error || success}</span>
+      <span className="min-w-0 flex-1">{error || success}</span>
+      <button
+        aria-label="Meldung schliessen"
+        className="shrink-0 rounded-full px-2 py-1 text-base leading-none text-current/70 transition hover:bg-black/10 hover:text-current"
+        onClick={dismissMessage}
+        type="button"
+      >
+        ×
+      </button>
     </div>
   );
 }

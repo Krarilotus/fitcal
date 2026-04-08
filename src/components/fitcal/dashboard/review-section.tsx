@@ -8,7 +8,11 @@ import type {
   PrimaryReviewItem,
   SicknessReviewItem,
 } from "@/components/fitcal/dashboard-types";
-import { DashboardSectionHeader, DashboardStatBox } from "@/components/fitcal/dashboard/dashboard-primitives";
+import {
+  DashboardSectionHeader,
+  DashboardStatBox,
+  DashboardStatusBadge,
+} from "@/components/fitcal/dashboard/dashboard-primitives";
 import { ReviewVideoPlayer } from "@/components/fitcal/dashboard/review-video-player";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,14 +110,14 @@ export function DashboardReviewSection({
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <CardTitle>{reviewSelfRow.name}</CardTitle>
-                      <span className="fc-chip fc-chip-accent">{labels.review.you}</span>
-                      <span className="fc-chip fc-chip-muted">{reviewSelfRow.modeLabel}</span>
+                      <DashboardStatusBadge tone="accent">{labels.review.you}</DashboardStatusBadge>
+                      <DashboardStatusBadge>{reviewSelfRow.modeLabel}</DashboardStatusBadge>
                     </div>
                     <CardDescription className="mt-1">{labels.review.selfHint}</CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <span className="fc-chip fc-chip-muted">{labels.review.todayStat} {reviewSelfRow.todayLabel}</span>
-                    <span className="fc-chip fc-chip-muted">{labels.review.yesterdayStat} {reviewSelfRow.yesterdayLabel}</span>
+                    <DashboardStatusBadge>{labels.review.todayStat} {reviewSelfRow.todayLabel}</DashboardStatusBadge>
+                    <DashboardStatusBadge>{labels.review.yesterdayStat} {reviewSelfRow.yesterdayLabel}</DashboardStatusBadge>
                   </div>
                 </div>
               </CardHeader>
@@ -137,8 +141,8 @@ export function DashboardReviewSection({
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <CardTitle className="text-base">{row.name}</CardTitle>
-                        {row.isSelf ? <span className="fc-chip fc-chip-accent">{labels.review.you}</span> : null}
-                        <span className="fc-chip fc-chip-muted">{row.modeLabel}</span>
+                        {row.isSelf ? <DashboardStatusBadge tone="accent">{labels.review.you}</DashboardStatusBadge> : null}
+                        <DashboardStatusBadge>{row.modeLabel}</DashboardStatusBadge>
                       </div>
                       <CardDescription className="mt-1">
                         {labels.review.todayStat} {row.todayLabel} · {labels.review.yesterdayStat} {row.yesterdayLabel}
@@ -183,7 +187,7 @@ export function DashboardReviewSection({
                       <td className="py-3 pr-4 font-medium">
                         <div className="flex flex-wrap items-center gap-2">
                           <span>{row.name}</span>
-                          {row.isSelf ? <span className="fc-chip fc-chip-accent">{labels.review.you}</span> : null}
+                          {row.isSelf ? <DashboardStatusBadge tone="accent">{labels.review.you}</DashboardStatusBadge> : null}
                         </div>
                       </td>
                       <td className="py-3 pr-4">{row.modeLabel}</td>
@@ -207,7 +211,7 @@ export function DashboardReviewSection({
           <div className="grid gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="fc-heading text-lg">{labels.review.sicknessTitle}</h3>
-              <span className="fc-chip fc-chip-muted">{sicknessReviewItems.length} {labels.review.openCount}</span>
+              <DashboardStatusBadge>{sicknessReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>
             </div>
             {sicknessReviewItems.length ? sicknessReviewItems.map((item) => (
               <Card key={item.id}>
@@ -235,7 +239,7 @@ export function DashboardReviewSection({
           <div className="grid gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="fc-heading text-lg">{labels.review.primaryTitle}</h3>
-              <span className="fc-chip fc-chip-muted">{primaryReviewItems.length} {labels.review.openCount}</span>
+              <DashboardStatusBadge>{primaryReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>
             </div>
             {primaryReviewItems.length ? primaryReviewItems.map((item) => (
               <Card key={item.id}>
@@ -282,7 +286,7 @@ export function DashboardReviewSection({
           <div className="grid gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h3 className="fc-heading text-lg">{labels.review.escalationTitle}</h3>
-              <span className="fc-chip fc-chip-muted">{escalationReviewItems.length} {labels.review.openCount}</span>
+              <DashboardStatusBadge>{escalationReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>
             </div>
             {escalationReviewItems.length ? escalationReviewItems.map((item) => (
               <Card key={item.id}>

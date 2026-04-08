@@ -30,17 +30,11 @@ export function DashboardAutoRefresh({
       refreshIfVisible();
     };
 
-    const handleFocus = () => {
-      refreshIfVisible();
-    };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleFocus);
 
     return () => {
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleFocus);
     };
   }, [enabled, intervalMs]);
 

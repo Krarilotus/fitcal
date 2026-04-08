@@ -50,7 +50,7 @@ async function sendMail(params: {
 
   if (!resend) {
     console.info(
-      `[fitcal-auth] Resend nicht konfiguriert. Mail an ${params.to}: ${params.subject}`,
+      `[fitcal-auth] Resend nicht konfiguriert. Mail an ${params.to}: ${params.subject}\n${params.text}`,
     );
     return false;
   }
@@ -107,8 +107,8 @@ export async function sendRegistrationApprovedMail(
   return sendMail({
     to: params.to,
     subject: "FitCal Registrierung bestaetigt",
-    text: `${greeting}\n\ndein Zugang zu FitCal wurde freigegeben. Wenn du deine E-Mail bereits bestaetigt hast, kannst du dich jetzt mit deiner E-Mail und deinem Passwort anmelden.`,
-    html: `<p>${greeting}</p><p>dein Zugang zu FitCal wurde freigegeben.</p><p>Wenn du deine E-Mail bereits bestaetigt hast, kannst du dich jetzt mit deiner E-Mail und deinem Passwort anmelden.</p>`,
+    text: `${greeting}\n\ndein Zugang zu FitCal wurde freigegeben. Du kannst dich jetzt mit deiner E-Mail und deinem Passwort anmelden.`,
+    html: `<p>${greeting}</p><p>dein Zugang zu FitCal wurde freigegeben.</p><p>Du kannst dich jetzt mit deiner E-Mail und deinem Passwort anmelden.</p>`,
   });
 }
 

@@ -4,23 +4,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--fc-radius-sm)] text-sm font-medium transition-all duration-150 disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[var(--fc-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--fc-bg)] cursor-pointer",
+  "inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-[var(--fc-radius-sm)] border border-transparent font-medium leading-none transition-all duration-150 disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[var(--fc-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--fc-bg)] cursor-pointer",
   {
     variants: {
       variant: {
         default:
-          "bg-[var(--fc-accent)] px-4 py-2 text-white hover:bg-[var(--fc-accent-hover)] active:brightness-90",
+          "bg-[var(--fc-accent)] text-white hover:bg-[var(--fc-accent-hover)] active:brightness-90",
         secondary:
-          "bg-[var(--fc-surface)] px-4 py-2 text-[var(--fc-ink-secondary)] border border-[var(--fc-border)] hover:border-[var(--fc-border-strong)] hover:text-[var(--fc-ink)]",
+          "border-[var(--fc-border)] bg-[var(--fc-surface)] text-[var(--fc-ink-secondary)] hover:border-[var(--fc-border-strong)] hover:text-[var(--fc-ink)]",
         ghost:
-          "px-3 py-2 text-[var(--fc-muted)] hover:text-[var(--fc-ink)] hover:bg-[var(--fc-surface-hover)]",
+          "text-[var(--fc-muted)] hover:bg-[var(--fc-surface-hover)] hover:text-[var(--fc-ink)]",
         danger:
-          "bg-red-500/10 px-4 py-2 text-red-400 border border-red-500/20 hover:bg-red-500/15",
+          "border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/15",
       },
       size: {
-        default: "",
-        lg: "px-7 py-3.5 text-base",
-        sm: "px-3.5 py-2 text-xs",
+        default: "h-10 px-4 text-sm",
+        lg: "h-12 px-7 text-base",
+        sm: "h-8 px-3.5 text-xs",
+        action: "h-8 px-3.5 text-xs font-medium",
+        compact: "h-8 px-3.5 text-xs font-medium",
       },
     },
     defaultVariants: {

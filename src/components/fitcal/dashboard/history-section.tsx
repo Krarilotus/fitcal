@@ -3,8 +3,12 @@
 import { type ChangeEvent, useMemo, useState } from "react";
 import type { AppDictionary } from "@/i18n";
 import type { TimelineEntry } from "@/components/fitcal/dashboard-types";
-import { DashboardSectionHeader } from "@/components/fitcal/dashboard/dashboard-primitives";
-import { Button } from "@/components/ui/button";
+import {
+  DashboardActionButton,
+  DashboardActionCluster,
+  DashboardSectionHeader,
+  DashboardStatusBadge,
+} from "@/components/fitcal/dashboard/dashboard-primitives";
 import {
   Card,
   CardContent,
@@ -17,11 +21,17 @@ import { Separator } from "@/components/ui/separator";
 export function DashboardHistorySection({
   commonLabels,
   labels,
+  onClaimEdit,
+  onClaimAddVideos,
+  onEditableVideoReplace,
   timelineEntries,
   onVideoReplaceSelection,
 }: {
   commonLabels: AppDictionary["common"];
   labels: AppDictionary["dashboard"];
+  onClaimEdit: (challengeDate: string) => void;
+  onClaimAddVideos: (challengeDate: string) => void;
+  onEditableVideoReplace: (challengeDate: string, videoId: string) => void;
   timelineEntries: TimelineEntry[];
   onVideoReplaceSelection: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
@@ -55,6 +65,20 @@ export function DashboardHistorySection({
     selectedTimelineEntry.verifiedSitupTotal != null
       ? `${labels.timeline.countsPrefix} ${selectedTimelineEntry.verifiedPushupTotal}/${selectedTimelineEntry.verifiedSitupTotal}`
       : null;
+  const deletingLastVideoRemovesClaim =
+    selectedTimelineEntry?.deletingLastVideoRemovesClaim ?? false;
+
+  function scrollToClaimEditor(challengeDate: string) {
+    onClaimEdit(challengeDate);
+  }
+
+  function openVideo(videoId: string) {
+    window.open(`/api/videos/${videoId}`, "_blank", "noopener,noreferrer");
+  }
+
+  function chooseReplacementVideo(videoId: string) {
+    document.getElementById(`replacement-video-${videoId}`)?.click();
+  }
 
   return (
     <section className="fc-section fc-rise" data-fitcal-section id="timeline">
@@ -73,7 +97,7 @@ export function DashboardHistorySection({
                   <Card className="h-full p-5">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold">{day.dateLabel}</p>
-                      <span className="fc-tag">{day.statusLabel}</span>
+                      <DashboardStatusBadge tone="warm">{day.statusLabel}</DashboardStatusBadge>
                     </div>
                     <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
                       {labels.timeline.recentTitle}
@@ -124,9 +148,13 @@ export function DashboardHistorySection({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <CardTitle>{selectedTimelineEntry.dateLabel}</CardTitle>
-                    <span className="fc-tag">{selectedTimelineEntry.statusLabel}</span>
+                    <DashboardStatusBadge tone="warm">
+                      {selectedTimelineEntry.statusLabel}
+                    </DashboardStatusBadge>
                     {selectedTimelineEntry.reviewStatusLabel ? (
-                      <span className="fc-chip fc-chip-muted">{selectedTimelineEntry.reviewStatusLabel}</span>
+                      <DashboardStatusBadge>
+                        {selectedTimelineEntry.reviewStatusLabel}
+                      </DashboardStatusBadge>
                     ) : null}
                   </div>
                   <CardDescription className="mt-1">
@@ -142,13 +170,41 @@ export function DashboardHistorySection({
             <CardContent className="space-y-4">
               {selectedTimelineEntry.pushupTotal != null &&
               selectedTimelineEntry.situpTotal != null ? (
-                <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
                   <p className="text-sm font-medium text-[var(--fc-ink)]">
                     {compactSetSummary}
                     {compactCountSummary ? (
                       <span className="text-[var(--fc-muted)]"> · {compactCountSummary}</span>
                     ) : null}
                   </p>
+                  {selectedTimelineEntry.isEditableClaim ? (
+                    <DashboardActionCluster>
+                      <DashboardActionButton
+                        onClick={() => scrollToClaimEditor(selectedTimelineEntry.challengeDate)}
+                        type="button"
+                      >
+                        {labels.timeline.claimEdit}
+                      </DashboardActionButton>
+                      {selectedTimelineEntry.canAddVideos ? (
+                        <DashboardActionButton
+                          onClick={() => onClaimAddVideos(selectedTimelineEntry.challengeDate)}
+                          type="button"
+                        >
+                          {labels.timeline.videoAdd}
+                        </DashboardActionButton>
+                      ) : null}
+                      <form action="/api/submissions/delete" method="post">
+                        <input
+                          name="challengeDate"
+                          type="hidden"
+                          value={selectedTimelineEntry.challengeDate}
+                        />
+                        <DashboardActionButton type="submit" variant="danger">
+                          {labels.timeline.claimDelete}
+                        </DashboardActionButton>
+                      </form>
+                    </DashboardActionCluster>
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>
@@ -158,14 +214,14 @@ export function DashboardHistorySection({
                 (selectedTimelineEntry.situpOverTarget ?? 0) > 0) ? (
                 <div className="flex flex-wrap gap-2">
                   {(selectedTimelineEntry.pushupOverTarget ?? 0) > 0 ? (
-                    <span className="fc-chip fc-chip-accent">
+                    <DashboardStatusBadge tone="accent">
                       +{selectedTimelineEntry.pushupOverTarget} {labels.timeline.pushupOverTarget}
-                    </span>
+                    </DashboardStatusBadge>
                   ) : null}
                   {(selectedTimelineEntry.situpOverTarget ?? 0) > 0 ? (
-                    <span className="fc-chip fc-chip-accent">
+                    <DashboardStatusBadge tone="accent">
                       +{selectedTimelineEntry.situpOverTarget} {labels.timeline.situpOverTarget}
-                    </span>
+                    </DashboardStatusBadge>
                   ) : null}
                 </div>
               ) : null}
@@ -207,53 +263,81 @@ export function DashboardHistorySection({
 
               {selectedTimelineEntry.videos.length ? (
                 <div className="grid gap-2">
+                  {selectedTimelineEntry.canAddVideos ? (
+                    <DashboardActionCluster>
+                      <DashboardActionButton
+                        onClick={() => onClaimAddVideos(selectedTimelineEntry.challengeDate)}
+                        type="button"
+                      >
+                        {labels.timeline.videoAdd}
+                      </DashboardActionButton>
+                    </DashboardActionCluster>
+                  ) : null}
                   {selectedTimelineEntry.videos.map((video) => (
                     <div className="fc-video-row" key={video.id}>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{video.originalName}</p>
                         <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
                       </div>
-                      <div className="fc-video-actions">
-                        <Button asChild className="fc-video-button" size="sm" variant="ghost">
-                          <a href={`/api/videos/${video.id}`} target="_blank">
-                            {commonLabels.open}
-                          </a>
-                        </Button>
-                        <form
-                          action="/api/videos/replace"
-                          className="fc-video-replace-form"
-                          encType="multipart/form-data"
-                          method="post"
-                        >
-                          <input name="videoId" type="hidden" value={video.id} />
-                          <label
-                            className="fc-video-action-button"
-                            htmlFor={`replacement-video-${video.id}`}
+                      <DashboardActionCluster>
+                        <DashboardActionButton onClick={() => openVideo(video.id)} type="button">
+                          {commonLabels.open}
+                        </DashboardActionButton>
+                        {selectedTimelineEntry.isEditableClaim ? (
+                          <DashboardActionButton
+                            onClick={() =>
+                              onEditableVideoReplace(
+                                selectedTimelineEntry.challengeDate,
+                                video.id,
+                              )
+                            }
+                            type="button"
                           >
                             {labels.timeline.videoReplace}
-                          </label>
-                          <input
-                            accept="video/*"
-                            className="sr-only"
-                            id={`replacement-video-${video.id}`}
-                            name="replacementVideo"
-                            onChange={onVideoReplaceSelection}
-                            required
-                            type="file"
-                          />
-                        </form>
+                          </DashboardActionButton>
+                        ) : (
+                          <form
+                            action="/api/videos/replace"
+                            encType="multipart/form-data"
+                            method="post"
+                          >
+                            <input name="videoId" type="hidden" value={video.id} />
+                            <DashboardActionButton
+                              onClick={() => chooseReplacementVideo(video.id)}
+                              type="button"
+                            >
+                              {labels.timeline.videoReplace}
+                            </DashboardActionButton>
+                            <input
+                              accept="video/*"
+                              className="sr-only"
+                              id={`replacement-video-${video.id}`}
+                              name="replacementVideo"
+                              onChange={onVideoReplaceSelection}
+                              required
+                              type="file"
+                            />
+                          </form>
+                        )}
                         <form action="/api/videos/delete" method="post">
                           <input name="videoId" type="hidden" value={video.id} />
-                          <Button className="fc-video-button" size="sm" type="submit" variant="secondary">
+                          <DashboardActionButton type="submit" variant="danger">
                             {labels.timeline.videoDelete}
-                          </Button>
+                          </DashboardActionButton>
                         </form>
-                      </div>
+                      </DashboardActionCluster>
                     </div>
                   ))}
+                  {deletingLastVideoRemovesClaim && !selectedTimelineEntry.isEditableClaim ? (
+                    <DashboardStatusBadge tone="warm">
+                      {labels.timeline.deleteRemovesClaim}
+                    </DashboardStatusBadge>
+                  ) : null}
                 </div>
               ) : (
-                <p className="text-xs text-[var(--fc-muted)]">{labels.timeline.noVideos}</p>
+                <div className="grid gap-2">
+                  <p className="text-xs text-[var(--fc-muted)]">{labels.timeline.noVideos}</p>
+                </div>
               )}
             </CardContent>
           </Card>

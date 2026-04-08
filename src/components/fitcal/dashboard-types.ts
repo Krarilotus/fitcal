@@ -6,6 +6,12 @@ export type ReviewFeedbackNote = {
   note: string;
 };
 
+export type TimelineVideo = {
+  id: string;
+  originalName: string;
+  sizeLabel: string;
+};
+
 export type OpenDay = {
   challengeDate: string;
   dateLabel: string;
@@ -13,14 +19,17 @@ export type OpenDay = {
   isCurrentDay: boolean;
   isQualificationDay: boolean;
   canUseJoker: boolean;
+  hasExistingClaim: boolean;
+  isEditableClaim: boolean;
+  canAddVideos: boolean;
+  pushupSet1: number;
+  pushupSet2: number;
+  situpSet1: number;
+  situpSet2: number;
+  notes: string;
   reviewStatusLabel: string | null;
   reviewNotes: ReviewFeedbackNote[];
-};
-
-export type TimelineVideo = {
-  id: string;
-  originalName: string;
-  sizeLabel: string;
+  videos: TimelineVideo[];
 };
 
 export type TimelineEntry = {
@@ -42,6 +51,9 @@ export type TimelineEntry = {
   situpOverTarget: number | null;
   notes: string | null;
   reviewNotes: ReviewFeedbackNote[];
+  deletingLastVideoRemovesClaim: boolean;
+  isEditableClaim: boolean;
+  canAddVideos: boolean;
   videos: TimelineVideo[];
 };
 

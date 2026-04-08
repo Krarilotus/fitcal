@@ -85,7 +85,15 @@ export async function POST(request: Request) {
         },
       });
 
-      const autoApprove = approvers.length === 0 || Boolean(invite);
+      const preApprovedReviewerIds = invite
+        ? approvers
+            .filter((reviewer) => reviewer.id === invite.invitedByUserId)
+            .map((reviewer) => reviewer.id)
+        : [];
+      const remainingReviewerIds = approvers
+        .map((reviewer) => reviewer.id)
+        .filter((reviewerId) => !preApprovedReviewerIds.includes(reviewerId));
+      const autoApprove = approvers.length === 0 || remainingReviewerIds.length === 0;
       const createdUser = await tx.user.create({
         data: {
           email: parsed.email,
@@ -115,12 +123,15 @@ export async function POST(request: Request) {
         });
       }
 
-      if (!autoApprove) {
+      if (approvers.length > 0) {
         await tx.registrationApproval.createMany({
           data: approvers.map((reviewer) => ({
             applicantUserId: createdUser.id,
             reviewerUserId: reviewer.id,
-            decision: RegistrationApprovalDecision.PENDING,
+            decision: preApprovedReviewerIds.includes(reviewer.id)
+              ? RegistrationApprovalDecision.APPROVED
+              : RegistrationApprovalDecision.PENDING,
+            decidedAt: preApprovedReviewerIds.includes(reviewer.id) ? new Date() : null,
           })),
         });
       }
@@ -139,6 +150,7 @@ export async function POST(request: Request) {
 
       return {
         autoApprove,
+        hadInvite: Boolean(invite),
       };
     });
 
@@ -164,12 +176,11 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.redirect(
-      getAppUrl(
-        "/login?success=Registrierungsanfrage%20gesendet.%20Bitte%20bestaetige%20deine%20E-Mail-Adresse.%20Danach%20muessen%20bestehende%20Nutzer%20deinen%20Zugang%20noch%20freigeben.",
-        request,
-      ),
-    );
+    const pendingMessage = result.hadInvite
+      ? "/login?success=Registrierung%20gesendet.%20Bitte%20bestaetige%20deine%20E-Mail-Adresse.%20Dein%20Einladender%20hat%20bereits%20zugestimmt,%20die%20anderen%20Teilnehmer%20muessen%20deinen%20Zugang%20aber%20noch%20freigeben."
+      : "/login?success=Registrierungsanfrage%20gesendet.%20Bitte%20bestaetige%20deine%20E-Mail-Adresse.%20Danach%20muessen%20bestehende%20Nutzer%20deinen%20Zugang%20noch%20freigeben.";
+
+    return NextResponse.redirect(getAppUrl(pendingMessage, request));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Registrierung fehlgeschlagen";

@@ -47,7 +47,7 @@
       eyebrow: "Registrierung",
       title: "Registrieren",
       invitedDescription:
-        "Du hast eine Einladung. Dein Account wird nach der Registrierung direkt aktiviert.",
+        "Du hast eine Einladung. Dein Einladender stimmt damit bereits zu, die übrigen Teilnehmer müssen deinen Zugang aber trotzdem noch freigeben.",
       standardDescription:
         "Nach der Registrierung muss dein Account von einem bestehenden Teilnehmer freigegeben werden.",
       alreadyRegistered: "Bereits registriert?",
@@ -155,6 +155,8 @@
       emailLabel: "E-Mail der Person",
       emailPlaceholder: "name@example.com",
       submit: "Einladung senden",
+      active: "Gesendete Einladungen",
+      revoke: "Zurückziehen",
     },
     approvals: {
       single: "Freigabe offen",
@@ -235,21 +237,44 @@
       fullHint:
         "Alles \u00fcber dem Tagesziel wird automatisch aus deinen Sets berechnet und nur auf offene Schulden angerechnet.",
       videos: "Videos",
-      mobileVideoHint:
-        "Handy-Galerie lädt meist die Originaldatei hoch. Messenger wie Telegram komprimieren zusätzlich, normale Uploads nicht.",
+      compressionHint:
+        "Videos über {size} MB werden vor dem Upload automatisch komprimiert.",
+      currentClaimHint:
+        "Dieser offene Claim kann hier noch angepasst werden. Ohne neue Videos bleiben die aktuellen Videos erhalten.",
+      currentVideos: "Aktuelle Videos",
+      replaceVideoLabel: "Video ersetzen",
+      replaceVideoHint:
+        "Wähle genau ein neues Video aus. Der Claim wird zusammen mit dem Ersatzvideo gespeichert.",
+      cancelReplaceVideo: "Ersetzen abbrechen",
+      replaceRequiresSingleVideo:
+        "Bitte wähle für das Ersetzen genau ein neues Video aus.",
       videoNames: "Videonamen",
       videoNameLabel: "Videoname {index}",
+      videoSizeCompressed: "{original} → {compressed}",
       notes: "Notiz",
       saveEntry: "Eintrag speichern",
       saveWorkout: "Workout speichern",
+      loadingEncoder: "Encoder lädt ...",
+      loadingEncoderHint: "Der lokale Video-Encoder wird geladen. Das passiert nur beim ersten Video-Upload.",
+      encodingWorkout: "Videos werden komprimiert ...",
+      encodingProgress: "Video {current}/{total} wird komprimiert: {name} ({percent} %)",
       uploadingEntry: "Eintrag wird gesendet ...",
       uploadingWorkout: "Upload läuft ...",
+      uploadingCompressed: "Die komprimierten Videos werden jetzt hochgeladen.",
+      confirmingUpload: "Upload wird bestätigt ...",
+      confirmingUploadHint: "Der Server bestätigt gerade, dass dein Workout vollständig angekommen ist.",
       uploadPendingHint:
         "Upload läuft. Gerade bei Handy-Videos kann das etwas dauern, also die Seite am besten offen lassen.",
       uploadTooMany: "Bitte wähle höchstens 4 Videos aus.",
       uploadTooLarge: "Ein Video ist zu groß. Pro Datei sind maximal 100 MB erlaubt.",
       uploadTooLargeRequest:
         "Der Upload wurde vom Server abgewiesen. Bitte kürze oder komprimiere das Video deutlich.",
+      encoderLoadFailed:
+        "Der lokale Video-Encoder konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
+      compressionFailed:
+        "Die lokale Videokompression ist fehlgeschlagen. Bitte versuche es erneut oder nutze einen kürzeren Clip.",
+      compressionTooLarge:
+        "Selbst nach der Kompression bleibt das Video über 15 MB. Bitte kürze den Clip stärker.",
       uploadUnexpected: "Der Upload konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
       sicknessToggle: "M\u00e4nnergrippe?",
       sicknessConsent:
@@ -270,9 +295,15 @@
       pushupOverTarget: "Liegest\u00fctze \u00fcber Soll",
       situpOverTarget: "Sit-ups \u00fcber Soll",
       videoReplace: "Video ersetzen",
+      videoAdd: "Video hinzufügen",
       replaceVideoInput: "Neues Video ausw\u00e4hlen",
       videoDelete: "Video l\u00f6schen",
-      deleteKeepClaim: "Nur nach abgeschlossenem Review",
+      deleteRemovesClaim:
+        "Wenn du das letzte Video l\u00f6schst, wird auch der Workout-Claim entfernt.",
+      claimEdit: "Claim ändern",
+      claimDelete: "Claim entfernen",
+      editableClaimHint:
+        "Solange noch kein Review passiert ist, kannst du den Claim im Upload-Fenster ändern oder komplett entfernen.",
       workoutNote: "Deine Notiz",
       reviewFeedback: "Review-Feedback",
       reviewedBy: "Review von",

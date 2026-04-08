@@ -1,8 +1,10 @@
+import { WorkoutReviewStatus } from "@prisma/client";
 import { z } from "zod";
 import {
   MAX_SETS_PER_EXERCISE,
   MAX_VIDEO_FILES_PER_DAY,
   MAX_VIDEO_SIZE_BYTES,
+  canSubmitForDate,
   getRequiredReps,
 } from "@/lib/challenge";
 
@@ -148,4 +150,18 @@ export function getSubmissionTotals(submission: {
     effectivePushupTotal: submission.verifiedPushupTotal ?? pushupTotal,
     effectiveSitupTotal: submission.verifiedSitupTotal ?? situpTotal,
   };
+}
+
+export function preservesSubmissionWithoutVideos(reviewStatus: WorkoutReviewStatus) {
+  return (
+    reviewStatus === WorkoutReviewStatus.APPROVED ||
+    reviewStatus === WorkoutReviewStatus.NOT_REQUIRED
+  );
+}
+
+export function canEditSubmissionBeforeReview(input: {
+  challengeDate: string;
+  reviewCount: number;
+}) {
+  return canSubmitForDate(input.challengeDate) && input.reviewCount === 0;
 }

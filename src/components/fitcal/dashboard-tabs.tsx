@@ -1,10 +1,13 @@
 ﻿"use client";
 
-import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { AppDictionary } from "@/i18n";
 import { DashboardHistorySection } from "@/components/fitcal/dashboard/history-section";
 import {
+  DashboardActionButton,
   DashboardSectionHeader as SectionHeader,
+  DashboardStatusBadge,
   DashboardStatBox as StatBox,
 } from "@/components/fitcal/dashboard/dashboard-primitives";
 import { DashboardReviewSection } from "@/components/fitcal/dashboard/review-section";
@@ -36,20 +39,37 @@ import {
   CHALLENGE_END_DATE,
   CHALLENGE_START_DATE,
   MAX_VIDEO_FILES_PER_DAY,
-  MAX_VIDEO_SIZE_BYTES,
   getChallengeDayIndex,
   getRequiredReps,
   isWithinChallenge,
 } from "@/lib/challenge";
+import {
+  prepareUploadVideosForSubmission,
+  VideoPreparationError,
+} from "@/lib/video-processing/browser/video-transcoder";
+import { shouldCompressVideoBeforeUpload } from "@/lib/video-processing/compression-policy";
+import { TARGET_UPLOAD_VIDEO_MB } from "@/lib/video-processing/constants";
+import { buildSubmissionUploadFormData } from "@/lib/video-processing/upload-form-data";
 
 type DashboardLabels = AppDictionary["dashboard"];
 type TabKey = "overview" | "uploads" | "timeline" | "metastats" | "review" | "regeln" | "rechner";
 type SelectedUploadVideo = {
+  compressedSizeLabel?: string;
   id: string;
   originalName: string;
   displayName: string;
   sizeLabel: string;
 };
+
+type UploadActivity = {
+  currentFileIndex?: number;
+  currentFileName?: string;
+  progress?: number;
+  stage: "loadingEncoder" | "encoding" | "uploading" | "confirming";
+  totalFiles?: number;
+};
+
+type ClaimEditorReplacementState = Record<string, string | null>;
 
 type SubmissionResponsePayload = {
   ok: boolean;
@@ -84,10 +104,87 @@ function formatFileSizeLabel(locale: Locale, sizeBytes: number) {
   return `${formatLocalizedNumber(locale, sizeBytes / (1024 * 1024), 1)} MB`;
 }
 
+function getUploadButtonLabel(
+  labels: DashboardLabels["uploads"],
+  activity: UploadActivity | null,
+  isLightParticipant: boolean,
+) {
+  if (!activity) {
+    return isLightParticipant ? labels.saveEntry : labels.saveWorkout;
+  }
+
+  if (activity.stage === "loadingEncoder") {
+    return labels.loadingEncoder;
+  }
+
+  if (activity.stage === "encoding") {
+    return labels.encodingWorkout;
+  }
+
+  if (activity.stage === "uploading") {
+    return isLightParticipant ? labels.uploadingEntry : labels.uploadingWorkout;
+  }
+
+  return labels.confirmingUpload;
+}
+
+function getUploadActivityMessage(
+  labels: DashboardLabels["uploads"],
+  activity: UploadActivity | null,
+) {
+  if (!activity) {
+    return null;
+  }
+
+  if (activity.stage === "loadingEncoder") {
+    return labels.loadingEncoderHint;
+  }
+
+  if (activity.stage === "encoding") {
+    return replaceTemplate(labels.encodingProgress, {
+      current: activity.currentFileIndex ?? 1,
+      name: activity.currentFileName ?? "video.mp4",
+      percent: Math.round((activity.progress ?? 0) * 100),
+      total: activity.totalFiles ?? 1,
+    });
+  }
+
+  if (activity.stage === "uploading") {
+    return labels.uploadingCompressed;
+  }
+
+  return labels.confirmingUploadHint;
+}
+
+function getVideoCompressionErrorMessage(
+  error: unknown,
+  labels: DashboardLabels["uploads"],
+) {
+  if (error instanceof VideoPreparationError) {
+    if (error.code === "encoder_load_failed") {
+      return labels.encoderLoadFailed;
+    }
+
+    if (error.code === "compression_too_large") {
+      return labels.compressionTooLarge;
+    }
+  }
+
+  const message = error instanceof Error ? error.message : "";
+
+  if (message.includes("15 MB")) {
+    return labels.compressionTooLarge;
+  }
+
+  return labels.compressionFailed;
+}
+
 async function submitTrackedUpload(
   form: HTMLFormElement,
-  setUploadingDays: Dispatch<SetStateAction<Record<string, boolean>>>,
+  locale: Locale,
+  setUploadActivities: Dispatch<SetStateAction<Record<string, UploadActivity | null>>>,
   setUploadErrors: Dispatch<SetStateAction<Record<string, string | null>>>,
+  setSelectedUploadVideos: Dispatch<SetStateAction<Record<string, SelectedUploadVideo[]>>>,
   labels: DashboardLabels["uploads"],
   isLightParticipant: boolean,
 ) {
@@ -96,12 +193,28 @@ async function submitTrackedUpload(
   const challengeDateValue = formData.get("challengeDate");
   const challengeDate =
     typeof challengeDateValue === "string" ? challengeDateValue : "unknown";
+  const hasExistingClaim = formData.get("hasExistingClaim") === "1";
+  const replaceVideoId =
+    typeof formData.get("replaceVideoId") === "string"
+      ? String(formData.get("replaceVideoId"))
+      : "";
   const files = formData
     .getAll("videos")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
   if (!isLightParticipant) {
-    if (files.length < 1 || files.length > MAX_VIDEO_FILES_PER_DAY) {
+    if (replaceVideoId && files.length !== 1) {
+      setUploadErrors((current) => ({
+        ...current,
+        [challengeDate]: labels.replaceRequiresSingleVideo,
+      }));
+      return;
+    }
+
+    if (
+      files.length > MAX_VIDEO_FILES_PER_DAY ||
+      (!hasExistingClaim && files.length < 1)
+    ) {
       setUploadErrors((current) => ({
         ...current,
         [challengeDate]: labels.uploadTooMany,
@@ -109,18 +222,16 @@ async function submitTrackedUpload(
       return;
     }
 
-    if (files.some((file) => file.size > MAX_VIDEO_SIZE_BYTES)) {
-      setUploadErrors((current) => ({
-        ...current,
-        [challengeDate]: labels.uploadTooLarge,
-      }));
-      return;
-    }
   }
 
-  setUploadingDays((current) => ({
+  setUploadActivities((current) => ({
     ...current,
-    [challengeDate]: true,
+    [challengeDate]:
+      isLightParticipant
+        ? { stage: "uploading" }
+        : files.some((file) => shouldCompressVideoBeforeUpload(file.size))
+          ? { stage: "loadingEncoder" }
+          : { stage: "uploading" },
   }));
   setUploadErrors((current) => ({
     ...current,
@@ -128,9 +239,84 @@ async function submitTrackedUpload(
   }));
 
   try {
+    const preparedVideos = !isLightParticipant
+      ? await prepareUploadVideosForSubmission({
+          files,
+          onEncoderLoadStart: () => {
+            setUploadActivities((current) => ({
+              ...current,
+              [challengeDate]: {
+                stage: "loadingEncoder",
+              },
+            }));
+          },
+          onEncoderReady: () => {
+            setUploadActivities((current) => ({
+              ...current,
+              [challengeDate]: {
+                stage: "encoding",
+                progress: 0,
+                totalFiles: files.length,
+              },
+            }));
+          },
+          onEncodingStart: ({ currentFileIndex, currentFileName, totalFiles }) => {
+            setUploadActivities((current) => ({
+              ...current,
+              [challengeDate]: {
+                stage: "encoding",
+                currentFileIndex,
+                currentFileName,
+                progress: 0,
+                totalFiles,
+              },
+            }));
+          },
+          onEncodingProgress: ({ currentFileIndex, currentFileName, totalFiles, value }) => {
+            setUploadActivities((current) => ({
+              ...current,
+              [challengeDate]: {
+                stage: "encoding",
+                currentFileIndex,
+                currentFileName,
+                progress: value,
+                totalFiles,
+              },
+            }));
+          },
+          totalFiles: files.length,
+        }).catch((error: unknown) => {
+          console.error("[fitcal-upload] local video compression failed", error);
+          throw new Error(getVideoCompressionErrorMessage(error, labels));
+        })
+      : [];
+
+    if (!isLightParticipant) {
+      setSelectedUploadVideos((current) => ({
+        ...current,
+        [challengeDate]: (current[challengeDate] ?? []).map((video, index) => ({
+          ...video,
+          compressedSizeLabel: preparedVideos[index]?.wasCompressed
+            ? formatFileSizeLabel(locale, preparedVideos[index].outputSizeBytes)
+            : undefined,
+        })),
+      }));
+    }
+
+    const requestFormData = isLightParticipant
+      ? formData
+      : buildSubmissionUploadFormData(formData, preparedVideos);
+
+    setUploadActivities((current) => ({
+      ...current,
+      [challengeDate]: {
+        stage: "uploading",
+      },
+    }));
+
     const response = await fetch("/api/submissions", {
       method: "POST",
-      body: formData,
+      body: requestFormData,
       credentials: "same-origin",
       headers: {
         Accept: "application/json",
@@ -163,9 +349,9 @@ async function submitTrackedUpload(
             ? labels.uploadUnexpected
           : labels.uploadUnexpected;
 
-      setUploadingDays((current) => ({
+      setUploadActivities((current) => ({
         ...current,
-        [challengeDate]: false,
+        [challengeDate]: null,
       }));
       setUploadErrors((current) => ({
         ...current,
@@ -174,6 +360,13 @@ async function submitTrackedUpload(
       return;
     }
 
+    setUploadActivities((current) => ({
+      ...current,
+      [challengeDate]: {
+        stage: "confirming",
+      },
+    }));
+
     const confirmedRedirectUrl = await confirmRecentSubmission(
       challengeDate,
       requestStartedAt,
@@ -184,15 +377,15 @@ async function submitTrackedUpload(
       return;
     }
 
-    setUploadingDays((current) => ({
+    setUploadActivities((current) => ({
       ...current,
-      [challengeDate]: false,
+      [challengeDate]: null,
     }));
     setUploadErrors((current) => ({
       ...current,
       [challengeDate]: labels.uploadUnexpected,
     }));
-  } catch {
+  } catch (error) {
     const confirmedRedirectUrl = await confirmRecentSubmission(
       challengeDate,
       requestStartedAt,
@@ -203,13 +396,16 @@ async function submitTrackedUpload(
       return;
     }
 
-    setUploadingDays((current) => ({
+    setUploadActivities((current) => ({
       ...current,
-      [challengeDate]: false,
+      [challengeDate]: null,
     }));
     setUploadErrors((current) => ({
       ...current,
-      [challengeDate]: labels.uploadUnexpected,
+      [challengeDate]:
+        error instanceof Error && error.message
+          ? error.message
+          : labels.uploadUnexpected,
     }));
   }
 }
@@ -326,8 +522,14 @@ export function DashboardTabs({
   const [weightInput, setWeightInput] = useState(profile.latestWeightKg != null ? String(profile.latestWeightKg).replace(".", ",") : "75");
   const [targetDateInput, setTargetDateInput] = useState(formatDateKeyForInput(CHALLENGE_START_DATE));
   const [selectedUploadVideos, setSelectedUploadVideos] = useState<Record<string, SelectedUploadVideo[]>>({});
-  const [uploadingDays, setUploadingDays] = useState<Record<string, boolean>>({});
+  const [uploadActivities, setUploadActivities] = useState<Record<string, UploadActivity | null>>({});
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
+  const [claimEditorReplacementTargets, setClaimEditorReplacementTargets] =
+    useState<ClaimEditorReplacementState>({});
+  const [focusedClaimEditorDate, setFocusedClaimEditorDate] = useState<string | null>(null);
+  const uploadSectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const uploadPrimaryInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const additionalSlackDays = Math.max(0, Math.floor(parseNumberInput(slackDaysInput)));
   const totalSlackDebtCents = Array.from({ length: additionalSlackDays }, (_, index) => slackBaseCents + (overview.existingSlackDays + index) * slackIncrementCents).reduce((sum, value) => sum + value, 0);
@@ -350,10 +552,13 @@ export function DashboardTabs({
 
   function handleUploadVideoSelection(
     challengeDate: string,
+    existingVideoCount: number,
+    replaceVideoId: string | null,
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const files = Array.from(event.currentTarget.files ?? []);
     const nextVideos = files.map((file, index) => ({
+      compressedSizeLabel: undefined,
       id: buildUploadVideoId(file, index),
       originalName: file.name,
       displayName: file.name.replace(/\.[^.]+$/, ""),
@@ -362,15 +567,19 @@ export function DashboardTabs({
 
     let nextError: string | null = null;
 
-    if (files.length > MAX_VIDEO_FILES_PER_DAY) {
+    if (replaceVideoId && files.length !== 1) {
+      nextError = labels.uploads.replaceRequiresSingleVideo;
+    } else if (!replaceVideoId && files.length + existingVideoCount > MAX_VIDEO_FILES_PER_DAY) {
       nextError = labels.uploads.uploadTooMany;
-    } else if (files.some((file) => file.size > MAX_VIDEO_SIZE_BYTES)) {
-      nextError = labels.uploads.uploadTooLarge;
     }
 
     setSelectedUploadVideos((current) => ({
       ...current,
       [challengeDate]: nextVideos,
+    }));
+    setUploadActivities((current) => ({
+      ...current,
+      [challengeDate]: null,
     }));
     setUploadErrors((current) => ({
       ...current,
@@ -391,6 +600,122 @@ export function DashboardTabs({
     }));
   }
 
+  function focusClaimEditor(
+    challengeDate: string,
+    options: {
+      openFilePicker?: boolean;
+      replaceVideoId?: string | null;
+    } = {},
+  ) {
+    const replaceVideoId = options.replaceVideoId ?? null;
+    const shouldOpenFilePicker = Boolean(options.openFilePicker || replaceVideoId);
+
+    flushSync(() => {
+      setActiveTab("uploads");
+      setFocusedClaimEditorDate(challengeDate);
+      setClaimEditorReplacementTargets((current) => ({
+        ...current,
+        [challengeDate]: replaceVideoId,
+      }));
+      setSelectedUploadVideos((current) => ({
+        ...current,
+        [challengeDate]: [],
+      }));
+      setUploadErrors((current) => ({
+        ...current,
+        [challengeDate]: null,
+      }));
+    });
+
+    const target = uploadSectionRefs.current[challengeDate];
+
+    if (!target) {
+      return;
+    }
+
+    document
+      .getElementById("uploads")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    if (shouldOpenFilePicker) {
+      const fileInput = uploadFileInputRefs.current[challengeDate];
+      fileInput?.focus();
+      fileInput?.click();
+    } else {
+      uploadPrimaryInputRefs.current[challengeDate]?.focus();
+    }
+
+    const stickyOffset = 112;
+    window.setTimeout(() => {
+      const targetTop = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
+
+      window.scrollTo({
+        top: Math.max(0, targetTop),
+        behavior: "smooth",
+      });
+    }, 40);
+  }
+
+  function clearClaimEditorReplacementTarget(challengeDate: string) {
+    setClaimEditorReplacementTargets((current) => ({
+      ...current,
+      [challengeDate]: null,
+    }));
+    setSelectedUploadVideos((current) => ({
+      ...current,
+      [challengeDate]: [],
+    }));
+  }
+
+  useEffect(() => {
+    if (!focusedClaimEditorDate) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setFocusedClaimEditorDate((current) =>
+        current === focusedClaimEditorDate ? null : current,
+      );
+    }, 2200);
+
+    return () => window.clearTimeout(timeout);
+  }, [focusedClaimEditorDate]);
+
+  function openVideo(videoId: string) {
+    window.open(`/api/videos/${videoId}`, "_blank", "noopener,noreferrer");
+  }
+
+  function submitDashboardPostAction(
+    action: string,
+    fields: Record<string, string>,
+  ) {
+    const form = document.createElement("form");
+    form.method = "post";
+    form.action = action;
+    form.style.display = "none";
+
+    Object.entries(fields).forEach(([name, value]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.requestSubmit();
+    window.setTimeout(() => {
+      form.remove();
+    }, 0);
+  }
+
+  function scrollToDashboardSection(sectionId: TabKey) {
+    setActiveTab(sectionId);
+    document
+      .getElementById(sectionId)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-fitcal-section]"));
     if (!sections.length) return;
@@ -409,7 +734,14 @@ export function DashboardTabs({
     <div className="grid gap-6 fc-has-bottom-nav">
       <nav className="fc-tab-bar">
         {tabs.map((tab) => (
-          <a className={`fc-tab ${activeTab === tab.key ? "is-active" : ""}`} href={`#${tab.key}`} key={tab.key}>{tab.label}</a>
+          <button
+            className={`fc-tab ${activeTab === tab.key ? "is-active" : ""}`}
+            key={tab.key}
+            onClick={() => scrollToDashboardSection(tab.key)}
+            type="button"
+          >
+            {tab.label}
+          </button>
         ))}
       </nav>
 
@@ -442,11 +774,25 @@ export function DashboardTabs({
         <SectionHeader title={labels.uploads.title} subtitle={labels.uploads.windowHint} />
         <div className="grid gap-4">
           {openDays.length > 0 ? (
-            openDays.map((day) => (
-              <article className="fc-card" key={day.challengeDate}>
+              openDays.map((day) => (
+                <article
+                  className={`fc-card ${focusedClaimEditorDate === day.challengeDate ? "is-focused-claim" : ""}`}
+                  id={`upload-${day.challengeDate}`}
+                  key={day.challengeDate}
+                  ref={(node) => {
+                    uploadSectionRefs.current[day.challengeDate] = node;
+                  }}
+                >
                 {(() => {
-                  const isUploading = uploadingDays[day.challengeDate] === true;
+                  const uploadActivity = uploadActivities[day.challengeDate] ?? null;
+                  const isUploading = uploadActivity != null;
                   const uploadError = uploadErrors[day.challengeDate];
+                  const uploadActivityMessage = getUploadActivityMessage(labels.uploads, uploadActivity);
+                  const replaceVideoId = claimEditorReplacementTargets[day.challengeDate] ?? null;
+                  const replacementVideo =
+                    replaceVideoId != null
+                      ? day.videos.find((video) => video.id === replaceVideoId) ?? null
+                      : null;
 
                   return (
                     <>
@@ -455,11 +801,19 @@ export function DashboardTabs({
                     <h3 className="fc-heading text-lg">{day.dateLabel}</h3>
                     <p className="mt-1 text-sm text-[var(--fc-muted)]">{day.targetReps} {labels.uploads.targetSuffix}</p>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="fc-chip fc-chip-accent">{day.isCurrentDay ? labels.uploads.today : labels.uploads.yesterday}</span>
-                    {day.isQualificationDay ? <span className="fc-chip fc-chip-warm">{labels.uploads.qualification}</span> : null}
-                    {day.reviewStatusLabel ? <span className="fc-chip fc-chip-muted">{day.reviewStatusLabel}</span> : null}
-                  </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <DashboardStatusBadge tone="accent">
+                        {day.isCurrentDay ? labels.uploads.today : labels.uploads.yesterday}
+                      </DashboardStatusBadge>
+                      {day.isQualificationDay ? (
+                        <DashboardStatusBadge tone="warm">
+                          {labels.uploads.qualification}
+                        </DashboardStatusBadge>
+                      ) : null}
+                      {day.reviewStatusLabel ? (
+                        <DashboardStatusBadge>{day.reviewStatusLabel}</DashboardStatusBadge>
+                      ) : null}
+                    </div>
                 </div>
                 {day.reviewNotes.length > 0 ? (
                   <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
@@ -476,6 +830,13 @@ export function DashboardTabs({
                     </div>
                   </div>
                 ) : null}
+                {day.isEditableClaim && day.hasExistingClaim ? (
+                  <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+                    <p className="text-sm text-[var(--fc-ink-secondary)]">
+                      {labels.uploads.currentClaimHint}
+                    </p>
+                  </div>
+                ) : null}
                 <form
                   className="mt-5 space-y-4"
                   encType="multipart/form-data"
@@ -483,29 +844,120 @@ export function DashboardTabs({
                     event.preventDefault();
                     void submitTrackedUpload(
                       event.currentTarget,
-                      setUploadingDays,
+                      locale,
+                      setUploadActivities,
                       setUploadErrors,
+                      setSelectedUploadVideos,
                       labels.uploads,
                       overview.isLightParticipant,
                     );
                   }}
                 >
                   <input name="challengeDate" type="hidden" value={day.challengeDate} />
+                  <input
+                    name="hasExistingClaim"
+                    type="hidden"
+                    value={day.hasExistingClaim ? "1" : "0"}
+                  />
+                  <input
+                    name="replaceVideoId"
+                    type="hidden"
+                    value={replaceVideoId ?? ""}
+                  />
                   <div className="fc-grid-2">
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" disabled={isUploading} min="0" name="pushupSet1" placeholder="0" type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" disabled={isUploading} min="0" name="pushupSet2" placeholder="0" type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" disabled={isUploading} min="0" name="situpSet1" placeholder="0" type="number" /></label>
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" disabled={isUploading} min="0" name="situpSet2" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" defaultValue={day.pushupSet1} disabled={isUploading} min="0" name="pushupSet1" placeholder="0" ref={(node) => {
+                      uploadPrimaryInputRefs.current[day.challengeDate] = node;
+                    }} type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" defaultValue={day.pushupSet2} disabled={isUploading} min="0" name="pushupSet2" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" defaultValue={day.situpSet1} disabled={isUploading} min="0" name="situpSet1" placeholder="0" type="number" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" defaultValue={day.situpSet2} disabled={isUploading} min="0" name="situpSet2" placeholder="0" type="number" /></label>
                   </div>
                   <p className="text-sm text-[var(--fc-muted)]">{overview.isLightParticipant ? labels.uploads.lightHint : labels.uploads.fullHint}</p>
                   <div className={`grid gap-3 ${overview.isLightParticipant ? "sm:grid-cols-1" : "sm:grid-cols-[1.1fr_0.9fr]"}`}>
                     {!overview.isLightParticipant ? (
                       <div className="space-y-3">
+                        {replacementVideo ? (
+                          <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+                                  {labels.uploads.replaceVideoLabel}
+                                </p>
+                                <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">
+                                  {replacementVideo.originalName}
+                                </p>
+                                <p className="mt-1 text-sm text-[var(--fc-muted)]">
+                                  {labels.uploads.replaceVideoHint}
+                                </p>
+                              </div>
+                              <DashboardActionButton
+                                disabled={isUploading}
+                                onClick={() => clearClaimEditorReplacementTarget(day.challengeDate)}
+                                type="button"
+                              >
+                                {labels.uploads.cancelReplaceVideo}
+                              </DashboardActionButton>
+                            </div>
+                          </div>
+                        ) : null}
                         <label className="fc-input-group">
                           <span className="fc-input-label">{labels.uploads.videos}</span>
-                          <input accept="video/*" className="fc-input-file" disabled={isUploading} multiple name="videos" onChange={(event) => handleUploadVideoSelection(day.challengeDate, event)} required type="file" />
+                          <input accept="video/*" className="fc-input-file" disabled={isUploading} id={`upload-video-input-${day.challengeDate}`} multiple={!replaceVideoId} name="videos" onChange={(event) => handleUploadVideoSelection(day.challengeDate, day.videos.length, replaceVideoId, event)} ref={(node) => {
+                            uploadFileInputRefs.current[day.challengeDate] = node;
+                          }} required={!day.hasExistingClaim || Boolean(replaceVideoId)} type="file" />
                         </label>
-                        <p className="text-sm text-[var(--fc-muted)]">{labels.uploads.mobileVideoHint}</p>
+                        <p className="text-sm text-[var(--fc-muted)]">{labels.uploads.compressionHint.replace("{size}", String(TARGET_UPLOAD_VIDEO_MB))}</p>
+                        {day.videos.length > 0 ? (
+                          <div className="grid gap-2">
+                            <p className="text-xs uppercase tracking-[0.18em] text-[var(--fc-muted)]">
+                              {labels.uploads.currentVideos}
+                            </p>
+                            {day.videos.map((video) => (
+                              <div className="fc-video-row" key={video.id}>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium">{video.originalName}</p>
+                                  <p className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</p>
+                                </div>
+                                <div className="fc-action-row">
+                                  <DashboardActionButton
+                                    onClick={() => openVideo(video.id)}
+                                    type="button"
+                                  >
+                                    {commonLabels.open}
+                                  </DashboardActionButton>
+                                  {day.isEditableClaim ? (
+                                    <>
+                                      <DashboardActionButton
+                                        disabled={isUploading}
+                                        onClick={() =>
+                                          focusClaimEditor(day.challengeDate, {
+                                            openFilePicker: true,
+                                            replaceVideoId: video.id,
+                                          })
+                                        }
+                                        type="button"
+                                      >
+                                        {labels.timeline.videoReplace}
+                                      </DashboardActionButton>
+                                      <DashboardActionButton
+                                        disabled={isUploading}
+                                        onClick={() =>
+                                          submitDashboardPostAction("/api/videos/delete", {
+                                            videoId: video.id,
+                                          })
+                                        }
+                                        type="button"
+                                        variant="danger"
+                                      >
+                                        {labels.timeline.videoDelete}
+                                      </DashboardActionButton>
+                                    </>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                         {selectedUploadVideos[day.challengeDate]?.length ? (
                           <div className="grid gap-2">
                             <p className="text-xs uppercase tracking-[0.18em] text-[var(--fc-muted)]">{labels.uploads.videoNames}</p>
@@ -513,17 +965,36 @@ export function DashboardTabs({
                               <label className="fc-input-group" key={video.id}>
                                 <span className="fc-input-label">{labels.uploads.videoNameLabel.replace("{index}", String(index + 1))}</span>
                                 <input className="fc-input" disabled={isUploading} maxLength={120} name={`videoDisplayName${index}`} onChange={(event) => handleUploadVideoRename(day.challengeDate, video.id, event.target.value)} placeholder={video.originalName} type="text" value={video.displayName} />
-                                <span className="text-xs text-[var(--fc-muted)]">{video.sizeLabel}</span>
+                                <span className="text-xs text-[var(--fc-muted)]">
+                                  {video.compressedSizeLabel
+                                    ? replaceTemplate(labels.uploads.videoSizeCompressed, {
+                                        compressed: video.compressedSizeLabel,
+                                        original: video.sizeLabel,
+                                      })
+                                    : video.sizeLabel}
+                                </span>
                               </label>
                             ))}
                           </div>
                         ) : null}
                       </div>
                     ) : null}
-                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.notes}</span><textarea className="fc-input min-h-[5.5rem]" disabled={isUploading} name="notes" /></label>
+                    <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.notes}</span><textarea className="fc-input min-h-[5.5rem]" defaultValue={day.notes} disabled={isUploading} name="notes" /></label>
                   </div>
                   {uploadError ? <p className="text-sm font-medium text-[var(--fc-warm)]">{uploadError}</p> : null}
-                  {isUploading ? <p className="text-sm text-[var(--fc-muted)]">{labels.uploads.uploadPendingHint}</p> : null}
+                  {uploadActivityMessage ? (
+                    <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+                      <p className="text-sm text-[var(--fc-ink-secondary)]">{uploadActivityMessage}</p>
+                      {uploadActivity?.stage === "encoding" && typeof uploadActivity.progress === "number" ? (
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--fc-surface)]">
+                          <div
+                            className="h-full rounded-full bg-[var(--fc-accent)] transition-[width] duration-200"
+                            style={{ width: `${Math.round(uploadActivity.progress * 100)}%` }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap gap-3">
                     <Button
                       disabled={isUploading}
@@ -532,16 +1003,32 @@ export function DashboardTabs({
                         if (!form) return;
                         void submitTrackedUpload(
                           form,
-                          setUploadingDays,
+                          locale,
+                          setUploadActivities,
                           setUploadErrors,
+                          setSelectedUploadVideos,
                           labels.uploads,
                           overview.isLightParticipant,
                         );
                       }}
                       type="button"
                     >
-                      {isUploading ? (overview.isLightParticipant ? labels.uploads.uploadingEntry : labels.uploads.uploadingWorkout) : (overview.isLightParticipant ? labels.uploads.saveEntry : labels.uploads.saveWorkout)}
+                      {getUploadButtonLabel(labels.uploads, uploadActivity, overview.isLightParticipant)}
                     </Button>
+                    {day.isEditableClaim && day.hasExistingClaim ? (
+                      <Button
+                        disabled={isUploading}
+                        onClick={() =>
+                          submitDashboardPostAction("/api/submissions/delete", {
+                            challengeDate: day.challengeDate,
+                          })
+                        }
+                        type="button"
+                        variant="danger"
+                      >
+                        {labels.timeline.claimDelete}
+                      </Button>
+                    ) : null}
                   </div>
                 </form>
                 {!overview.isLightParticipant ? (
@@ -570,6 +1057,16 @@ export function DashboardTabs({
       <DashboardHistorySection
         commonLabels={commonLabels}
         labels={labels}
+        onClaimEdit={(challengeDate) => focusClaimEditor(challengeDate)}
+        onClaimAddVideos={(challengeDate) =>
+          focusClaimEditor(challengeDate, { openFilePicker: true })
+        }
+        onEditableVideoReplace={(challengeDate, videoId) =>
+          focusClaimEditor(challengeDate, {
+            openFilePicker: true,
+            replaceVideoId: videoId,
+          })
+        }
         onVideoReplaceSelection={handleVideoReplaceSelection}
         timelineEntries={timelineEntries}
       />
