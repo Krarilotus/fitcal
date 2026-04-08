@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { disconnectTestDb, prisma } from "../helpers/db";
 import { loginAsReviewer } from "../helpers/auth";
+import { disconnectTestDb, prisma } from "../helpers/db";
 import { resetE2EState } from "../helpers/reset";
 
 test.beforeEach(() => {
@@ -10,6 +10,10 @@ test.beforeEach(() => {
 test.afterAll(async () => {
   await disconnectTestDb();
 });
+
+function getTimelineDateLabel(challengeDate: string) {
+  return `${challengeDate.slice(8, 10)}.${challengeDate.slice(5, 7)}.`;
+}
 
 test("dashboard buttons for invite and approvals work", async ({ page }) => {
   await loginAsReviewer(page);
@@ -40,17 +44,17 @@ test("dashboard buttons for invite and approvals work", async ({ page }) => {
 test("review area shows participant progress and can approve a workout", async ({ page }) => {
   await loginAsReviewer(page);
 
-  await page.getByRole("link", { name: "Review" }).click();
+  await page.getByRole("button", { name: "Review" }).click();
   await expect(page.locator("#review")).toBeVisible();
   await expect(page.getByRole("cell", { name: "Paul Participant" })).toBeVisible();
 
   await page.getByRole("button", { name: "Ausstehend" }).click();
   await expect(page.getByText(/Erstreviews/i)).toBeVisible();
-  await expect(page.getByText(/Paul Participant · 19.04/i)).toBeVisible();
+  await expect(page.getByText(/Paul Participant . 19.04/i)).toBeVisible();
 
   await Promise.all([
     page.waitForURL(/\/dashboard\?(success|error)=/),
-    page.getByRole("button", { name: "Workout zählt komplett" }).first().click(),
+    page.getByRole("button", { name: /Workout zählt komplett/i }).first().click(),
   ]);
 
   expect(page.url()).toContain("success=");
@@ -78,10 +82,10 @@ test("review area shows participant progress and can approve a workout", async (
 test("review area can accept a sickness request", async ({ page }) => {
   await loginAsReviewer(page);
 
-  await page.getByRole("link", { name: "Review" }).click();
+  await page.getByRole("button", { name: "Review" }).click();
   await page.getByRole("button", { name: "Ausstehend" }).click();
   await expect(page.getByText(/Krankmeldungen/i)).toBeVisible();
-  await expect(page.getByText(/Paul Participant · 20.04/i)).toBeVisible();
+  await expect(page.getByText(/Paul Participant . 20.04/i)).toBeVisible();
 
   await Promise.all([
     page.waitForURL(/\/dashboard\?(success|error)=/),
@@ -106,7 +110,7 @@ test("dashboard profile and measurement entries can be saved", async ({ page }) 
 
   const profileSection = page.locator("#metastats");
   const measurementForm = page.locator('form[action="/api/measurements"]');
-  await page.getByRole("link", { name: "Metastats" }).click();
+  await page.getByRole("button", { name: "Metastats" }).click();
   await profileSection.getByLabel("Name").fill("Rita Test");
   await profileSection.getByLabel("Geburtsdatum").fill("19.09.1994");
   await profileSection.getByLabel(/Warum machst du das/i).fill("E2E Profiltest");
@@ -168,18 +172,19 @@ test("dashboard profile and measurement entries can be saved", async ({ page }) 
 test("dashboard upload and video delete buttons work", async ({ page }) => {
   await loginAsReviewer(page);
 
-  const uploadForm = page.locator('form[enctype="multipart/form-data"]').first();
+  const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
   const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
-  await uploadForm.getByLabel("Liegestütze Set 1").fill("16");
-  await uploadForm.getByLabel("Liegestütze Set 2").fill("15");
-  await uploadForm.getByLabel("Sit-ups Set 1").fill("16");
-  await uploadForm.getByLabel("Sit-ups Set 2").fill("15");
-  await uploadForm.getByLabel("Videos").setInputFiles({
+  await uploadForm.locator('input[name="pushupSet1"]').fill("16");
+  await uploadForm.locator('input[name="pushupSet2"]').fill("15");
+  await uploadForm.locator('input[name="situpSet1"]').fill("16");
+  await uploadForm.locator('input[name="situpSet2"]').fill("15");
+  await uploadForm.locator('input[name="videos"]').setInputFiles({
     name: "proof.mp4",
     mimeType: "video/mp4",
     buffer: Buffer.from("tiny fake mp4"),
   });
-  await uploadForm.getByLabel("Notiz").fill("E2E Upload");
+  await uploadForm.locator('textarea[name="notes"]').fill("E2E Upload");
+
   await Promise.all([
     page.waitForURL(/\/dashboard\?(success|error)=/),
     uploadForm.getByRole("button", { name: "Workout speichern" }).click(),
@@ -189,7 +194,11 @@ test("dashboard upload and video delete buttons work", async ({ page }) => {
   const todaySubmission = await prisma.dailySubmission.findUnique({
     where: {
       userId_challengeDate: {
-        userId: (await prisma.user.findUniqueOrThrow({ where: { email: "reviewer@fitcal.test" } })).id,
+        userId: (
+          await prisma.user.findUniqueOrThrow({
+            where: { email: "reviewer@fitcal.test" },
+          })
+        ).id,
         challengeDate: uploadDate,
       },
     },
@@ -198,10 +207,18 @@ test("dashboard upload and video delete buttons work", async ({ page }) => {
   expect(todaySubmission?.status).toBe("COMPLETED");
   expect(todaySubmission?.videos).toHaveLength(1);
 
+  await page
+    .locator("#timeline")
+    .getByRole("button")
+    .filter({ hasText: getTimelineDateLabel(uploadDate) })
+    .first()
+    .click();
+  await expect(page.locator("#timeline").getByText("proof.mp4")).toBeVisible();
+
   await Promise.all([
     page.waitForURL(/\/dashboard\?(success|error)=/),
     page
-      .locator(".fc-video-row")
+      .locator("#timeline .fc-video-row")
       .filter({ hasText: "proof.mp4" })
       .locator('form[action="/api/videos/delete"] button')
       .click(),
@@ -217,7 +234,58 @@ test("dashboard upload and video delete buttons work", async ({ page }) => {
     },
   });
   expect(remainingUploadedVideo).toBeNull();
+});
 
+test("editable claim buttons focus the upload editor and open the replacement file chooser", async ({
+  page,
+}) => {
+  await loginAsReviewer(page);
+
+  const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
+  const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
+  await uploadForm.locator('input[name="pushupSet1"]').fill("12");
+  await uploadForm.locator('input[name="pushupSet2"]').fill("12");
+  await uploadForm.locator('input[name="situpSet1"]').fill("12");
+  await uploadForm.locator('input[name="situpSet2"]').fill("12");
+  await uploadForm.locator('input[name="videos"]').setInputFiles({
+    name: "editable-proof.mp4",
+    mimeType: "video/mp4",
+    buffer: Buffer.from("editable fake mp4"),
+  });
+
+  await Promise.all([
+    page.waitForURL(/\/dashboard\?(success|error)=/),
+    uploadForm.getByRole("button", { name: "Workout speichern" }).click(),
+  ]);
+
+  const historyCard = page
+    .locator("#timeline")
+    .locator(".fc-video-row")
+    .filter({ hasText: "editable-proof.mp4" })
+    .first();
+  await page
+    .locator("#timeline")
+    .getByRole("button")
+    .filter({ hasText: getTimelineDateLabel(uploadDate) })
+    .first()
+    .click();
+  await expect(historyCard).toBeVisible();
+
+  const addVideoChooserPromise = page.waitForEvent("filechooser");
+  await page.locator("#timeline").getByRole("button", { name: "Video hinzufügen" }).first().click();
+  const addVideoChooser = await addVideoChooserPromise;
+  expect(addVideoChooser.isMultiple()).toBe(true);
+
+  await page.locator("#timeline").getByRole("button", { name: "Claim ändern" }).first().click();
+
+  const uploadCard = page.locator(`#upload-${uploadDate}`);
+  await expect(uploadCard).toHaveClass(/is-focused-claim/);
+  await expect(uploadCard.locator('input[name="pushupSet1"]')).toBeFocused();
+
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await historyCard.getByRole("button", { name: "Video ersetzen" }).click();
+  const fileChooser = await fileChooserPromise;
+  expect(fileChooser.isMultiple()).toBe(false);
 });
 
 test.fixme("dashboard joker button works", async ({ page }) => {
@@ -231,7 +299,9 @@ test.fixme("dashboard joker button works", async ({ page }) => {
   ]);
   expect(page.url()).toContain("success=");
 
-  const reviewer = await prisma.user.findUniqueOrThrow({ where: { email: "reviewer@fitcal.test" } });
+  const reviewer = await prisma.user.findUniqueOrThrow({
+    where: { email: "reviewer@fitcal.test" },
+  });
   const jokerSubmission = await prisma.dailySubmission.findUnique({
     where: {
       userId_challengeDate: {

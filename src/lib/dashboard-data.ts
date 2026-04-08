@@ -32,6 +32,8 @@ import type { CurrentUser } from "@/lib/auth/session";
 import {
   CHALLENGE_FREE_DAYS,
   CHALLENGE_START_DATE,
+  MAX_VIDEO_FILES_PER_DAY,
+  canSubmitForDate,
   formatCurrencyFromCents,
   getChallengeDayIndex,
   getChallengeOverview,
@@ -41,7 +43,12 @@ import {
 import { prisma } from "@/lib/db";
 import type { Locale } from "@/lib/preferences";
 import { getDailyMessage } from "@/lib/special-day";
-import { deserializeSets, getSubmissionTotals } from "@/lib/submission";
+import {
+  canEditSubmissionBeforeReview,
+  deserializeSets,
+  getSubmissionTotals,
+  preservesSubmissionWithoutVideos,
+} from "@/lib/submission";
 import { formatMeasurementDate } from "./measurements";
 
 type DashboardLabels = AppDictionary["dashboard"];
@@ -98,7 +105,19 @@ function buildOpenDays(
   overview: ReturnType<typeof getChallengeOverview>,
 ): OpenDay[] {
   return overview.days
-    .filter((day) => day.canUpload)
+    .filter((day) => {
+      const submission = user.dailySubmissions.find(
+        (entry) => entry.challengeDate === day.challengeDate,
+      );
+      const isEditableClaim =
+        submission != null &&
+        canEditSubmissionBeforeReview({
+          challengeDate: submission.challengeDate,
+          reviewCount: submission.workoutReviews.length,
+        });
+
+      return day.canUpload || (isEditableClaim && canSubmitForDate(day.challengeDate));
+    })
     .map((day) => {
       const submission = user.dailySubmissions.find(
         (entry) => entry.challengeDate === day.challengeDate,
@@ -112,6 +131,8 @@ function buildOpenDays(
               note: review.notes!.trim(),
             }))
         : [];
+      const pushupSets = submission ? deserializeSets(submission.pushupSets) : [];
+      const situpSets = submission ? deserializeSets(submission.situpSets) : [];
 
       return {
         challengeDate: day.challengeDate,
@@ -120,10 +141,32 @@ function buildOpenDays(
         isCurrentDay: day.isCurrentDay,
         isQualificationDay: isFreeChallengeDay(day.challengeDate),
         canUseJoker: day.canUseJoker,
+        hasExistingClaim: Boolean(submission),
+        isEditableClaim: submission
+          ? canEditSubmissionBeforeReview({
+              challengeDate: submission.challengeDate,
+              reviewCount: submission.workoutReviews.length,
+            })
+          : false,
+        canAddVideos:
+          Boolean(submission) &&
+          canSubmitForDate(day.challengeDate) &&
+          (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
+        pushupSet1: pushupSets[0] ?? 0,
+        pushupSet2: pushupSets[1] ?? 0,
+        situpSet1: situpSets[0] ?? 0,
+        situpSet2: situpSets[1] ?? 0,
+        notes: submission?.notes ?? "",
         reviewStatusLabel: submission
           ? formatReviewStatus(submission.reviewStatus, labels.reviewStatusLabels)
           : null,
         reviewNotes,
+        videos:
+          submission?.videos.map((video) => ({
+            id: video.id,
+            originalName: video.originalName,
+            sizeLabel: formatFileSize(locale, video.sizeBytes),
+          })) ?? [],
       };
     });
 }
@@ -174,6 +217,19 @@ function buildTimelineEntries(
       situpOverTarget: submission ? Math.max(0, totals!.situpTotal - day.repsTarget) : null,
       notes: submission?.notes ?? null,
       reviewNotes,
+      deletingLastVideoRemovesClaim: submission
+        ? !preservesSubmissionWithoutVideos(submission.reviewStatus)
+        : false,
+      isEditableClaim: submission
+        ? canEditSubmissionBeforeReview({
+            challengeDate: submission.challengeDate,
+            reviewCount: submission.workoutReviews.length,
+          })
+        : false,
+      canAddVideos:
+        Boolean(submission) &&
+        canSubmitForDate(day.challengeDate) &&
+        (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
       videos:
         submission?.videos.map((video) => ({
           id: video.id,

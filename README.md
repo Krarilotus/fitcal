@@ -20,6 +20,25 @@ npm run dev
 Dann:
 - App: `http://localhost:3000`
 
+## Clientseitige Video-Kompression
+
+Workout-Videos werden vor dem Upload lokal im Browser mit einer WebCodecs-basierten Pipeline neu kodiert:
+- Zielprofil: `MP4`, `480p`, `24 fps`
+- Zielgroesse: maximal `15 MB` pro Datei
+- Audio wird fuer die Workout-Beweise verworfen, um Dateigroesse und Encode-Zeit niedrig zu halten
+- Hardwarebeschleunigung wird bevorzugt, wenn der Browser sie bereitstellt
+- Danach laeuft weiter der robuste JSON-Handshake gegen `/api/submissions` plus Server-Bestaetigung ueber `/api/submissions/status`
+
+Warum das so gebaut ist:
+- grosse Handyvideos werden vor dem Upload direkt auf dem Geraet verkleinert
+- die Wiedergabe im Browser bleibt MP4-basiert und damit kompatibel mit Scrubbing und `2x`
+- der Server muss kein riesiges Originalvideo annehmen, bevor komprimiert wird
+
+Wichtig fuer Entwickler:
+- die Kompression setzt einen Browser mit `VideoEncoder` und `VideoDecoder` voraus
+- `localhost` ist dafuer als sicherer Ursprung okay
+- fuer nicht unterstuetzte Browser wird der Upload mit einer klaren Fehlermeldung abgebrochen statt kaputte Dateien zu erzeugen
+
 ## Lokale Checks vor Deployment
 
 ```bash
@@ -319,6 +338,33 @@ sudo systemctl reload nginx
 - ist der Absender `fitcal@hisqu.de`?
 - kommen Antworten im STRATO-Postfach an?
 5. Test-Upload und Review pruefen
+
+## Testen der Video-Kompression
+
+Sinnvolle lokale Testfaelle:
+
+1. Kleines Handyvideo auswaehlen
+- im Dashboard sollte zuerst `Encoder lädt ...` erscheinen
+- danach `Videos werden komprimiert ...`
+- erst danach startet der eigentliche Upload
+
+2. Grosses Handyvideo auswaehlen
+- die Seite soll im Dashboard bleiben
+- bei Erfolg landet der Upload normal wieder im Dashboard
+- wenn die komprimierte Datei trotzdem zu gross bleibt, erscheint eine klare Fehlermeldung statt einer kaputten API-Seite
+
+3. Nach erfolgreichem Upload pruefen
+- Video oeffnen
+- Scrubbing / Seek testen
+- `2x`-Wiedergabe im Review testen
+
+Automatisierte Checks:
+
+```bash
+npm run test:sim
+npm run lint
+npm run build
+```
 
 ## Update spaeter
 

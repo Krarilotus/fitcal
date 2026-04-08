@@ -47,7 +47,7 @@
       eyebrow: "Registration",
       title: "Register",
       invitedDescription:
-        "You have an invite. Your account will be activated right after registration.",
+        "You have an invite. Your inviter already counts as an approval, but the other participants still need to approve your access.",
       standardDescription:
         "After registration, your account has to be approved by an existing participant.",
       alreadyRegistered: "Already registered?",
@@ -155,6 +155,8 @@
       emailLabel: "Person's email",
       emailPlaceholder: "name@example.com",
       submit: "Send invite",
+      active: "Sent invites",
+      revoke: "Revoke",
     },
     approvals: {
       single: "Approval pending",
@@ -235,21 +237,46 @@
       fullHint:
         "Anything above the daily target is calculated automatically from your sets and only applied to open debt.",
       videos: "Videos",
-      mobileVideoHint:
-        "Phone galleries usually upload the original file. Messengers like Telegram compress additionally, normal uploads do not.",
+      compressionHint:
+        "Videos above {size} MB are compressed automatically before upload.",
+      currentClaimHint:
+        "This open claim can still be changed here. Without new videos, the current videos stay attached.",
+      currentVideos: "Current videos",
+      replaceVideoLabel: "Replace video",
+      replaceVideoHint:
+        "Choose exactly one new video. The claim will be saved together with the replacement video.",
+      cancelReplaceVideo: "Cancel replace",
+      replaceRequiresSingleVideo:
+        "Please choose exactly one new video for replacement.",
       videoNames: "Video names",
       videoNameLabel: "Video name {index}",
+      videoSizeCompressed: "{original} → {compressed}",
       notes: "Note",
       saveEntry: "Save entry",
       saveWorkout: "Save workout",
+      loadingEncoder: "Loading encoder ...",
+      loadingEncoderHint:
+        "The local video encoder is loading. This only happens on the first video upload.",
+      encodingWorkout: "Compressing videos ...",
+      encodingProgress: "Compressing video {current}/{total}: {name} ({percent}%)",
       uploadingEntry: "Sending entry ...",
       uploadingWorkout: "Uploading ...",
+      uploadingCompressed: "Uploading the compressed videos now.",
+      confirmingUpload: "Confirming upload ...",
+      confirmingUploadHint:
+        "The server is confirming that your workout arrived completely.",
       uploadPendingHint:
         "Upload in progress. Phone videos can take a bit, so it is best to keep the page open.",
       uploadTooMany: "Please choose at most 4 videos.",
       uploadTooLarge: "A video is too large. Each file may be at most 100 MB.",
       uploadTooLargeRequest:
         "The server rejected this upload. Please trim or compress the video significantly.",
+      encoderLoadFailed:
+        "The local video encoder could not be loaded. Please reload the page and try again.",
+      compressionFailed:
+        "Local video compression failed. Please try again or use a shorter clip.",
+      compressionTooLarge:
+        "Even after compression, the video stays above 15 MB. Please trim it more aggressively.",
       uploadUnexpected: "The upload could not be completed. Please try again.",
       sicknessToggle: "Man flu?",
       sicknessConsent:
@@ -270,9 +297,15 @@
       pushupOverTarget: "Push-ups above target",
       situpOverTarget: "Sit-ups above target",
       videoReplace: "Replace video",
+      videoAdd: "Add video",
       replaceVideoInput: "Choose a new video",
       videoDelete: "Delete video",
-      deleteKeepClaim: "Only after review is complete",
+      deleteRemovesClaim:
+        "Deleting the last video also removes the workout claim until review is complete.",
+      claimEdit: "Edit claim",
+      claimDelete: "Remove claim",
+      editableClaimHint:
+        "As long as no review happened yet, you can change this claim in the upload area or remove it entirely.",
       workoutNote: "Your note",
       reviewFeedback: "Review feedback",
       reviewedBy: "Review by",

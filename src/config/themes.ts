@@ -2,6 +2,7 @@ export const themes = {
   midnight: {
     label: "Midnight",
     colors: {
+      fcColorScheme: "dark",
       background: "#0f0f11",
       foreground: "#fafafa",
       fcBg: "#0f0f11",
@@ -27,11 +28,15 @@ export const themes = {
       fcChartBlue: "#60a5fa",
       fcChartRose: "#fb7185",
       fcChartAmber: "#fbbf24",
+      fcScrollbarThumb: "#3f3f46",
+      fcScrollbarThumbHover: "#52525b",
+      fcScrollbarTrack: "#18181b",
     },
   },
   paper: {
     label: "Paper",
     colors: {
+      fcColorScheme: "light",
       background: "#f6f1e8",
       foreground: "#2f2923",
       fcBg: "#f6f1e8",
@@ -57,6 +62,9 @@ export const themes = {
       fcChartBlue: "#2563eb",
       fcChartRose: "#db2777",
       fcChartAmber: "#d97706",
+      fcScrollbarThumb: "#c7b59d",
+      fcScrollbarThumbHover: "#b89f82",
+      fcScrollbarTrack: "#f3e8d8",
     },
   },
 } as const;

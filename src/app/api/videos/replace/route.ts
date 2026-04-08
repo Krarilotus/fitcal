@@ -1,22 +1,24 @@
-import { rm, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { MAX_VIDEO_SIZE_BYTES } from "@/lib/challenge";
 import { prisma } from "@/lib/db";
 import {
-  buildStoredVideoFileName,
-  ensureDailyUploadDirectory,
-} from "@/lib/storage";
+  persistReplacementSubmissionVideo,
+  removeReplacedSubmissionVideo,
+} from "@/lib/submission-videos";
 
 export const runtime = "nodejs";
+
+function redirectTo(url: string | URL) {
+  return NextResponse.redirect(url, { status: 303 });
+}
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.redirect(getAppUrl("/login", request));
+    return redirectTo(getAppUrl("/login", request));
   }
 
   try {
@@ -38,10 +40,10 @@ export async function POST(request: Request) {
 
     const video = await prisma.dailyVideo.findFirst({
       where: {
-        id: videoId,
         dailySubmission: {
           userId: user.id,
         },
+        id: videoId,
       },
       include: {
         dailySubmission: {
@@ -56,48 +58,37 @@ export async function POST(request: Request) {
       throw new Error("Dieses Video gehört nicht zu deinem Account.");
     }
 
-    const { folderPath, safeUserLabel } = await ensureDailyUploadDirectory(
-      user.name || user.email,
-      video.dailySubmission.challengeDate,
-    );
-
-    const storedName = buildStoredVideoFileName({
+    const persistedReplacement = await persistReplacementSubmissionVideo({
       challengeDate: video.dailySubmission.challengeDate,
-      safeUserLabel,
-      partIndex: video.orderIndex,
-      originalName: replacement.name,
+      displayName: replacement.name,
+      file: replacement,
+      target: {
+        orderIndex: video.orderIndex,
+        storedPath: video.storedPath,
+      },
+      userLabel: user.name || user.email,
     });
-    const storedPath = path.join(folderPath, storedName);
-    const bytes = Buffer.from(await replacement.arrayBuffer());
-
-    await writeFile(storedPath, bytes);
-
-    if (video.storedPath !== storedPath) {
-      await rm(video.storedPath, { force: true });
-    }
 
     await prisma.dailyVideo.update({
       where: {
         id: video.id,
       },
       data: {
-        originalName: replacement.name,
-        storedName,
-        storedPath,
-        mimeType: replacement.type || "application/octet-stream",
-        sizeBytes: replacement.size,
+        mimeType: persistedReplacement.mimeType,
+        originalName: persistedReplacement.originalName,
+        sizeBytes: persistedReplacement.sizeBytes,
+        storedName: persistedReplacement.storedName,
+        storedPath: persistedReplacement.storedPath,
       },
     });
 
-    return NextResponse.redirect(
-      getAppUrl("/dashboard?success=Video%20ersetzt", request),
-    );
+    await removeReplacedSubmissionVideo(video.storedPath, persistedReplacement.storedPath);
+
+    return redirectTo(getAppUrl("/dashboard?success=Video%20ersetzt", request));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Video konnte nicht ersetzt werden.";
 
-    return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
-    );
+    return redirectTo(getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request));
   }
 }

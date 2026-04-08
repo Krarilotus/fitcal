@@ -118,11 +118,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </form>
 
             {activeInvites.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 space-y-2">
+                <p className="text-sm text-[var(--fc-muted)]">{dashboardLabels.invite.active}</p>
                 {activeInvites.map((invite) => (
-                  <span className="fc-chip fc-chip-muted" key={invite.id}>
-                    {invite.email}
-                  </span>
+                  <div
+                    className="flex flex-col gap-2 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    key={invite.id}
+                  >
+                    <p className="min-w-0 truncate text-sm font-medium text-[var(--fc-ink)]">
+                      {invite.email}
+                    </p>
+                    <form action="/api/invitations/revoke" method="post">
+                      <input name="inviteId" type="hidden" value={invite.id} />
+                      <Button size="sm" type="submit" variant="secondary">
+                        {dashboardLabels.invite.revoke}
+                      </Button>
+                    </form>
+                  </div>
                 ))}
               </div>
             ) : null}

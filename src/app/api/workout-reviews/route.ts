@@ -9,6 +9,11 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { prisma } from "@/lib/db";
 import { getSetsTotal } from "@/lib/submission";
+import {
+  parseArbitrationWorkoutReviewAction,
+  parsePrimaryWorkoutReviewAction,
+  resolvePrimaryWorkoutReviewDecision,
+} from "@/lib/workout-reviews";
 
 const REVIEW_REWARD_CENTS = 5;
 const MAX_REVIEW_COUNT = 5000;
@@ -113,20 +118,20 @@ export async function POST(request: Request) {
           throw new Error("Du hast diesen Eintrag bereits primär geprüft.");
         }
 
-        let countedPushups = rawPushups;
-        let countedSitups = rawSitups;
-        let decision: WorkoutReviewDecision = WorkoutReviewDecision.APPROVE;
+        const primaryAction = parsePrimaryWorkoutReviewAction(decisionValue);
 
-        if (decisionValue !== "approve") {
-          countedPushups = parseCount(formData.get("countedPushups"));
-          countedSitups = parseCount(formData.get("countedSitups"));
-          decision =
-            countedPushups === 0 && countedSitups === 0
-              ? WorkoutReviewDecision.REJECT
-              : countedPushups === rawPushups && countedSitups === rawSitups
-                ? WorkoutReviewDecision.APPROVE
-                : WorkoutReviewDecision.REDUCE;
+        if (!primaryAction) {
+          throw new Error("Bitte wähle eine gültige Review-Entscheidung.");
         }
+
+        const { countedPushups, countedSitups, decision } =
+          resolvePrimaryWorkoutReviewDecision({
+            action: primaryAction,
+            countedPushups: parseCount(formData.get("countedPushups")),
+            countedSitups: parseCount(formData.get("countedSitups")),
+            rawPushups,
+            rawSitups,
+          });
 
         await tx.workoutReview.create({
           data: {
@@ -200,14 +205,16 @@ export async function POST(request: Request) {
         throw new Error("Die Prüfentscheidung wurde bereits abgegeben.");
       }
 
+      const arbitrationAction = parseArbitrationWorkoutReviewAction(decisionValue);
+
       const arbitrationDecision =
-        decisionValue === "accept"
+        arbitrationAction === "accept"
           ? WorkoutReviewDecision.ACCEPT_REVIEW
-          : decisionValue === "reject"
+          : arbitrationAction === "reject"
             ? WorkoutReviewDecision.REJECT_REVIEW
             : null;
 
-      if (!arbitrationDecision) {
+      if (!arbitrationAction || !arbitrationDecision) {
         throw new Error("Bitte wähle eine gültige Prüfentscheidung.");
       }
 
