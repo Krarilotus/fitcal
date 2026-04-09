@@ -526,6 +526,7 @@ export function DashboardTabs({
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
   const [claimEditorReplacementTargets, setClaimEditorReplacementTargets] =
     useState<ClaimEditorReplacementState>({});
+  const [expandedClaimEditors, setExpandedClaimEditors] = useState<Record<string, boolean>>({});
   const [focusedClaimEditorDate, setFocusedClaimEditorDate] = useState<string | null>(null);
   const uploadSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -549,6 +550,9 @@ export function DashboardTabs({
   const selectedDateInChallenge = selectedDateKey ? isWithinChallenge(selectedDateKey) : false;
   const selectedDateTarget = selectedDateKey && selectedDateInChallenge ? getRequiredReps(selectedDateKey) : null;
   const selectedChallengeDay = selectedDateKey && selectedDateInChallenge ? getChallengeDayIndex(selectedDateKey) + 1 : null;
+  const renderedOpenDays = openDays.filter(
+    (day) => day.showByDefault || expandedClaimEditors[day.challengeDate],
+  );
 
   function handleUploadVideoSelection(
     challengeDate: string,
@@ -612,6 +616,10 @@ export function DashboardTabs({
 
     flushSync(() => {
       setActiveTab("uploads");
+      setExpandedClaimEditors((current) => ({
+        ...current,
+        [challengeDate]: true,
+      }));
       setFocusedClaimEditorDate(challengeDate);
       setClaimEditorReplacementTargets((current) => ({
         ...current,
@@ -627,26 +635,26 @@ export function DashboardTabs({
       }));
     });
 
-    const target = uploadSectionRefs.current[challengeDate];
-
-    if (!target) {
-      return;
-    }
-
     document
       .getElementById("uploads")
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    if (shouldOpenFilePicker) {
-      const fileInput = uploadFileInputRefs.current[challengeDate];
-      fileInput?.focus();
-      fileInput?.click();
-    } else {
-      uploadPrimaryInputRefs.current[challengeDate]?.focus();
-    }
-
     const stickyOffset = 112;
     window.setTimeout(() => {
+      const target = uploadSectionRefs.current[challengeDate];
+
+      if (!target) {
+        return;
+      }
+
+      if (shouldOpenFilePicker) {
+        const fileInput = uploadFileInputRefs.current[challengeDate];
+        fileInput?.focus();
+        fileInput?.click();
+      } else {
+        uploadPrimaryInputRefs.current[challengeDate]?.focus();
+      }
+
       const targetTop = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
 
       window.scrollTo({
@@ -773,8 +781,8 @@ export function DashboardTabs({
       <section className="fc-section fc-rise" data-fitcal-section id="uploads">
         <SectionHeader title={labels.uploads.title} subtitle={labels.uploads.windowHint} />
         <div className="grid gap-4">
-          {openDays.length > 0 ? (
-              openDays.map((day) => (
+          {renderedOpenDays.length > 0 ? (
+              renderedOpenDays.map((day) => (
                 <article
                   className={`fc-card ${focusedClaimEditorDate === day.challengeDate ? "is-focused-claim" : ""}`}
                   id={`upload-${day.challengeDate}`}

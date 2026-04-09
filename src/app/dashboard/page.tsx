@@ -2,11 +2,13 @@ import { RegistrationStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { DashboardTabs } from "@/components/fitcal/dashboard-tabs";
 import { DashboardAutoRefresh } from "@/components/fitcal/dashboard-auto-refresh";
+import { FeatureRequestCard } from "@/components/fitcal/feature-request-card";
 import { FlashMessage } from "@/components/fitcal/flash-message";
 import { PreferenceControls } from "@/components/fitcal/preference-controls";
 import { Button } from "@/components/ui/button";
 import { getDictionary } from "@/i18n";
 import { getCurrentUser } from "@/lib/auth/session";
+import { hasGitHubFeatureRequestConfig } from "@/lib/github/feature-requests";
 import {
   CHALLENGE_START_DATE,
   CHALLENGE_END_DATE,
@@ -25,6 +27,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const dictionary = getDictionary(locale);
   const dashboardLabels = dictionary.dashboard;
   const commonLabels = dictionary.common;
+  const featureRequestsEnabled = hasGitHubFeatureRequestConfig();
 
   if (!user) {
     redirect("/login");
@@ -92,6 +95,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </header>
 
         <FlashMessage error={error} success={success} />
+
+        <FeatureRequestCard
+          enabled={featureRequestsEnabled}
+          labels={dashboardLabels.featureRequest}
+          locale={locale}
+        />
 
         {canReview ? (
           <section className="border-b border-[var(--fc-border)] pb-5">

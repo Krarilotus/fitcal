@@ -16,6 +16,7 @@ export type OpenDay = {
   challengeDate: string;
   dateLabel: string;
   targetReps: number;
+  showByDefault: boolean;
   isCurrentDay: boolean;
   isQualificationDay: boolean;
   canUseJoker: boolean;

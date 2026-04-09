@@ -138,6 +138,7 @@ function buildOpenDays(
         challengeDate: day.challengeDate,
         dateLabel: formatChallengeDate(locale, day.challengeDate),
         targetReps: getRequiredReps(day.challengeDate),
+        showByDefault: day.canUpload,
         isCurrentDay: day.isCurrentDay,
         isQualificationDay: isFreeChallengeDay(day.challengeDate),
         canUseJoker: day.canUseJoker,

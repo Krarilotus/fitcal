@@ -164,6 +164,21 @@
       approve: "Annehmen",
       reject: "Ablehnen",
     },
+    featureRequest: {
+      title: "Feature anfragen",
+      description:
+        "Schick einen Wunsch direkt als GitHub-Issue ins Projekt, damit er nicht verloren geht.",
+      unavailable:
+        "Feature-Requests sind gerade nicht verbunden. Sobald GitHub dafür eingerichtet ist, erscheint hier das Formular.",
+      open: "Feature anfragen",
+      close: "Schließen",
+      titleLabel: "Kurzer Titel",
+      titlePlaceholder: "z. B. Mobile Uploads noch klarer machen",
+      detailsLabel: "Was wünschst du dir?",
+      detailsPlaceholder:
+        "Beschreibe kurz, was du brauchst, warum es hilfreich wäre und wie es sich ideal verhalten soll.",
+      submit: "Issue erstellen",
+    },
     statusLabels: {
       completed: "Erledigt",
       partial: "Teilweise",

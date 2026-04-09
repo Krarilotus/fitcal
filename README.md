@@ -142,6 +142,12 @@ AUTH_URL=https://fitcal.hisqu.de
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
 RESEND_FROM="FitCal <fitcal@hisqu.de>"
 RESEND_REPLY_TO="fitcal@hisqu.de"
+
+GITHUB_APP_ID=1234567
+GITHUB_APP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+GITHUB_APP_REPO_OWNER=Krarilotus
+GITHUB_APP_REPO_NAME=fitcal
+GITHUB_APP_ISSUE_LABELS=feature-request,fitcal
 ```
 
 Wenn `3107` belegt ist:
@@ -207,6 +213,53 @@ Dann in GitHub:
 7. `Allow write access` deaktiviert lassen
 
 Damit zieht der Server den Code read-only per SSH.
+
+### GitHub Feature Requests
+
+Damit Nutzer aus dem Dashboard direkt einen Feature-Wunsch als GitHub-Issue anlegen koennen, nutzt FitCal jetzt eine echte GitHub App statt eines usergebundenen Tokens.
+
+#### GitHub App anlegen
+
+In GitHub:
+1. `Settings`
+2. `Developer settings`
+3. `GitHub Apps`
+4. `New GitHub App`
+
+Empfohlene Einstellungen:
+- GitHub App name: z. B. `FitCal Feature Requests`
+- Homepage URL: `https://fitcal.hisqu.de`
+- Webhook:
+  - deaktiviert lassen, weil FitCal fuer diese Funktion keine Webhooks braucht
+- Repository permissions:
+  - `Issues`: `Read and write`
+  - `Metadata`: `Read-only`
+
+Danach:
+1. App speichern
+2. unter der App `Generate a private key`
+3. die PEM-Datei sicher ablegen
+4. die App ueber `Install App` auf `Krarilotus/fitcal` installieren
+5. am besten `Only select repositories` und nur `fitcal` waehlen
+
+Dann die folgenden Umgebungsvariablen in `.env.production` setzen:
+
+```env
+GITHUB_APP_ID=1234567
+GITHUB_APP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+# Optional statt GITHUB_APP_PRIVATE_KEY:
+# GITHUB_APP_PRIVATE_KEY_BASE64=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0t...
+# Optional; wenn leer, wird die Installation ueber owner/repo automatisch gefunden
+GITHUB_APP_INSTALLATION_ID=
+GITHUB_APP_REPO_OWNER=Krarilotus
+GITHUB_APP_REPO_NAME=fitcal
+GITHUB_APP_ISSUE_LABELS=feature-request,fitcal
+```
+
+Wichtig:
+- Issue-Aktionen werden in GitHub der App-Installation zugerechnet, nicht einem einzelnen Benutzer.
+- Fuer FitCal brauchst du aktuell weder OAuth-Callback noch Webhook-Secret.
+- Ohne diese Variablen zeigt das Dashboard nur an, dass Feature-Requests gerade nicht verbunden sind.
 
 ### Clone
 

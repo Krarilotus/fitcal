@@ -164,6 +164,21 @@
       approve: "Approve",
       reject: "Reject",
     },
+    featureRequest: {
+      title: "Request a feature",
+      description:
+        "Send a feature wish straight into the project as a GitHub issue so it does not get lost.",
+      unavailable:
+        "Feature requests are not connected yet. The form will appear here once GitHub is configured for it.",
+      open: "Request feature",
+      close: "Close",
+      titleLabel: "Short title",
+      titlePlaceholder: "e.g. Make mobile uploads clearer",
+      detailsLabel: "What do you want?",
+      detailsPlaceholder:
+        "Describe briefly what you need, why it helps, and how it should ideally behave.",
+      submit: "Create issue",
+    },
     statusLabels: {
       completed: "Done",
       partial: "Partial",
