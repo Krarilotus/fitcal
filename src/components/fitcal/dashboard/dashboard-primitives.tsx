@@ -23,6 +23,14 @@ export function DashboardSectionHeader({
   );
 }
 
+export function DashboardCardTitle({
+  title,
+}: {
+  title: string;
+}) {
+  return <h3 className="fc-heading text-lg">{title}</h3>;
+}
+
 export function DashboardStatBox({
   label,
   value,

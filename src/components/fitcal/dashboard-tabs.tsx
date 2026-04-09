@@ -1,12 +1,13 @@
 ﻿"use client";
 
-import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { AppDictionary } from "@/i18n";
 import { DashboardHistorySection } from "@/components/fitcal/dashboard/history-section";
 import { DashboardProfileSection } from "@/components/fitcal/dashboard/profile-section";
 import {
   DashboardActionButton,
+  DashboardCardTitle,
   DashboardSectionHeader as SectionHeader,
   DashboardStatusBadge,
   DashboardStatBox as StatBox,
@@ -87,6 +88,8 @@ type SubmissionResponsePayload = {
   error?: string;
   errorCode?: string;
 };
+
+type PanelTransitionDirection = "forward" | "backward";
 
 function formatCurrency(locale: Locale, cents: number) {
   return formatDashboardCurrency(locale, cents);
@@ -560,9 +563,15 @@ export function DashboardTabs({
     useState<ClaimEditorReplacementState>({});
   const [expandedClaimEditors, setExpandedClaimEditors] = useState<Record<string, boolean>>({});
   const [focusedClaimEditorDate, setFocusedClaimEditorDate] = useState<string | null>(null);
+  const [panelTransitionDirection, setPanelTransitionDirection] =
+    useState<PanelTransitionDirection>("forward");
+  const [panelTransitionNonce, setPanelTransitionNonce] = useState(0);
   const uploadSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const uploadPrimaryInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const touchStartYRef = useRef<number | null>(null);
+  const wheelDeltaCarryRef = useRef(0);
+  const lastPanelSwitchAtRef = useRef(0);
 
   const additionalSlackDays = Math.max(0, Math.floor(parseNumberInput(slackDaysInput)));
   const totalSlackDebtCents = Array.from({ length: additionalSlackDays }, (_, index) => slackBaseCents + (overview.existingSlackDays + index) * slackIncrementCents).reduce((sum, value) => sum + value, 0);
@@ -584,6 +593,92 @@ export function DashboardTabs({
   const selectedChallengeDay = selectedDateKey && selectedDateInChallenge ? getChallengeDayIndex(selectedDateKey) + 1 : null;
   const renderedOpenDays = openDays.filter(
     (day) => day.showByDefault || expandedClaimEditors[day.challengeDate],
+  );
+
+  const getTabIndex = useCallback(
+    (tabKey: TabKey) => tabs.findIndex((tab) => tab.key === tabKey),
+    [tabs],
+  );
+
+  const switchToTab = useCallback(
+    (nextTab: TabKey, options?: { preserveScroll?: boolean }) => {
+      if (nextTab === activeTab) {
+        return;
+      }
+
+      const currentIndex = getTabIndex(activeTab);
+      const nextIndex = getTabIndex(nextTab);
+
+      setPanelTransitionDirection(
+        nextIndex >= currentIndex ? "forward" : "backward",
+      );
+      setPanelTransitionNonce((current) => current + 1);
+      setActiveTab(nextTab);
+
+      if (!options?.preserveScroll) {
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }
+    },
+    [activeTab, getTabIndex],
+  );
+
+  function isNearPageEdge(edge: "top" | "bottom") {
+    const scrollTop = window.scrollY;
+    const viewportHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+
+    if (edge === "top") {
+      return scrollTop <= 20;
+    }
+
+    return scrollTop + viewportHeight >= documentHeight - 20;
+  }
+
+  function shouldIgnorePanelScrollGesture(target: EventTarget | null) {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+
+    return Boolean(
+      target.closest(
+        [
+          "input",
+          "textarea",
+          "select",
+          "button",
+          "a",
+          "video",
+          "summary",
+          "[contenteditable='true']",
+          ".fc-scroll-x",
+          ".fc-scroll-y",
+          "[data-fitcal-no-panel-swipe]",
+        ].join(","),
+      ),
+    );
+  }
+
+  const tryScrollPanelTransition = useCallback(
+    (direction: PanelTransitionDirection) => {
+      if (Date.now() - lastPanelSwitchAtRef.current < 650) {
+        return false;
+      }
+
+      const currentIndex = getTabIndex(activeTab);
+      const nextIndex =
+        direction === "forward" ? currentIndex + 1 : currentIndex - 1;
+
+      if (nextIndex < 0 || nextIndex >= tabs.length) {
+        return false;
+      }
+
+      lastPanelSwitchAtRef.current = Date.now();
+      switchToTab(tabs[nextIndex]!.key);
+      return true;
+    },
+    [activeTab, getTabIndex, switchToTab, tabs],
   );
 
   function handleUploadVideoSelection(
@@ -647,7 +742,7 @@ export function DashboardTabs({
     const shouldOpenFilePicker = Boolean(options.openFilePicker || replaceVideoId);
 
     flushSync(() => {
-      setActiveTab("uploads");
+      switchToTab("uploads", { preserveScroll: true });
       setExpandedClaimEditors((current) => ({
         ...current,
         [challengeDate]: true,
@@ -721,6 +816,83 @@ export function DashboardTabs({
     return () => window.clearTimeout(timeout);
   }, [focusedClaimEditorDate]);
 
+  useEffect(() => {
+    function handleWheel(event: WheelEvent) {
+      if (shouldIgnorePanelScrollGesture(event.target) || Math.abs(event.deltaY) < 14) {
+        return;
+      }
+
+      if (event.deltaY > 0 && isNearPageEdge("bottom")) {
+        wheelDeltaCarryRef.current = Math.max(0, wheelDeltaCarryRef.current) + event.deltaY;
+
+        if (wheelDeltaCarryRef.current >= 120 && tryScrollPanelTransition("forward")) {
+          wheelDeltaCarryRef.current = 0;
+        }
+
+        return;
+      }
+
+      if (event.deltaY < 0 && isNearPageEdge("top")) {
+        wheelDeltaCarryRef.current = Math.min(0, wheelDeltaCarryRef.current) + event.deltaY;
+
+        if (wheelDeltaCarryRef.current <= -120 && tryScrollPanelTransition("backward")) {
+          wheelDeltaCarryRef.current = 0;
+        }
+
+        return;
+      }
+
+      wheelDeltaCarryRef.current = 0;
+    }
+
+    function handleTouchStart(event: TouchEvent) {
+      if (event.touches.length !== 1 || shouldIgnorePanelScrollGesture(event.target)) {
+        touchStartYRef.current = null;
+        return;
+      }
+
+      touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    }
+
+    function handleTouchEnd(event: TouchEvent) {
+      if (touchStartYRef.current == null || shouldIgnorePanelScrollGesture(event.target)) {
+        touchStartYRef.current = null;
+        return;
+      }
+
+      const endY = event.changedTouches[0]?.clientY;
+
+      if (typeof endY !== "number") {
+        touchStartYRef.current = null;
+        return;
+      }
+
+      const deltaY = touchStartYRef.current - endY;
+      touchStartYRef.current = null;
+
+      if (deltaY > 70 && isNearPageEdge("bottom")) {
+        void tryScrollPanelTransition("forward");
+      } else if (deltaY < -70 && isNearPageEdge("top")) {
+        void tryScrollPanelTransition("backward");
+      }
+    }
+
+    window.addEventListener("wheel", handleWheel, { passive: true });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [tryScrollPanelTransition]);
+
+  const panelTransitionClass =
+    panelTransitionDirection === "forward"
+      ? "fc-panel-shell fc-panel-enter-forward"
+      : "fc-panel-shell fc-panel-enter-backward";
+
   function openVideo(videoId: string) {
     window.open(`/api/videos/${videoId}`, "_blank", "noopener,noreferrer");
   }
@@ -756,7 +928,7 @@ export function DashboardTabs({
           <button
             className={`fc-tab ${activeTab === tab.key ? "is-active" : ""}`}
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => switchToTab(tab.key)}
             type="button"
           >
             {tab.label}
@@ -764,6 +936,11 @@ export function DashboardTabs({
         ))}
       </nav>
 
+      <div className="fc-panel-stage">
+        <div
+          className={panelTransitionClass}
+          key={`${activeTab}-${panelTransitionNonce}`}
+        >
       {activeTab === "overview" ? (
       <section className="fc-section fc-rise" id="overview">
         <div className="fc-card-lg">
@@ -850,7 +1027,7 @@ export function DashboardTabs({
 
       {activeTab === "uploads" ? (
       <section className="fc-section fc-rise" id="uploads">
-        <SectionHeader title={labels.uploads.title} subtitle={labels.uploads.windowHint} />
+        <SectionHeader title={labels.uploads.title} />
         <div className="grid gap-4">
           {renderedOpenDays.length > 0 ? (
               renderedOpenDays.map((day) => (
@@ -1155,17 +1332,12 @@ export function DashboardTabs({
 
       {activeTab === "metastats" ? (
       <section className="fc-section fc-rise" id="metastats">
-        <SectionHeader subtitle={labels.metastats.measurementsKicker} title={labels.metastats.title} />
+        <SectionHeader title={labels.metastats.title} />
         <div className="mt-6 space-y-6">
           <PerformanceChart labels={labels.charts} points={performancePoints} />
 
           <section className="fc-card">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="fc-kicker">{labels.metastats.measurementsKicker}</p>
-                <h3 className="fc-heading mt-1 text-xl">{labels.metastats.measurementsTitle}</h3>
-              </div>
-            </div>
+            <DashboardCardTitle title={labels.metastats.measurementsTitle} />
             <div className="mt-4 grid grid-cols-2 gap-2">
               {profile.weightLabel ? <StatBox label={labels.metastats.weight} value={profile.weightLabel} /> : null}
               {profile.waistLabel ? <StatBox label={labels.metastats.waist} value={profile.waistLabel} /> : null}
@@ -1285,6 +1457,8 @@ export function DashboardTabs({
         </div>
       </section>
       ) : null}
+        </div>
+      </div>
     </div>
   );
 }

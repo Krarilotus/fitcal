@@ -3,6 +3,7 @@
 import type { AppDictionary } from "@/i18n";
 import {
   DashboardActionButton,
+  DashboardCardTitle,
   DashboardSectionHeader,
   DashboardStatBox,
 } from "@/components/fitcal/dashboard/dashboard-primitives";
@@ -39,16 +40,10 @@ export function DashboardProfileSection({
 }) {
   return (
     <section className="fc-section fc-rise" id="profile">
-      <DashboardSectionHeader
-        subtitle={labels.metastats.profileKicker}
-        title={labels.tabs.profile}
-      />
+      <DashboardSectionHeader title={labels.tabs.profile} />
       <div className="mt-6 space-y-6">
         <section className="fc-card">
-          <div>
-            <p className="fc-kicker">{labels.metastats.profileKicker}</p>
-            <h3 className="fc-heading mt-1 text-lg">{labels.tabs.profile}</h3>
-          </div>
+          <DashboardCardTitle title={labels.tabs.profile} />
           {profile.motivation ? (
             <p className="mt-1 text-sm text-[var(--fc-muted)]">{profile.motivation}</p>
           ) : null}
@@ -151,10 +146,7 @@ export function DashboardProfileSection({
 
         {canReview ? (
           <section className="fc-card">
-            <div>
-              <p className="fc-kicker">{labels.invite.title}</p>
-              <h3 className="fc-heading mt-1 text-lg">{labels.invite.title}</h3>
-            </div>
+            <DashboardCardTitle title={labels.invite.title} />
             <form
               action="/api/invitations"
               className="mt-4 flex flex-col gap-3 sm:flex-row"

@@ -398,6 +398,23 @@ button, input, textarea, select {
   color: white;
 }
 
+.fc-panel-stage {
+  position: relative;
+  overflow: clip;
+}
+
+.fc-panel-shell {
+  min-width: 0;
+}
+
+.fc-panel-enter-forward {
+  animation: fc-panel-enter-forward 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fc-panel-enter-backward {
+  animation: fc-panel-enter-backward 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* ── Timeline ── */
 .fc-timeline-row {
   display: grid;
@@ -603,6 +620,30 @@ button, input, textarea, select {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fc-panel-enter-forward {
+  0% {
+    opacity: 0;
+    transform: translate3d(2.5rem, 0, 0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes fc-panel-enter-backward {
+  0% {
+    opacity: 0;
+    transform: translate3d(-2.5rem, 0, 0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .fc-count-animated {
   animation: fc-pop 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
 }
@@ -727,6 +768,17 @@ button, input, textarea, select {
 
   .fc-has-bottom-nav { padding-bottom: 4.5rem; }
   .fc-grid-2, .fc-grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-panel-enter-forward,
+  .fc-panel-enter-backward,
+  .fc-rise,
+  .fc-count-animated {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
 }
 
 @media (min-width: 640px) {
