@@ -2,7 +2,6 @@ import { RegistrationStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { DashboardTabs } from "@/components/fitcal/dashboard-tabs";
 import { DashboardAutoRefresh } from "@/components/fitcal/dashboard-auto-refresh";
-import { FeatureRequestCard } from "@/components/fitcal/feature-request-card";
 import { FlashMessage } from "@/components/fitcal/flash-message";
 import { PreferenceControls } from "@/components/fitcal/preference-controls";
 import { Button } from "@/components/ui/button";
@@ -96,116 +95,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <FlashMessage error={error} success={success} />
 
-        <FeatureRequestCard
-          enabled={featureRequestsEnabled}
-          labels={dashboardLabels.featureRequest}
-          locale={locale}
-        />
-
-        {canReview ? (
-          <section className="border-b border-[var(--fc-border)] pb-5">
-            <h2 className="fc-heading mb-3 text-lg">{dashboardLabels.invite.title}</h2>
-
-            <form
-              action="/api/invitations"
-              className="flex flex-col gap-3 sm:flex-row"
-              method="post"
-            >
-              <label className="fc-input-group flex-1">
-                <span className="fc-input-label">{dashboardLabels.invite.emailLabel}</span>
-                <input
-                  className="fc-input"
-                  name="email"
-                  placeholder={dashboardLabels.invite.emailPlaceholder}
-                  required
-                  type="email"
-                />
-              </label>
-              <div className="flex items-end">
-                <Button type="submit">{dashboardLabels.invite.submit}</Button>
-              </div>
-            </form>
-
-            {activeInvites.length > 0 ? (
-              <div className="mt-3 space-y-2">
-                <p className="text-sm text-[var(--fc-muted)]">{dashboardLabels.invite.active}</p>
-                {activeInvites.map((invite) => (
-                  <div
-                    className="flex flex-col gap-2 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                    key={invite.id}
-                  >
-                    <p className="min-w-0 truncate text-sm font-medium text-[var(--fc-ink)]">
-                      {invite.email}
-                    </p>
-                    <form action="/api/invitations/revoke" method="post">
-                      <input name="inviteId" type="hidden" value={invite.id} />
-                      <Button size="sm" type="submit" variant="secondary">
-                        {dashboardLabels.invite.revoke}
-                      </Button>
-                    </form>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {canReview && pendingApprovals.length > 0 ? (
-          <section className="border-b border-[var(--fc-border)] pb-5">
-            <p className="mb-2 text-sm font-medium">
-              {pendingApprovals.length}{" "}
-              {pendingApprovals.length > 1
-                ? dashboardLabels.approvals.plural
-                : dashboardLabels.approvals.single}
-            </p>
-
-            <div className="space-y-2">
-              {pendingApprovals.map((approval) => (
-                <div
-                  className="flex flex-col gap-2 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                  key={approval.id}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {approval.applicant.name || approval.applicant.email}
-                    </p>
-                    {approval.applicant.motivation ? (
-                      <p className="text-sm text-[var(--fc-muted)]">
-                        &quot;{approval.applicant.motivation}&quot;
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <form action="/api/registration-approvals" method="post">
-                      <input name="approvalId" type="hidden" value={approval.id} />
-                      <input name="decision" type="hidden" value="approve" />
-                      <Button size="sm" type="submit">
-                        {dashboardLabels.approvals.approve}
-                      </Button>
-                    </form>
-                    <form action="/api/registration-approvals" method="post">
-                      <input name="approvalId" type="hidden" value={approval.id} />
-                      <input name="decision" type="hidden" value="reject" />
-                      <Button size="sm" type="submit" variant="secondary">
-                        {dashboardLabels.approvals.reject}
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         <DashboardTabs
+          activeInvites={activeInvites}
+          canReview={canReview}
           commonLabels={commonLabels}
           escalationReviewItems={escalationReviewItems}
+          featureRequestsEnabled={featureRequestsEnabled}
           labels={dashboardLabels}
           locale={locale}
           measurementPoints={measurementPoints}
           openDays={openDays}
           overview={overview}
+          pendingApprovals={pendingApprovals}
           participantRows={participantRows}
           performancePoints={performancePoints}
           primaryReviewItems={primaryReviewItems}

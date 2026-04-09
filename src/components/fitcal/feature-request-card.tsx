@@ -5,10 +5,12 @@ import type { AppDictionary } from "@/i18n";
 import { Button } from "@/components/ui/button";
 
 export function FeatureRequestCard({
+  compact = false,
   enabled,
   labels,
   locale,
 }: {
+  compact?: boolean;
   enabled: boolean;
   labels: AppDictionary["dashboard"]["featureRequest"];
   locale: string;
@@ -16,14 +18,16 @@ export function FeatureRequestCard({
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <section className="border-b border-[var(--fc-border)] pb-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="fc-heading text-lg">{labels.title}</h2>
-          <p className="mt-1 text-sm text-[var(--fc-muted)]">
-            {enabled ? labels.description : labels.unavailable}
-          </p>
-        </div>
+    <section className={compact ? "" : "border-b border-[var(--fc-border)] pb-5"}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {compact ? null : (
+          <div>
+            <h2 className="fc-heading text-lg">{labels.title}</h2>
+            <p className="mt-1 text-sm text-[var(--fc-muted)]">
+              {enabled ? labels.description : labels.unavailable}
+            </p>
+          </div>
+        )}
         <Button
           disabled={!enabled}
           onClick={() => setIsOpen((current) => !current)}
@@ -35,8 +39,16 @@ export function FeatureRequestCard({
         </Button>
       </div>
 
+      {compact && !enabled ? (
+        <p className="mt-2 text-sm text-[var(--fc-muted)]">{labels.unavailable}</p>
+      ) : null}
+
       {enabled && isOpen ? (
-        <form action="/api/feature-requests" className="mt-4 grid gap-3" method="post">
+        <form
+          action="/api/feature-requests"
+          className={compact ? "grid gap-3" : "mt-4 grid gap-3"}
+          method="post"
+        >
           <input name="locale" type="hidden" value={locale} />
           <label className="fc-input-group">
             <span className="fc-input-label">{labels.titleLabel}</span>

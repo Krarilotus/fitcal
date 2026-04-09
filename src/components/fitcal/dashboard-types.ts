@@ -78,11 +78,14 @@ export type MeasurementPoint = {
 
 export type ProfileSummary = {
   name: string | null;
+  email: string;
+  emailVerified: boolean;
   motivation: string | null;
   birthDateInput: string;
   birthDateLabel: string | null;
   heightInput: string;
   heightLabel: string | null;
+  emailVerifiedAtLabel: string | null;
   weightLabel: string | null;
   waistLabel: string | null;
   latestWeightKg: number | null;

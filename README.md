@@ -39,6 +39,23 @@ Wichtig fuer Entwickler:
 - `localhost` ist dafuer als sicherer Ursprung okay
 - fuer nicht unterstuetzte Browser wird der Upload mit einer klaren Fehlermeldung abgebrochen statt kaputte Dateien zu erzeugen
 
+## Dashboard-Struktur
+
+Das Dashboard ist in klar getrennte Bereiche aufgeteilt, damit nicht mehr alles als ein langer Scroll-Block untereinander haengt:
+- `Uebersicht`: Tagesziel, Tagesstatus, Kerndaten
+- `Uploads`: offene Tage und editierbare Claims
+- `Timeline`: Verlauf, Review-Feedback, Video-Historie
+- `Metastats`: Leistungs- und Messdaten
+- `Profil`: Kontodaten, E-Mail-Verifizierung, Einladungen, Feature-Request
+- `Review`: Review-Workflows und Teilnehmerstand
+- `Regeln`: Challenge-Regeln und Referenzen
+- `Rechner`: Hilfsrechner fuer Ziel, Slack, Schulden und Kalorien
+
+Semantische Leitlinie:
+- Konto- und Profilthemen liegen im eigenen Bereich `Profil`
+- taegliche Workout-Aktionen bleiben bei `Uploads`
+- Plattform-/Moderationsthemen liegen sichtbar in `Uebersicht` und `Review`
+
 ## Lokale Checks vor Deployment
 
 ```bash
@@ -417,6 +434,25 @@ Automatisierte Checks:
 npm run test:sim
 npm run lint
 npm run build
+```
+
+## Lokaler Dashboard-Test
+
+Fuer einen schnellen lokalen UX-Check nach Aenderungen am Dashboard:
+1. `npm run dev`
+2. als normaler oder Reviewer-Account anmelden
+3. Tabs einmal komplett pruefen:
+- `Uebersicht`: Ziel und Tagesdaten sichtbar
+- `Uploads`: offene Tage, Claim-Aktionen, Video-Aktionen
+- `Timeline`: Verlaufsauswahl und Review-Feedback
+- `Metastats`: Charts und Messdaten
+- `Profil`: Profil, E-Mail-Verifizierungsstatus, Einladen, Feature-Request
+- `Review`: Review-Ansicht und Pending-Tab
+
+Automatisierte Dashboard-Checks:
+
+```bash
+npx playwright test --config=playwright.config.mts tests/e2e/specs/dashboard.spec.ts
 ```
 
 ## Update spaeter

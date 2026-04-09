@@ -51,8 +51,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
       footer={
         <p>
           {labels.noAccess} <Link href="/register">{labels.registerNow}</Link>. {labels.forgot}{" "}
-          <Link href="/forgot-password">{labels.requestReset}</Link>. {labels.unverified}{" "}
-          <Link href="/verify-email">{labels.requestVerification}</Link>.
+          <Link href="/forgot-password">{labels.requestReset}</Link>.
         </p>
       }
     >

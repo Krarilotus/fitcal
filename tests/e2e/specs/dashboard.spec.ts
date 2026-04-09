@@ -15,15 +15,18 @@ function getTimelineDateLabel(challengeDate: string) {
   return `${challengeDate.slice(8, 10)}.${challengeDate.slice(5, 7)}.`;
 }
 
-test("dashboard buttons for invite and approvals work", async ({ page }) => {
+test("dashboard invite and approval areas work in their new sections", async ({ page }) => {
   await loginAsReviewer(page);
 
+  await page.getByRole("button", { name: "Profil" }).click();
   await page.getByLabel("E-Mail der Person").fill("invitee@fitcal.test");
   await page.getByRole("button", { name: "Einladung senden" }).click();
   await expect(page).toHaveURL(/\/dashboard\?success=/);
   await expect(page.getByText(/Einladung verschickt/i)).toBeVisible();
+  await page.getByRole("button", { name: "Profil" }).click();
   await expect(page.getByText("invitee@fitcal.test")).toBeVisible();
 
+  await page.getByRole("button", { name: "Übersicht" }).click();
   await page.getByRole("button", { name: "Annehmen" }).first().click();
   await expect(page.getByText(/Freigabe gespeichert/i)).toBeVisible();
 
@@ -32,6 +35,7 @@ test("dashboard buttons for invite and approvals work", async ({ page }) => {
   });
   expect(approvedUser?.registrationStatus).toBe("APPROVED");
 
+  await page.getByRole("button", { name: "Übersicht" }).click();
   await page.getByRole("button", { name: "Ablehnen" }).first().click();
   await expect(page.getByText(/Freigabe gespeichert/i)).toBeVisible();
 
@@ -108,9 +112,11 @@ test("review area can accept a sickness request", async ({ page }) => {
 test("dashboard profile and measurement entries can be saved", async ({ page }) => {
   await loginAsReviewer(page);
 
-  const profileSection = page.locator("#metastats");
+  const profileSection = page.locator("#profile");
   const measurementForm = page.locator('form[action="/api/measurements"]');
-  await page.getByRole("button", { name: "Metastats" }).click();
+  await page.getByRole("button", { name: "Profil" }).click();
+  await expect(profileSection.getByRole("button", { name: "Bestätigungslink senden" })).toBeVisible();
+  await expect(profileSection.getByText("E-Mail unbestätigt").first()).toBeVisible();
   await profileSection.getByLabel("Name").fill("Rita Test");
   await profileSection.getByLabel("Geburtsdatum").fill("19.09.1994");
   await profileSection.getByLabel(/Warum machst du das/i).fill("E2E Profiltest");
@@ -138,6 +144,7 @@ test("dashboard profile and measurement entries can be saved", async ({ page }) 
   expect(updatedUser?.name).toBe("Rita Test");
   expect(updatedUser?.motivation).toBe("E2E Profiltest");
 
+  await page.getByRole("button", { name: "Metastats" }).click();
   await measurementForm.getByLabel("Gewicht in kg").fill("79.8");
   await measurementForm.getByLabel("Bauchumfang in cm").fill("89");
   await measurementForm.getByLabel("Ruhepuls").fill("58");
@@ -171,6 +178,7 @@ test("dashboard profile and measurement entries can be saved", async ({ page }) 
 
 test("dashboard upload and video delete buttons work", async ({ page }) => {
   await loginAsReviewer(page);
+  await page.getByRole("button", { name: "Uploads" }).click();
 
   const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
   const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
@@ -208,6 +216,9 @@ test("dashboard upload and video delete buttons work", async ({ page }) => {
   expect(todaySubmission?.videos).toHaveLength(1);
 
   await page
+    .getByRole("button", { name: "Timeline" })
+    .click();
+  await page
     .locator("#timeline")
     .getByRole("button")
     .filter({ hasText: getTimelineDateLabel(uploadDate) })
@@ -240,6 +251,7 @@ test("editable claim buttons focus the upload editor and open the replacement fi
   page,
 }) => {
   await loginAsReviewer(page);
+  await page.getByRole("button", { name: "Uploads" }).click();
 
   const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
   const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
@@ -264,6 +276,9 @@ test("editable claim buttons focus the upload editor and open the replacement fi
     .filter({ hasText: "editable-proof.mp4" })
     .first();
   await page
+    .getByRole("button", { name: "Timeline" })
+    .click();
+  await page
     .locator("#timeline")
     .getByRole("button")
     .filter({ hasText: getTimelineDateLabel(uploadDate) })
@@ -276,16 +291,30 @@ test("editable claim buttons focus the upload editor and open the replacement fi
   const addVideoChooser = await addVideoChooserPromise;
   expect(addVideoChooser.isMultiple()).toBe(true);
 
+  await page.getByRole("button", { name: "Timeline" }).click();
+  await page
+    .locator("#timeline")
+    .getByRole("button")
+    .filter({ hasText: getTimelineDateLabel(uploadDate) })
+    .first()
+    .click();
+  const fileChooserPromise = page.waitForEvent("filechooser");
+  await historyCard.getByRole("button", { name: "Video ersetzen" }).click();
+  const fileChooser = await fileChooserPromise;
+  expect(fileChooser.isMultiple()).toBe(false);
+
+  await page.getByRole("button", { name: "Timeline" }).click();
+  await page
+    .locator("#timeline")
+    .getByRole("button")
+    .filter({ hasText: getTimelineDateLabel(uploadDate) })
+    .first()
+    .click();
   await page.locator("#timeline").getByRole("button", { name: "Claim ändern" }).first().click();
 
   const uploadCard = page.locator(`#upload-${uploadDate}`);
   await expect(uploadCard).toHaveClass(/is-focused-claim/);
   await expect(uploadCard.locator('input[name="pushupSet1"]')).toBeFocused();
-
-  const fileChooserPromise = page.waitForEvent("filechooser");
-  await historyCard.getByRole("button", { name: "Video ersetzen" }).click();
-  const fileChooser = await fileChooserPromise;
-  expect(fileChooser.isMultiple()).toBe(false);
 });
 
 test.fixme("dashboard joker button works", async ({ page }) => {

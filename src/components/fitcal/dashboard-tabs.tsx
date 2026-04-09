@@ -4,6 +4,7 @@ import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useMem
 import { flushSync } from "react-dom";
 import type { AppDictionary } from "@/i18n";
 import { DashboardHistorySection } from "@/components/fitcal/dashboard/history-section";
+import { DashboardProfileSection } from "@/components/fitcal/dashboard/profile-section";
 import {
   DashboardActionButton,
   DashboardSectionHeader as SectionHeader,
@@ -34,6 +35,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateTextInput } from "@/components/ui/date-text-input";
+import type { ActiveInviteSummary, PendingApprovalSummary } from "@/lib/dashboard-data";
 import type { Locale } from "@/lib/preferences";
 import {
   CHALLENGE_END_DATE,
@@ -52,7 +54,15 @@ import { TARGET_UPLOAD_VIDEO_MB } from "@/lib/video-processing/constants";
 import { buildSubmissionUploadFormData } from "@/lib/video-processing/upload-form-data";
 
 type DashboardLabels = AppDictionary["dashboard"];
-type TabKey = "overview" | "uploads" | "timeline" | "metastats" | "review" | "regeln" | "rechner";
+type TabKey =
+  | "overview"
+  | "uploads"
+  | "timeline"
+  | "metastats"
+  | "review"
+  | "regeln"
+  | "rechner"
+  | "profile";
 type SelectedUploadVideo = {
   compressedSizeLabel?: string;
   id: string;
@@ -177,6 +187,22 @@ function getVideoCompressionErrorMessage(
   }
 
   return labels.compressionFailed;
+}
+
+function getSubmissionFailureMessage(
+  payload: SubmissionResponsePayload | null,
+  responseStatus: number,
+  labels: DashboardLabels["uploads"],
+) {
+  if (responseStatus === 413 || payload?.errorCode === "too_large") {
+    return labels.uploadTooLargeRequest;
+  }
+
+  if (typeof payload?.error === "string" && payload.error.trim()) {
+    return payload.error.trim();
+  }
+
+  return labels.uploadUnexpected;
 }
 
 async function submitTrackedUpload(
@@ -342,12 +368,7 @@ async function submitTrackedUpload(
         return;
       }
 
-      const errorMessage =
-        response.status === 413 || payload?.errorCode === "too_large"
-          ? labels.uploadTooLargeRequest
-          : payload?.error || payload?.errorCode === "submission_failed"
-            ? labels.uploadUnexpected
-          : labels.uploadUnexpected;
+      const errorMessage = getSubmissionFailureMessage(payload, response.status, labels);
 
       setUploadActivities((current) => ({
         ...current,
@@ -454,13 +475,17 @@ function buildUploadVideoId(file: File, index: number) {
 }
 
 export function DashboardTabs({
+  activeInvites,
+  canReview,
   commonLabels,
   escalationReviewItems,
+  featureRequestsEnabled,
   labels,
   locale,
   measurementPoints,
   openDays,
   overview,
+  pendingApprovals,
   participantRows,
   performancePoints,
   primaryReviewItems,
@@ -468,13 +493,17 @@ export function DashboardTabs({
   sicknessReviewItems,
   timelineEntries,
 }: {
+  activeInvites: ActiveInviteSummary[];
+  canReview: boolean;
   commonLabels: AppDictionary["common"];
   escalationReviewItems: EscalationReviewItem[];
+  featureRequestsEnabled: boolean;
   labels: DashboardLabels;
   locale: Locale;
   measurementPoints: MeasurementPoint[];
   openDays: OpenDay[];
   overview: OverviewSummary;
+  pendingApprovals: PendingApprovalSummary[];
   participantRows: ParticipantRow[];
   performancePoints: PerformancePoint[];
   primaryReviewItems: PrimaryReviewItem[];
@@ -482,33 +511,36 @@ export function DashboardTabs({
   sicknessReviewItems: SicknessReviewItem[];
   timelineEntries: TimelineEntry[];
 }) {
-  const baseTabs = useMemo(
-    () =>
-      [
-        { key: "overview", label: labels.tabs.overview },
-        { key: "uploads", label: labels.tabs.uploads },
-        { key: "timeline", label: labels.tabs.timeline },
-        { key: "metastats", label: labels.tabs.metastats },
-        { key: "regeln", label: labels.tabs.rules },
-        { key: "rechner", label: labels.tabs.calculator },
-      ] as const,
+  const baseTabs = useMemo<ReadonlyArray<{ key: TabKey; label: string }>>(
+    () => [
+      { key: "overview", label: labels.tabs.overview },
+      { key: "uploads", label: labels.tabs.uploads },
+      { key: "timeline", label: labels.tabs.timeline },
+      { key: "metastats", label: labels.tabs.metastats },
+      { key: "profile", label: labels.tabs.profile },
+      { key: "regeln", label: labels.tabs.rules },
+      { key: "rechner", label: labels.tabs.calculator },
+    ],
     [
       labels.tabs.calculator,
       labels.tabs.metastats,
       labels.tabs.overview,
+      labels.tabs.profile,
       labels.tabs.rules,
       labels.tabs.timeline,
       labels.tabs.uploads,
     ],
   );
 
-  const tabs = useMemo(
-    () =>
-      overview.isLightParticipant
-        ? baseTabs
-        : ([...baseTabs.slice(0, 4), { key: "review", label: labels.tabs.review }, ...baseTabs.slice(4)] as const),
-    [baseTabs, labels.tabs.review, overview.isLightParticipant],
-  );
+  const tabs = useMemo(() => {
+    const nextTabs = [...baseTabs];
+
+    if (!overview.isLightParticipant) {
+      nextTabs.splice(4, 0, { key: "review", label: labels.tabs.review });
+    }
+
+    return nextTabs as readonly { key: TabKey; label: string }[];
+  }, [baseTabs, labels.tabs.review, overview.isLightParticipant]);
 
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const hasStudentPricing = overview.hasStudentDiscount && !overview.isLightParticipant;
@@ -717,27 +749,6 @@ export function DashboardTabs({
     }, 0);
   }
 
-  function scrollToDashboardSection(sectionId: TabKey) {
-    setActiveTab(sectionId);
-    document
-      .getElementById(sectionId)
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  useEffect(() => {
-    const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-fitcal-section]"));
-    if (!sections.length) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target.id) setActiveTab(visible.target.id as TabKey);
-      },
-      { rootMargin: "-18% 0px -62% 0px", threshold: [0.1, 0.25, 0.5, 0.75] },
-    );
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
-  }, [tabs]);
-
   return (
     <div className="grid gap-6 fc-has-bottom-nav">
       <nav className="fc-tab-bar">
@@ -745,7 +756,7 @@ export function DashboardTabs({
           <button
             className={`fc-tab ${activeTab === tab.key ? "is-active" : ""}`}
             key={tab.key}
-            onClick={() => scrollToDashboardSection(tab.key)}
+            onClick={() => setActiveTab(tab.key)}
             type="button"
           >
             {tab.label}
@@ -753,7 +764,8 @@ export function DashboardTabs({
         ))}
       </nav>
 
-      <section className="fc-section fc-rise" data-fitcal-section id="overview">
+      {activeTab === "overview" ? (
+      <section className="fc-section fc-rise" id="overview">
         <div className="fc-card-lg">
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="warm">{labels.overview.dayPrefix} {overview.dayNumber}</Badge>
@@ -775,10 +787,69 @@ export function DashboardTabs({
             <StatBox label={labels.overview.days} value={overview.documentedDays} />
           </div>
           {overview.dailyMessage ? <p className="fc-daily-message">{overview.dailyMessage}</p> : null}
+          {canReview ? (
+            <div className="mt-5 border-t border-[var(--fc-border)] pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="fc-heading text-base">{labels.overview.approvals}</h3>
+                <DashboardStatusBadge>
+                  {pendingApprovals.length}{" "}
+                  {pendingApprovals.length === 1
+                    ? labels.approvals.single
+                    : labels.approvals.plural}
+                </DashboardStatusBadge>
+              </div>
+              {pendingApprovals.length > 0 ? (
+                <div className="mt-4 grid gap-3">
+                  {pendingApprovals.map((approval) => (
+                    <div
+                      className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3"
+                      key={approval.id}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-[var(--fc-ink)]">
+                            {approval.applicant.name || approval.applicant.email}
+                          </p>
+                          <p className="mt-1 text-sm text-[var(--fc-muted)]">
+                            {approval.applicant.email}
+                          </p>
+                          {approval.applicant.motivation ? (
+                            <p className="mt-2 text-sm text-[var(--fc-ink-secondary)]">
+                              {approval.applicant.motivation}
+                            </p>
+                          ) : null}
+                        </div>
+                        <form
+                          action="/api/registration-approvals"
+                          className="flex flex-wrap gap-2"
+                          method="post"
+                        >
+                          <input name="approvalId" type="hidden" value={approval.id} />
+                          <DashboardActionButton name="decision" type="submit" value="approve">
+                            {labels.approvals.approve}
+                          </DashboardActionButton>
+                          <DashboardActionButton
+                            name="decision"
+                            type="submit"
+                            value="reject"
+                            variant="danger"
+                          >
+                            {labels.approvals.reject}
+                          </DashboardActionButton>
+                        </form>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </section>
+      ) : null}
 
-      <section className="fc-section fc-rise" data-fitcal-section id="uploads">
+      {activeTab === "uploads" ? (
+      <section className="fc-section fc-rise" id="uploads">
         <SectionHeader title={labels.uploads.title} subtitle={labels.uploads.windowHint} />
         <div className="grid gap-4">
           {renderedOpenDays.length > 0 ? (
@@ -1061,7 +1132,9 @@ export function DashboardTabs({
           ) : <div className="fc-card text-sm text-[var(--fc-muted)]">{labels.uploads.empty}</div>}
         </div>
       </section>
+      ) : null}
 
+      {activeTab === "timeline" ? (
       <DashboardHistorySection
         commonLabels={commonLabels}
         labels={labels}
@@ -1078,31 +1151,12 @@ export function DashboardTabs({
         onVideoReplaceSelection={handleVideoReplaceSelection}
         timelineEntries={timelineEntries}
       />
+      ) : null}
 
-      <section className="fc-section fc-rise" data-fitcal-section id="metastats">
-        <SectionHeader subtitle={labels.metastats.profileTitle} title={labels.metastats.title} />
+      {activeTab === "metastats" ? (
+      <section className="fc-section fc-rise" id="metastats">
+        <SectionHeader subtitle={labels.metastats.measurementsKicker} title={labels.metastats.title} />
         <div className="mt-6 space-y-6">
-          <section className="fc-card">
-            <div>
-              <p className="fc-kicker">{labels.metastats.profileKicker}</p>
-              <h3 className="fc-heading mt-1 text-lg">{labels.metastats.profileTitle}</h3>
-            </div>
-            {profile.motivation ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{profile.motivation}</p> : null}
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {profile.birthDateLabel ? <StatBox label={labels.metastats.birthDate} value={profile.birthDateLabel} /> : null}
-              {profile.heightLabel ? <StatBox label={labels.metastats.heightCm} value={profile.heightLabel} /> : null}
-            </div>
-            <form action="/api/profile" className="mt-5 space-y-4" method="post">
-              <div className="fc-grid-2">
-                <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.name}</span><input className="fc-input" defaultValue={profile.name ?? ""} name="name" type="text" /></label>
-                <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.birthDate}</span><DateTextInput className="fc-input" defaultValue={profile.birthDateInput} name="birthDate" placeholder={commonLabels.datePlaceholder} /></label>
-                <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.heightCm}</span><input className="fc-input" defaultValue={profile.heightInput} inputMode="decimal" name="heightCm" step="0.1" type="number" /></label>
-              </div>
-              <label className="fc-input-group"><span className="fc-input-label">{labels.metastats.motivation}</span><textarea className="fc-input min-h-20" defaultValue={profile.motivation ?? ""} maxLength={240} name="motivation" placeholder={labels.metastats.notes} /></label>
-              <Button type="submit">{labels.metastats.saveProfile}</Button>
-            </form>
-          </section>
-
           <PerformanceChart labels={labels.charts} points={performancePoints} />
 
           <section className="fc-card">
@@ -1130,8 +1184,21 @@ export function DashboardTabs({
           <MeasurementChart labels={labels.charts} points={measurementPoints} />
         </div>
       </section>
+      ) : null}
 
-      {!overview.isLightParticipant ? (
+      {activeTab === "profile" ? (
+      <DashboardProfileSection
+        activeInvites={activeInvites}
+        canReview={canReview}
+        commonLabels={commonLabels}
+        featureRequestsEnabled={featureRequestsEnabled}
+        labels={labels}
+        locale={locale}
+        profile={profile}
+      />
+      ) : null}
+
+      {!overview.isLightParticipant && activeTab === "review" ? (
         <DashboardReviewSection
           commonLabels={commonLabels}
           escalationReviewItems={escalationReviewItems}
@@ -1142,7 +1209,8 @@ export function DashboardTabs({
         />
       ) : null}
 
-      <section className="fc-section fc-rise" data-fitcal-section id="regeln">
+      {activeTab === "regeln" ? (
+      <section className="fc-section fc-rise" id="regeln">
         <SectionHeader title={labels.rules.title} />
         <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <ol className="fc-rule-list">{rules.map((rule) => <li key={rule}>{rule}</li>)}</ol>
@@ -1159,8 +1227,10 @@ export function DashboardTabs({
           </div>
         </div>
       </section>
+      ) : null}
 
-      <section className="fc-section fc-rise" data-fitcal-section id="rechner">
+      {activeTab === "rechner" ? (
+      <section className="fc-section fc-rise" id="rechner">
         <SectionHeader title={labels.calculator.title} />
         <div className={`grid gap-4 md:grid-cols-2 ${overview.isLightParticipant ? "xl:grid-cols-2" : "xl:grid-cols-4"}`}>
           <section className="fc-card">
@@ -1214,6 +1284,7 @@ export function DashboardTabs({
           </section>
         </div>
       </section>
+      ) : null}
     </div>
   );
 }

@@ -681,12 +681,16 @@ function buildProfileSummary(
 ): ProfileSummary {
   return {
     name: user.name ?? null,
+    email: user.email,
+    emailVerified: Boolean(user.emailVerified),
     motivation: user.motivation ?? null,
     birthDateInput: formatBirthDateInput(locale, user.birthDate),
     birthDateLabel: formatBirthDate(locale, user.birthDate),
     heightInput: formatHeightInput(user.heightCm),
     heightLabel:
       user.heightCm != null ? `${formatDecimal(locale, user.heightCm, 0)} cm` : null,
+    emailVerifiedAtLabel:
+      user.emailVerified != null ? formatBirthDate(locale, user.emailVerified) : null,
     latestWeightKg: latestMeasurement?.weightKg ?? null,
     weightLabel:
       latestMeasurement?.weightKg != null

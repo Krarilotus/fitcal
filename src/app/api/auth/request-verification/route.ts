@@ -5,8 +5,39 @@ import { createEmailVerificationToken } from "@/lib/auth/email-verification";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
 import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
 
+function getMessages(locale: string) {
+  if (locale === "en") {
+    return {
+      success: "If the address exists, a verification link has been sent.",
+      fallbackError: "Verification link could not be created.",
+    };
+  }
+
+  return {
+    success: "Wenn die Adresse existiert, wurde ein Bestaetigungslink versendet.",
+    fallbackError: "Bestaetigungslink konnte nicht erstellt werden.",
+  };
+}
+
+function getSafeRedirectPath(rawValue: FormDataEntryValue | null) {
+  if (typeof rawValue !== "string") {
+    return "/verify-email";
+  }
+
+  const trimmed = rawValue.trim();
+
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
+    return "/verify-email";
+  }
+
+  return trimmed;
+}
+
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const locale = typeof formData.get("locale") === "string" ? String(formData.get("locale")) : "de";
+  const redirectPath = getSafeRedirectPath(formData.get("redirectTo"));
+  const messages = getMessages(locale);
 
   try {
     const parsed = forgotPasswordSchema.parse({
@@ -35,16 +66,16 @@ export async function POST(request: Request) {
 
     return NextResponse.redirect(
       getAppUrl(
-        "/verify-email?success=Wenn%20die%20Adresse%20existiert,%20wurde%20ein%20Bestaetigungslink%20versendet.",
+        `${redirectPath}?success=${encodeURIComponent(messages.success)}`,
         request,
       ),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Bestaetigungslink konnte nicht erstellt werden.";
+      error instanceof Error ? error.message : messages.fallbackError;
 
     return NextResponse.redirect(
-      getAppUrl(`/verify-email?error=${encodeURIComponent(message)}`, request),
+      getAppUrl(`${redirectPath}?error=${encodeURIComponent(message)}`, request),
     );
   }
 }
