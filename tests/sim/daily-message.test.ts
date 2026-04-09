@@ -35,6 +35,65 @@ test("english daily message stays fully english", () => {
   assert.match(message, /today|calendar|logged|weight/i);
 });
 
+test("german April 9 message avoids broken subordinate grammar", () => {
+  const message = getDailyMessage(
+    buildContext({
+      currentDate: "2026-04-09",
+    }),
+    "de",
+  );
+
+  assert.doesNotMatch(message, /dass hängen/i);
+  assert.doesNotMatch(message, /Für heute bleibt hängen, dass/i);
+  assert.match(message, /Widerstandsgeschichten|NS-Zeit|Haltung gezeigt/i);
+});
+
+test("english April 9 message does not repeat the date", () => {
+  const message = getDailyMessage(
+    buildContext({
+      currentDate: "2026-04-09",
+    }),
+    "en",
+  );
+
+  assert.doesNotMatch(message, /April 9/i);
+  assert.match(message, /resistance under Nazi rule|held their ground/i);
+});
+
+test("monthly german personal lines can address the user by name", () => {
+  const message = getDailyMessage(
+    buildContext({
+      currentDate: "2026-04-05",
+      name: "Daniel",
+      latestWaistCm: null,
+      latestWeightKg: null,
+      documentedDays: 0,
+      outstandingDebtCents: 0,
+      motivation: "Dranbleiben.",
+    }),
+    "de",
+  );
+
+  assert.match(message, /Daniel,/);
+});
+
+test("monthly english personal lines can address the user by name", () => {
+  const message = getDailyMessage(
+    buildContext({
+      currentDate: "2026-04-05",
+      name: "Daniel",
+      latestWaistCm: null,
+      latestWeightKg: null,
+      documentedDays: 0,
+      outstandingDebtCents: 0,
+      motivation: "Keep going.",
+    }),
+    "en",
+  );
+
+  assert.match(message, /Daniel,/);
+});
+
 test("higher bodyweight profile gets a lean-oriented german line", () => {
   const message = getDailyMessage(
     buildContext({

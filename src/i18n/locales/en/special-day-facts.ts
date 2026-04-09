@@ -1,4 +1,6 @@
-export const enSpecialDayFacts: Record<string, string> = {
+import type { SpecialDayFactInput } from "@/i18n/special-day";
+
+export const enSpecialDayFacts: Record<string, SpecialDayFactInput> = {
 "01-01":
     "New Year's Day is the one date when even a plain training plan can feel symbolic.",
   "01-02":
@@ -197,8 +199,11 @@ export const enSpecialDayFacts: Record<string, string> = {
     "April 7 is World Health Day. Routine plus documentation looks especially smart today.",
   "04-08":
     "April 8 is International Romani Day, a reminder that visibility and recognition rarely appear on their own.",
-  "04-09":
-    "April 9 often points to resistance under Nazi rule, to people who held their ground under pressure.",
+  "04-09": {
+    composition: "raw",
+    tone: "serious",
+    text: "Resistance under Nazi rule still points to people who held their ground under pressure.",
+  },
   "04-10":
     "April 10 is Siblings Day: small rivalries, real loyalty, and more family jokes than strictly necessary.",
   "04-11":

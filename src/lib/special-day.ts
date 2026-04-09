@@ -2,6 +2,8 @@ import { defaultLocale, type Locale } from "@/lib/preferences";
 import {
   getSpecialDayDictionary,
   type DailyMessageContext,
+  type SpecialDayFactInput,
+  type SpecialDayFactTone,
   type DailyMessageIntlHelpers,
 } from "@/i18n/special-day";
 
@@ -70,6 +72,63 @@ function isSportFact(fact: string, sportPattern: RegExp) {
   return sportPattern.test(fact);
 }
 
+function getFactText(entry: SpecialDayFactInput) {
+  return typeof entry === "string" ? entry : entry.text;
+}
+
+function getFactTone(
+  entry: SpecialDayFactInput,
+  dictionary: ReturnType<typeof getSpecialDayDictionary>,
+) {
+  if (typeof entry !== "string" && entry.tone) {
+    return entry.tone;
+  }
+
+  const fact = getFactText(entry);
+
+  if (isSeriousFact(fact, dictionary.seriousKeywords)) {
+    return "serious" as const;
+  }
+
+  if (isSportFact(fact, dictionary.sportPattern)) {
+    return "sport" as const;
+  }
+
+  return "generic" as const;
+}
+
+function normalizeFactEntry(
+  entry: SpecialDayFactInput,
+  dictionary: ReturnType<typeof getSpecialDayDictionary>,
+) {
+  const rawText = getFactText(entry).trim();
+  const strippedText = stripDateLead(rawText, dictionary.dateLeadPatterns).trim();
+
+  if (typeof entry !== "string" && entry.composition) {
+    return {
+      composition: entry.composition,
+      text: entry.composition === "raw" ? rawText : strippedText || rawText,
+      tone: getFactTone(entry, dictionary),
+    };
+  }
+
+  if (!strippedText || strippedText === rawText) {
+    return {
+      composition: "raw" as const,
+      text: rawText,
+      tone: getFactTone(entry, dictionary),
+    };
+  }
+
+  return {
+    composition: beginsWithVerb(strippedText, dictionary.beginsWithVerbPattern)
+      ? ("leadlessVerb" as const)
+      : ("leadlessSentence" as const),
+    text: strippedText,
+    tone: getFactTone(entry, dictionary),
+  };
+}
+
 function hasPersonalContext(context: DailyMessageContext) {
   return (
     context.latestWaistCm != null ||
@@ -84,15 +143,25 @@ function getSecondLine(
   context: DailyMessageContext,
   helpers: DailyMessageIntlHelpers,
   dayNumber: number,
-  fact: string,
+  factText: string,
+  factTone: SpecialDayFactTone,
   locale: ReturnType<typeof getSpecialDayDictionary>,
 ) {
+  const monthlyPersonalLines =
+    context.name?.trim() && hasPersonalContext(context)
+      ? locale.buildMonthlyPersonalLines(context, helpers)
+      : [];
+
+  if (monthlyPersonalLines.length > 0 && (dayNumber === 5 || dayNumber === 21)) {
+    return monthlyPersonalLines[(dayNumber === 5 ? 0 : 1) % monthlyPersonalLines.length]!;
+  }
+
   const variants =
     hasPersonalContext(context) && dayNumber % 3 !== 1
       ? locale.buildPersonalLines(context, helpers)
-      : isSeriousFact(fact, locale.seriousKeywords)
+      : factTone === "serious"
         ? locale.seriousFocusLines(context)
-        : isSportFact(fact, locale.sportPattern)
+        : factTone === "sport"
           ? locale.sportFocusLines(context)
           : locale.genericFocusLines(context);
 
@@ -119,23 +188,37 @@ export function getDailyMessage(
     }
   }
 
-  const fact = dictionary.facts[context.currentDate.slice(5)] ?? dictionary.fallbackFact;
-  const strippedFact = stripDateLead(fact, dictionary.dateLeadPatterns).trim();
-  const secondLine = getSecondLine(context, helpers, dayNumber, fact, dictionary);
+  const factEntry =
+    dictionary.facts[context.currentDate.slice(5)] ?? dictionary.fallbackFact;
+  const normalizedFact = normalizeFactEntry(factEntry, dictionary);
+  const secondLine = getSecondLine(
+    context,
+    helpers,
+    dayNumber,
+    normalizedFact.text,
+    normalizedFact.tone,
+    dictionary,
+  );
 
-  if (!strippedFact || strippedFact === fact) {
-    return `${uppercaseFirst(fact)}\n${uppercaseFirst(secondLine)}`.trim();
+  let lead: string;
+
+  if (normalizedFact.composition === "raw") {
+    lead = uppercaseFirst(normalizedFact.text);
+  } else if (normalizedFact.composition === "leadlessVerb") {
+    lead = dictionary.buildVerbLead({
+      weekday,
+      strippedFact: normalizedFact.text,
+    });
+  } else {
+    const leadVariants =
+      normalizedFact.tone === "serious"
+        ? dictionary.seriousLeadVariants
+        : dictionary.sentenceLeadVariants;
+    lead = leadVariants[dayNumber % leadVariants.length]({
+      weekday,
+      strippedFact: uppercaseFirst(normalizedFact.text),
+    });
   }
-
-  const leadVariants = beginsWithVerb(strippedFact, dictionary.beginsWithVerbPattern)
-    ? dictionary.verbLeadVariants
-    : dictionary.nounLeadVariants;
-  const lead = leadVariants[dayNumber % leadVariants.length]({
-    weekday,
-    strippedFact: beginsWithVerb(strippedFact, dictionary.beginsWithVerbPattern)
-      ? strippedFact
-      : uppercaseFirst(strippedFact),
-  });
 
   return `${lead}\n${uppercaseFirst(secondLine)}`.trim();
 }

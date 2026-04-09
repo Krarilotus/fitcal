@@ -106,6 +106,70 @@ function buildDePersonalLines(
   return candidates;
 }
 
+function buildDeMonthlyPersonalLines(
+  context: DailyMessageContext,
+) {
+  const name = context.name?.trim();
+
+  if (!name) {
+    return [];
+  }
+
+  const monthKey = context.currentDate.slice(5, 7);
+  const monthlyLines: Record<string, string[]> = {
+    "01": [
+      `${name}, der Januar ist kühl genug. Die Ausrede muss heute nicht auch noch frostig sein.`,
+      `${name}, Jahresanfang heißt hier vor allem: lieber sauber anfangen als groß ankündigen.`,
+    ],
+    "02": [
+      `${name}, der Februar ist kurz. Genau deshalb passt heute eine kurze, ehrliche Runde besonders gut.`,
+      `${name}, im Februar zählt weniger Theater und mehr Rhythmus. Das reicht völlig.`,
+    ],
+    "03": [
+      `${name}, der März riecht nach Neustart. Die Matte braucht dazu nur eine klare Zusage.`,
+      `${name}, wenn der März Bewegung verspricht, darfst du das heute ruhig wörtlich nehmen.`,
+    ],
+    "04": [
+      `${name}, der April macht genug eigene Überraschungen. Deine Wiederholungen dürfen heute gern verlässlich bleiben.`,
+      `${name}, im April reicht schon die kleine, saubere Version von Konsequenz, um den Tag zu gewinnen.`,
+    ],
+    "05": [
+      `${name}, der Mai wirkt schnell nach Aufbruch. Die sauberste Form davon ist heute einfach ein dokumentierter Tag.`,
+      `${name}, Mai heißt hier nicht Leichtigkeit vorspielen, sondern Spannung sauber halten.`,
+    ],
+    "06": [
+      `${name}, der Juni macht lange Tage. Einer davon darf heute ruhig ordentlich zu Ende gebracht werden.`,
+      `${name}, wenn der Juni ausfranst, hilft oft schon ein Satz mit klarer Form zurück in die Spur.`,
+    ],
+    "07": [
+      `${name}, der Juli darf warm sein. Deine Ausführung sollte trotzdem einen kühlen Kopf behalten.`,
+      `${name}, Hochsommer ist kein Gegenargument. Es ist bloß die Kulisse für saubere Arbeit.`,
+    ],
+    "08": [
+      `${name}, im August kippt vieles in Ferienlogik. Deine Wiederholungen dürfen trotzdem erwachsen bleiben.`,
+      `${name}, Augusttage mögen locker wirken, aber die Matte merkt trotzdem, wer es ernst meint.`,
+    ],
+    "09": [
+      `${name}, der September klingt nach Struktur. Genau deshalb passt heute ein ruhiger, sauberer Durchlauf.`,
+      `${name}, wenn der September alles wieder sortiert, dürfen deine Sets ruhig mitziehen.`,
+    ],
+    "10": [
+      `${name}, der Oktober bringt genug Schwere mit. Du musst ihr heute nur eine klare Form geben.`,
+      `${name}, im Oktober wirkt ein sauber abgeschlossener Tag oft besser als jede große Ansage.`,
+    ],
+    "11": [
+      `${name}, der November ist gut darin, Dinge zu verlangsamen. Umso besser, wenn du heute trotzdem nicht stehen bleibst.`,
+      `${name}, wenn der November grau wird, darf dein Tag trotzdem eine saubere Kontur behalten.`,
+    ],
+    "12": [
+      `${name}, der Dezember ist laut genug. Deine Wiederholungen dürfen die ruhige Antwort darauf sein.`,
+      `${name}, zwischen allem Dezemberzeug wirkt ein klar erledigter Tag fast schon luxuriös.`,
+    ],
+  };
+
+  return monthlyLines[monthKey] ?? [];
+}
+
 export const deSpecialDay: SpecialDayLocaleDictionary = {
   weekdayLocale: "de-DE",
   facts: deSpecialDayFacts,
@@ -148,22 +212,20 @@ export const deSpecialDay: SpecialDayLocaleDictionary = {
   ],
   sportPattern:
     /Sport|Olymp|Dance|Yoga|Skateboarding|Tour de France|Tennis|Bicycle|Cricket|Fußball|WM|Wimbledon/i,
-  verbLeadVariants: [
-    ({ strippedFact }) => `Heute ${strippedFact}`,
-    ({ strippedFact }) => `Für heute bleibt hängen, dass ${strippedFact}`,
-    ({ strippedFact }) => `Im Kalender steht heute, dass ${strippedFact}`,
-    ({ weekday, strippedFact }) => `${weekday} gilt hier, dass ${strippedFact}`,
-  ],
-  nounLeadVariants: [
+  sentenceLeadVariants: [
     ({ strippedFact }) => `Heute gilt: ${strippedFact}`,
     ({ weekday, strippedFact }) => `${weekday} bringt das hier mit: ${strippedFact}`,
     ({ strippedFact }) => `Im Kalender steht heute: ${strippedFact}`,
     ({ strippedFact }) => `Für heute bleibt hängen: ${strippedFact}`,
     ({ weekday, strippedFact }) => `${weekday} hat diese Randnotiz: ${strippedFact}`,
-    ({ strippedFact }) => `Die Datumsnotiz für heute lautet: ${strippedFact}`,
-    ({ strippedFact }) => `Was heute hängen bleibt: ${strippedFact}`,
     ({ strippedFact }) => `Heute passt dieser Gedanke: ${strippedFact}`,
   ],
+  seriousLeadVariants: [
+    ({ strippedFact }) => `Heute erinnert der Tag an Folgendes: ${strippedFact}`,
+    ({ strippedFact }) => `Heute lohnt sich dieser nüchterne Blick: ${strippedFact}`,
+    ({ weekday, strippedFact }) => `${weekday} bringt diese ernste Notiz mit: ${strippedFact}`,
+  ],
+  buildVerbLead: ({ strippedFact }) => `Heute ${strippedFact}`,
   seriousFocusLines: () => [
     "Heute reicht ein ruhiger, sauberer Tag als Antwort völlig aus.",
     "Mehr musst du daraus nicht machen: ordentlich liefern genügt.",
@@ -184,6 +246,7 @@ export const deSpecialDay: SpecialDayLocaleDictionary = {
     "Heute reicht genau die Sorte Arbeit, die später fast zu schlicht wirkt.",
   ],
   buildPersonalLines: buildDePersonalLines,
+  buildMonthlyPersonalLines: buildDeMonthlyPersonalLines,
   buildBirthdayMessage: (context, helpers) => {
     const name = context.name?.trim() || "Du";
     const latestWaist = helpers.formatNumber(context.latestWaistCm);

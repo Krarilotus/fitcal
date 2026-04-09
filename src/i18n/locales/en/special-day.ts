@@ -106,11 +106,76 @@ function buildEnPersonalLines(
   return candidates;
 }
 
+function buildEnMonthlyPersonalLines(
+  context: DailyMessageContext,
+) {
+  const name = context.name?.trim();
+
+  if (!name) {
+    return [];
+  }
+
+  const monthKey = context.currentDate.slice(5, 7);
+  const monthlyLines: Record<string, string[]> = {
+    "01": [
+      `${name}, January is cold enough already. Your excuse does not need to freeze over too.`,
+      `${name}, the cleanest way to start a year is still to finish one honest day properly.`,
+    ],
+    "02": [
+      `${name}, February is short. That is exactly why a short, honest session works so well here.`,
+      `${name}, February rewards rhythm more than drama. That is good news for today.`,
+    ],
+    "03": [
+      `${name}, March likes to talk about fresh starts. The mat only needs one clear yes from you.`,
+      `${name}, if March promises motion, today is a fine day to take that literally.`,
+    ],
+    "04": [
+      `${name}, April brings enough surprises on its own. Your reps can stay reliable.`,
+      `${name}, in April the small, clean version of consistency still counts for a lot.`,
+    ],
+    "05": [
+      `${name}, May always sounds like momentum. The cleanest version of that is simply a documented day.`,
+      `${name}, May does not need fake lightness from you. Clean tension will do nicely.`,
+    ],
+    "06": [
+      `${name}, June makes the days longer. One of them can still end properly.`,
+      `${name}, if June starts to sprawl, one clean set is often enough to pull the day back into shape.`,
+    ],
+    "07": [
+      `${name}, July can be hot. Your execution can still keep a cool head.`,
+      `${name}, summer is only the backdrop. The work still has to look honest up close.`,
+    ],
+    "08": [
+      `${name}, August loves slipping into holiday logic. Your reps do not have to follow.`,
+      `${name}, August may look loose on the surface, but the mat still notices who means it.`,
+    ],
+    "09": [
+      `${name}, September sounds like structure again. A calm, clean session fits that perfectly.`,
+      `${name}, if September starts sorting things out, your sets can join in.`,
+    ],
+    "10": [
+      `${name}, October already carries enough weight. You only need to give it clear form today.`,
+      `${name}, in October a clean finished day often lands better than any big speech.`,
+    ],
+    "11": [
+      `${name}, November is good at slowing everything down. All the better if you still keep moving.`,
+      `${name}, if November turns grey, your day can still keep a clean outline.`,
+    ],
+    "12": [
+      `${name}, December is noisy enough. Your reps can be the quiet answer to that.`,
+      `${name}, among all the December clutter, a properly finished day looks almost luxurious.`,
+    ],
+  };
+
+  return monthlyLines[monthKey] ?? [];
+}
+
 export const enSpecialDay: SpecialDayLocaleDictionary = {
   weekdayLocale: "en-US",
   facts: enSpecialDayFacts,
   fallbackFact: "Today mostly asks you to close the day cleanly.",
   dateLeadPatterns: [
+    /^[A-Z][a-z]+ \d{1,2}(?:, \d{4})?,?\s+/u,
     /^On [A-Z][a-z]+ \d{1,2}(?:, \d{4})?,?\s+/u,
     /^Last day of [A-Z][a-z]+:\s*/u,
     /^Spring equinox:\s*/u,
@@ -142,22 +207,19 @@ export const enSpecialDay: SpecialDayLocaleDictionary = {
   ],
   sportPattern:
     /sport|Olymp|Dance|Yoga|Skateboarding|Tour de France|Tennis|Bicycle|Cricket|Football|Soccer|Wimbledon/i,
-  verbLeadVariants: [
-    ({ strippedFact }) => `Today ${strippedFact}`,
-    ({ strippedFact }) => `What matters today: ${strippedFact}`,
-    ({ strippedFact }) => `The note for today is simple: ${strippedFact}`,
-    ({ weekday, strippedFact }) => `${weekday} gives you this: ${strippedFact}`,
-  ],
-  nounLeadVariants: [
+  sentenceLeadVariants: [
     ({ strippedFact }) => `Today's note is simple: ${strippedFact}`,
     ({ weekday, strippedFact }) => `${weekday} brings this with it: ${strippedFact}`,
     ({ strippedFact }) => `The calendar note for today: ${strippedFact}`,
     ({ strippedFact }) => `What matters today: ${strippedFact}`,
-    ({ weekday, strippedFact }) => `${weekday} also carries this: ${strippedFact}`,
-    ({ strippedFact }) => `What sticks today: ${strippedFact}`,
-    ({ strippedFact }) => `One good thought for today: ${strippedFact}`,
     ({ strippedFact }) => `Worth keeping in mind today: ${strippedFact}`,
   ],
+  seriousLeadVariants: [
+    ({ strippedFact }) => `Today carries this reminder: ${strippedFact}`,
+    ({ strippedFact }) => `Worth holding onto today: ${strippedFact}`,
+    ({ weekday, strippedFact }) => `${weekday} also carries this sober note: ${strippedFact}`,
+  ],
+  buildVerbLead: ({ strippedFact }) => `Today ${strippedFact}`,
   seriousFocusLines: () => [
     "A calm, properly finished day is enough of an answer.",
     "You do not need to decorate this one. Showing up cleanly is enough.",
@@ -178,6 +240,7 @@ export const enSpecialDay: SpecialDayLocaleDictionary = {
     "Today's work only needs to be the kind that looks almost too simple in hindsight.",
   ],
   buildPersonalLines: buildEnPersonalLines,
+  buildMonthlyPersonalLines: buildEnMonthlyPersonalLines,
   buildBirthdayMessage: (context, helpers) => {
     const name = context.name?.trim() || "You";
     const latestWaist = helpers.formatNumber(context.latestWaistCm);

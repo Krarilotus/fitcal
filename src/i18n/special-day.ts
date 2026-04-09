@@ -20,6 +20,16 @@ export type DailyMessageIntlHelpers = {
   formatCurrency: (valueInCents: number) => string;
 };
 
+export type SpecialDayFactTone = "generic" | "serious" | "sport";
+
+export type SpecialDayFactEntry = {
+  text: string;
+  composition?: "raw" | "leadlessSentence" | "leadlessVerb";
+  tone?: SpecialDayFactTone;
+};
+
+export type SpecialDayFactInput = string | SpecialDayFactEntry;
+
 export type FactLeadArgs = {
   weekday: string;
   strippedFact: string;
@@ -27,18 +37,23 @@ export type FactLeadArgs = {
 
 export type SpecialDayLocaleDictionary = {
   weekdayLocale: string;
-  facts: Record<string, string>;
-  fallbackFact: string;
+  facts: Record<string, SpecialDayFactInput>;
+  fallbackFact: SpecialDayFactInput;
   dateLeadPatterns: RegExp[];
   beginsWithVerbPattern: RegExp;
   seriousKeywords: string[];
   sportPattern: RegExp;
-  verbLeadVariants: Array<(args: FactLeadArgs) => string>;
-  nounLeadVariants: Array<(args: FactLeadArgs) => string>;
+  sentenceLeadVariants: Array<(args: FactLeadArgs) => string>;
+  seriousLeadVariants: Array<(args: FactLeadArgs) => string>;
+  buildVerbLead: (args: FactLeadArgs) => string;
   seriousFocusLines: (context: DailyMessageContext) => string[];
   sportFocusLines: (context: DailyMessageContext) => string[];
   genericFocusLines: (context: DailyMessageContext) => string[];
   buildPersonalLines: (
+    context: DailyMessageContext,
+    helpers: DailyMessageIntlHelpers,
+  ) => string[];
+  buildMonthlyPersonalLines: (
     context: DailyMessageContext,
     helpers: DailyMessageIntlHelpers,
   ) => string[];

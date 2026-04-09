@@ -1,4 +1,6 @@
-export const deSpecialDayFacts: Record<string, string> = {
+import type { SpecialDayFactInput } from "@/i18n/special-day";
+
+export const deSpecialDayFacts: Record<string, SpecialDayFactInput> = {
   "01-01":
     "Neujahr ist das einzige Datum, an dem selbst ein nüchterner Trainingsplan kurz wie große Symbolik aussehen darf.",
   "01-02":
@@ -196,8 +198,11 @@ export const deSpecialDayFacts: Record<string, string> = {
     "Am 7. April ist Weltgesundheitstag, und die Kombination aus Routine und Dokumentation wirkt plötzlich sehr vernünftig.",
   "04-08":
     "Am 8. April ist Internationaler Tag der Roma, ein guter Hinweis darauf, dass Sichtbarkeit und Anerkennung selten von allein entstehen.",
-  "04-09":
-    "Am 9. April hängen viele Rückblicke an Widerstandsgeschichten aus der NS-Zeit, also an Menschen, die unter Druck Haltung gezeigt haben.",
+  "04-09": {
+    composition: "raw",
+    tone: "serious",
+    text: "Widerstandsgeschichten aus der NS-Zeit erinnern heute an Menschen, die unter Druck Haltung gezeigt haben.",
+  },
   "04-10":
     "Am 10. April ist Geschwistertag, also ein Datum für kleine Rivalitäten, große Loyalität und überraschend viele Familienwitze.",
   "04-11":
