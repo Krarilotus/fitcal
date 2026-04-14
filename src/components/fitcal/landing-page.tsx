@@ -75,7 +75,7 @@ export function FitcalLandingPage({
                 <Badge variant="warm">{labels.dayPrefix} {snapshot.challengeDay}</Badge>
               </div>
               <p className="fc-display fc-count-animated mt-4 text-[clamp(4rem,10vw,7rem)] text-[var(--fc-accent)]">{snapshot.targetReps}</p>
-              <p className="mt-3 text-sm text-[var(--fc-muted)]">{snapshot.todayLabel}</p>
+              <p className="mt-3 fc-text-muted">{snapshot.todayLabel}</p>
             </div>
           </div>
         </section>
@@ -108,13 +108,13 @@ export function FitcalLandingPage({
                 <div>
                   <p className="mb-1 text-sm font-medium">{labels.targetFormula}</p>
                   <code className="inline-block rounded-[var(--fc-radius-sm)] bg-[var(--fc-surface)] px-2 py-1 text-xs font-mono text-[var(--fc-accent-2)]">{labels.targetFormulaExpression}</code>
-                  <p className="mt-1.5 text-sm text-[var(--fc-muted)]">{labels.todayPerExerciseShort}: <strong className="text-[var(--fc-ink)]">{snapshot.targetReps}</strong> {labels.todayPerExercise.toLowerCase()}</p>
+                  <p className="mt-1.5 fc-text-muted">{labels.todayPerExerciseShort}: <strong className="text-[var(--fc-ink)]">{snapshot.targetReps}</strong> {labels.todayPerExercise.toLowerCase()}</p>
                 </div>
                 <div>
                   <p className="mb-1 text-sm font-medium">{labels.debtExamples}</p>
                   <div className="space-y-1">
                     {debtExamples.map((entry) => (
-                      <p className="flex items-center justify-between text-sm text-[var(--fc-muted)]" key={entry.missedDays}>
+                      <p className="flex items-center justify-between fc-text-muted" key={entry.missedDays}>
                         <span>{entry.missedDays} {entry.missedDays > 1 ? labels.slackDaysLabel : labels.slackDayLabel}</span>
                         <strong className="text-[var(--fc-ink)]">{moneyFormatter.format(entry.amount)}</strong>
                       </p>
@@ -128,7 +128,7 @@ export function FitcalLandingPage({
 
         <section className="fc-rise fc-rise-delay-3">
           <p className="fc-kicker mb-3">{labels.referenceVideos}</p>
-          <p className="mb-4 text-sm text-[var(--fc-muted)]">{labels.videoMeta}</p>
+          <p className="mb-4 fc-text-muted">{labels.videoMeta}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <a className="fc-video-link" href="https://www.youtube.com/watch?v=JvX0ilRCBrU" rel="noreferrer" target="_blank"><PlayCircle className="size-5" /><span>{labels.pushupReference}</span></a>
             <a className="fc-video-link" href="https://www.youtube.com/watch?v=czKvGbo5zAo" rel="noreferrer" target="_blank"><PlayCircle className="size-5" /><span>{labels.situpReference}</span></a>

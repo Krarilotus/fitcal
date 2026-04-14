@@ -13,13 +13,7 @@ import { Button } from "@/components/ui/button";
 import type { ProfileSummary } from "@/components/fitcal/dashboard-types";
 import type { ActiveInviteSummary } from "@/lib/dashboard-data";
 import type { Locale } from "@/lib/preferences";
-
-function replaceTemplate(template: string, values: Record<string, string | number>) {
-  return Object.entries(values).reduce(
-    (current, [key, value]) => current.replaceAll(`{${key}}`, String(value)),
-    template,
-  );
-}
+import { replaceTemplate } from "@/lib/template";
 
 export function DashboardProfileSection({
   activeInvites,
@@ -41,11 +35,11 @@ export function DashboardProfileSection({
   return (
     <section className="fc-section fc-rise" id="profile">
       <DashboardSectionHeader title={labels.tabs.profile} />
-      <div className="mt-6 space-y-6">
+      <div className="space-y-6">
         <section className="fc-card">
           <DashboardCardTitle title={labels.tabs.profile} />
           {profile.motivation ? (
-            <p className="mt-1 text-sm text-[var(--fc-muted)]">{profile.motivation}</p>
+            <p className="mt-1 fc-text-muted">{profile.motivation}</p>
           ) : null}
           <div className="mt-4 grid grid-cols-2 gap-2">
             <DashboardStatBox label={commonLabels.email} value={profile.email} />
@@ -70,15 +64,15 @@ export function DashboardProfileSection({
               />
             ) : null}
           </div>
-          <div className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
+          <div className="mt-4 fc-info-box">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-[var(--fc-ink)]">
+                <p className="fc-text-emphasis">
                   {profile.emailVerified
                     ? labels.metastats.emailVerified
                     : labels.metastats.emailUnverified}
                 </p>
-                <p className="mt-1 text-sm text-[var(--fc-muted)]">
+                <p className="mt-1 fc-text-muted">
                   {profile.emailVerified && profile.emailVerifiedAtLabel
                     ? replaceTemplate(labels.metastats.emailVerifiedAt, {
                         date: profile.emailVerifiedAtLabel,
@@ -169,13 +163,13 @@ export function DashboardProfileSection({
 
             {activeInvites.length > 0 ? (
               <div className="mt-4 space-y-2">
-                <p className="text-sm text-[var(--fc-muted)]">{labels.invite.active}</p>
+                <p className="fc-text-muted">{labels.invite.active}</p>
                 {activeInvites.map((invite) => (
                   <div
                     className="flex flex-col gap-2 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     key={invite.id}
                   >
-                    <p className="min-w-0 truncate text-sm font-medium text-[var(--fc-ink)]">
+                    <p className="min-w-0 truncate fc-text-emphasis">
                       {invite.email}
                     </p>
                     <form action="/api/invitations/revoke" method="post">

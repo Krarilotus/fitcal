@@ -60,7 +60,7 @@ export function MetaStatChart({
   const [hiddenSeries, setHiddenSeries] = useState<string[]>([]);
 
   if (points.length === 0) {
-    return <div className="fc-card text-sm text-[var(--fc-muted)]">{emptyText}</div>;
+    return <div className="fc-card fc-text-muted">{emptyText}</div>;
   }
 
   const width = 100;
@@ -173,7 +173,7 @@ export function MetaStatChart({
             })}
           </svg>
 
-          <div className="mt-4 flex flex-wrap justify-between gap-3 text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+          <div className="mt-4 flex flex-wrap justify-between gap-3 fc-meta-label">
             <span>{points[0]?.label}</span>
             <span>{activePoint.label}</span>
             <span>{points[points.length - 1]?.label}</span>
@@ -181,7 +181,7 @@ export function MetaStatChart({
         </div>
 
         <div className="fc-chart-readout">
-          <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+          <p className="fc-meta-label">
             {focusLabel}
           </p>
           <p className="mt-2 text-lg font-semibold">{activePoint.label}</p>

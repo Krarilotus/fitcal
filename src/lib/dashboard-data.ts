@@ -25,6 +25,8 @@ import type {
   PerformancePoint,
   PrimaryReviewItem,
   ProfileSummary,
+  ReviewFeedbackItem,
+  ReviewFeedbackNote,
   SicknessReviewItem,
   TimelineEntry,
 } from "@/components/fitcal/dashboard-types";
@@ -79,11 +81,99 @@ export type DashboardPageData = {
   participantRows: ParticipantRow[];
   pendingApprovals: PendingApprovalSummary[];
   performancePoints: PerformancePoint[];
+  reviewFeedbackItems: ReviewFeedbackItem[];
   primaryReviewItems: PrimaryReviewItem[];
   profile: ProfileSummary;
   sicknessReviewItems: SicknessReviewItem[];
   timelineEntries: TimelineEntry[];
 };
+
+function getReviewStageLabel(
+  stage: WorkoutReviewStage,
+  labels: DashboardLabels,
+) {
+  return stage === WorkoutReviewStage.PRIMARY
+    ? labels.review.stagePrimary
+    : labels.review.stageArbitration;
+}
+
+function buildReviewFeedbackNotes(
+  workoutReviews: Array<{
+    id: string;
+    notes: string | null;
+    stage: WorkoutReviewStage;
+    reviewer: {
+      name: string | null;
+      email: string;
+    };
+  }>,
+  labels: DashboardLabels,
+): ReviewFeedbackNote[] {
+  return workoutReviews
+    .filter((review) => review.notes?.trim())
+    .map((review) => ({
+      id: review.id,
+      reviewerLabel: review.reviewer.name || review.reviewer.email,
+      stageLabel: getReviewStageLabel(review.stage, labels),
+      note: review.notes!.trim(),
+    }));
+}
+
+function getReviewerDisplayLabel(reviewer: { name: string | null; email: string }) {
+  return reviewer.name || reviewer.email;
+}
+
+function buildReviewerSummaryLabel(
+  workoutReviews: Array<{
+    reviewer: {
+      name: string | null;
+      email: string;
+    };
+  }>,
+) {
+  const uniqueLabels = [...new Set(workoutReviews.map((review) => getReviewerDisplayLabel(review.reviewer)))];
+
+  if (!uniqueLabels.length) {
+    return null;
+  }
+
+  return uniqueLabels.join(", ");
+}
+
+function buildMostCommonReviewerLabel(
+  workoutReviews: Array<{
+    reviewerUserId: string;
+    reviewer: {
+      name: string | null;
+      email: string;
+    };
+  }>,
+  labels: DashboardLabels,
+) {
+  if (!workoutReviews.length) {
+    return labels.review.noReviewerData;
+  }
+
+  const reviewerCounts = new Map<string, { count: number; label: string }>();
+
+  for (const review of workoutReviews) {
+    const current = reviewerCounts.get(review.reviewerUserId);
+    const label = getReviewerDisplayLabel(review.reviewer);
+
+    reviewerCounts.set(review.reviewerUserId, {
+      count: (current?.count ?? 0) + 1,
+      label,
+    });
+  }
+
+  const highestCount = Math.max(...[...reviewerCounts.values()].map((entry) => entry.count));
+  const topReviewers = [...reviewerCounts.values()]
+    .filter((entry) => entry.count === highestCount)
+    .map((entry) => entry.label)
+    .sort((left, right) => left.localeCompare(right));
+
+  return `${topReviewers.join(", ")} · ${highestCount}x`;
+}
 
 function buildChallengeRecords(user: CurrentUser) {
   return user.dailySubmissions.map((submission) => {
@@ -123,13 +213,7 @@ function buildOpenDays(
         (entry) => entry.challengeDate === day.challengeDate,
       );
       const reviewNotes = submission
-        ? [...submission.workoutReviews]
-            .filter((review) => review.notes?.trim())
-            .map((review) => ({
-              id: review.id,
-              reviewerLabel: review.reviewer.name || review.reviewer.email,
-              note: review.notes!.trim(),
-            }))
+        ? buildReviewFeedbackNotes([...submission.workoutReviews], labels)
         : [];
       const pushupSets = submission ? deserializeSets(submission.pushupSets) : [];
       const situpSets = submission ? deserializeSets(submission.situpSets) : [];
@@ -161,6 +245,9 @@ function buildOpenDays(
         reviewStatusLabel: submission
           ? formatReviewStatus(submission.reviewStatus, labels.reviewStatusLabels)
           : null,
+        reviewerSummaryLabel: submission
+          ? buildReviewerSummaryLabel([...submission.workoutReviews])
+          : null,
         reviewNotes,
         videos:
           submission?.videos.map((video) => ({
@@ -186,13 +273,7 @@ function buildTimelineEntries(
     const situpSets = submission ? deserializeSets(submission.situpSets) : [];
     const totals = submission ? getSubmissionTotals(submission) : null;
     const reviewNotes = submission
-      ? [...submission.workoutReviews]
-          .filter((review) => review.notes?.trim())
-          .map((review) => ({
-            id: review.id,
-            reviewerLabel: review.reviewer.name || review.reviewer.email,
-            note: review.notes!.trim(),
-          }))
+      ? buildReviewFeedbackNotes([...submission.workoutReviews], labels)
       : [];
 
     return {
@@ -217,6 +298,9 @@ function buildTimelineEntries(
       pushupOverTarget: submission ? Math.max(0, totals!.pushupTotal - day.repsTarget) : null,
       situpOverTarget: submission ? Math.max(0, totals!.situpTotal - day.repsTarget) : null,
       notes: submission?.notes ?? null,
+      reviewerSummaryLabel: submission
+        ? buildReviewerSummaryLabel([...submission.workoutReviews])
+        : null,
       reviewNotes,
       deletingLastVideoRemovesClaim: submission
         ? !preservesSubmissionWithoutVideos(submission.reviewStatus)
@@ -294,6 +378,17 @@ async function buildParticipantRows(
           situpSets: true,
           verifiedPushupTotal: true,
           verifiedSitupTotal: true,
+          workoutReviews: {
+            select: {
+              reviewerUserId: true,
+              reviewer: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           challengeDate: "asc",
@@ -346,6 +441,9 @@ async function buildParticipantRows(
     const totalSitups = participant.dailySubmissions
       .filter((submission) => submission.status === "COMPLETED")
       .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectiveSitupTotal, 0);
+    const allWorkoutReviews = participant.dailySubmissions.flatMap(
+      (submission) => submission.workoutReviews,
+    );
 
     return {
       id: participant.id,
@@ -379,6 +477,9 @@ async function buildParticipantRows(
         : pendingReviewCount > 0
           ? `${pendingReviewCount} ${labels.participantReview.pendingSuffix}`
           : labels.participantReview.clear,
+      commonReviewerLabel: participant.isLightParticipant
+        ? labels.participantReview.off
+        : buildMostCommonReviewerLabel(allWorkoutReviews, labels),
     };
   }).sort((left, right) => {
     if (left.isSelf !== right.isSelf) {
@@ -445,11 +546,8 @@ async function buildPrimaryReviewItems(
             review.reviewerUserId === currentUser.id,
         ),
     )
-    .map((submission) => {
+    .map<PrimaryReviewItem>((submission) => {
       const totals = getSubmissionTotals(submission);
-      const latestPrimary = [...submission.workoutReviews]
-        .reverse()
-        .find((review) => review.stage === WorkoutReviewStage.PRIMARY);
 
       return {
         id: submission.id,
@@ -464,10 +562,7 @@ async function buildPrimaryReviewItems(
           labels.reviewStatusLabels,
         ),
         workoutNote: submission.notes,
-        priorNote:
-          latestPrimary?.notes && submission.reviewStatus === "REVISION_REQUESTED"
-            ? `${latestPrimary.reviewer.name || latestPrimary.reviewer.email}: ${latestPrimary.notes}`
-            : null,
+        reviewNotes: buildReviewFeedbackNotes([...submission.workoutReviews], labels),
         videos: submission.videos.map((video) => ({
           id: video.id,
           label: video.originalName,
@@ -479,6 +574,7 @@ async function buildPrimaryReviewItems(
 async function buildEscalationReviewItems(
   currentUser: CurrentUser,
   locale: Locale,
+  labels: DashboardLabels,
 ): Promise<EscalationReviewItem[]> {
   const submissions = await prisma.dailySubmission.findMany({
     where: {
@@ -522,7 +618,7 @@ async function buildEscalationReviewItems(
   });
 
   return submissions
-    .map((submission) => {
+    .map<EscalationReviewItem | null>((submission) => {
       const primaryReview = [...submission.workoutReviews]
         .reverse()
         .find((review) => review.stage === WorkoutReviewStage.PRIMARY);
@@ -543,6 +639,8 @@ async function buildEscalationReviewItems(
 
       const totals = getSubmissionTotals(submission);
 
+      const reviewSummaryLabel: string | null = `${primaryReview.reviewer.name || primaryReview.reviewer.email} ${labels.review.countsLabel} ${primaryReview.countedPushups} / ${primaryReview.countedSitups}.`;
+
       return {
         id: submission.id,
         challengeDate: submission.challengeDate,
@@ -553,9 +651,9 @@ async function buildEscalationReviewItems(
         claimedSitups: totals.situpTotal,
         reviewedPushups: primaryReview.countedPushups,
         reviewedSitups: primaryReview.countedSitups,
-        reviewComment: primaryReview.notes,
-        reviewerLabel: primaryReview.reviewer.name || primaryReview.reviewer.email,
         workoutNote: submission.notes,
+        reviewNotes: buildReviewFeedbackNotes([...submission.workoutReviews], labels),
+        reviewSummaryLabel,
         videos: submission.videos.map((video) => ({
           id: video.id,
           label: video.originalName,
@@ -563,6 +661,76 @@ async function buildEscalationReviewItems(
       };
     })
     .filter((item): item is EscalationReviewItem => item != null);
+}
+
+async function buildReviewFeedbackItems(
+  currentUser: CurrentUser,
+  locale: Locale,
+  labels: DashboardLabels,
+): Promise<ReviewFeedbackItem[]> {
+  const submissions = await prisma.dailySubmission.findMany({
+    where: {
+      userId: { not: currentUser.id },
+      user: {
+        registrationStatus: RegistrationStatus.APPROVED,
+        isLightParticipant: false,
+      },
+      workoutReviews: {
+        some: {
+          reviewerUserId: currentUser.id,
+        },
+      },
+    },
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+      workoutReviews: {
+        include: {
+          reviewer: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+    orderBy: [{ challengeDate: "desc" }, { submittedAt: "desc" }],
+  });
+
+  return submissions
+    .map<ReviewFeedbackItem | null>((submission) => {
+      const statusLabel: string | null = formatReviewStatus(
+        submission.reviewStatus,
+        labels.reviewStatusLabels,
+      );
+      const reviewNotes = buildReviewFeedbackNotes([...submission.workoutReviews], labels);
+      const involvedReviewers = new Set(
+        submission.workoutReviews.map((review) => review.reviewerUserId),
+      );
+
+      if (reviewNotes.length === 0 || involvedReviewers.size < 2) {
+        return null;
+      }
+
+      return {
+        id: submission.id,
+        challengeDate: submission.challengeDate,
+        dateLabel: formatChallengeDate(locale, submission.challengeDate),
+        userLabel: submission.user.name || submission.user.email,
+        statusLabel,
+        workoutNote: submission.notes,
+        reviewNotes,
+      };
+    })
+    .filter((item): item is ReviewFeedbackItem => item != null);
 }
 
 async function buildSicknessReviewItems(
@@ -722,7 +890,7 @@ export async function getDashboardPageData(params: {
   const latestWeightKg = latestMeasurement?.weightKg ?? null;
   const latestWaistCm = latestMeasurement?.waistCircumferenceCm ?? null;
 
-  const [pendingApprovals, activeInvites, participantRows, primaryReviewItems, escalationReviewItems, sicknessReviewItems] =
+  const [pendingApprovals, activeInvites, participantRows, primaryReviewItems, escalationReviewItems, reviewFeedbackItems, sicknessReviewItems] =
     await Promise.all([
       canReview
         ? prisma.registrationApproval.findMany({
@@ -768,7 +936,8 @@ export async function getDashboardPageData(params: {
         ? buildParticipantRows(user, locale, labels, challengeOverview)
         : Promise.resolve([]),
       canReview ? buildPrimaryReviewItems(user, locale, labels) : Promise.resolve([]),
-      canReview ? buildEscalationReviewItems(user, locale) : Promise.resolve([]),
+      canReview ? buildEscalationReviewItems(user, locale, labels) : Promise.resolve([]),
+      canReview ? buildReviewFeedbackItems(user, locale, labels) : Promise.resolve([]),
       canReview ? buildSicknessReviewItems(user, locale) : Promise.resolve([]),
     ]);
 
@@ -791,6 +960,7 @@ export async function getDashboardPageData(params: {
     participantRows,
     pendingApprovals,
     performancePoints: buildPerformancePoints(user),
+    reviewFeedbackItems,
     primaryReviewItems,
     profile: buildProfileSummary(user, locale, latestMeasurement),
     sicknessReviewItems,

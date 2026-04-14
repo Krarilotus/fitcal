@@ -6,12 +6,15 @@ import type {
   EscalationReviewItem,
   ParticipantRow,
   PrimaryReviewItem,
+  ReviewFeedbackItem,
+  ReviewFeedbackNote,
   SicknessReviewItem,
 } from "@/components/fitcal/dashboard-types";
 import {
   DashboardSectionHeader,
   DashboardStatBox,
   DashboardStatusBadge,
+  DashboardSubsectionHeader,
 } from "@/components/fitcal/dashboard/dashboard-primitives";
 import { ReviewVideoPlayer } from "@/components/fitcal/dashboard/review-video-player";
 import { Button } from "@/components/ui/button";
@@ -30,11 +33,40 @@ function isCompletedLikeStatus(status: ParticipantRow["todayStatus"]) {
   return ["completed", "partial", "joker", "sick"].includes(status);
 }
 
+function ReviewThreadNotes({
+  notes,
+  title,
+}: {
+  notes: ReviewFeedbackNote[];
+  title: string;
+}) {
+  if (!notes.length) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 fc-note-box">
+      <p className="fc-meta-label">{title}</p>
+      <div className="mt-2 grid gap-3">
+        {notes.map((reviewNote) => (
+          <div key={reviewNote.id}>
+            <p className="fc-text-emphasis">
+              {reviewNote.stageLabel} · {reviewNote.reviewerLabel}
+            </p>
+            <p className="mt-1 fc-text-secondary">{reviewNote.note}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DashboardReviewSection({
   commonLabels,
   labels,
   participantRows,
   primaryReviewItems,
+  reviewFeedbackItems,
   escalationReviewItems,
   sicknessReviewItems,
 }: {
@@ -42,6 +74,7 @@ export function DashboardReviewSection({
   labels: AppDictionary["dashboard"];
   participantRows: ParticipantRow[];
   primaryReviewItems: PrimaryReviewItem[];
+  reviewFeedbackItems: ReviewFeedbackItem[];
   escalationReviewItems: EscalationReviewItem[];
   sicknessReviewItems: SicknessReviewItem[];
 }) {
@@ -69,7 +102,7 @@ export function DashboardReviewSection({
   );
 
   return (
-    <section className="fc-section fc-rise" data-fitcal-section id="review">
+    <section className="fc-section fc-rise" id="review">
       <DashboardSectionHeader
         title={labels.review.title}
         actions={
@@ -122,16 +155,44 @@ export function DashboardReviewSection({
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
                   <DashboardStatBox label={labels.review.stats.totalPushups} value={reviewSelfRow.totalPushups} />
                   <DashboardStatBox label={labels.review.stats.totalSitups} value={reviewSelfRow.totalSitups} />
                   <DashboardStatBox label={labels.review.stats.days} value={reviewSelfRow.documentedDays} />
                   <DashboardStatBox label={labels.review.stats.qualification} value={reviewSelfRow.qualificationLabel} />
                   <DashboardStatBox label={labels.review.stats.debt} value={reviewSelfRow.debtLabel ?? labels.participantReview.off} />
+                  <DashboardStatBox label={labels.review.stats.commonReviewer} value={reviewSelfRow.commonReviewerLabel} />
                 </div>
               </CardContent>
             </Card>
           ) : null}
+
+          <div className="grid gap-4">
+            <DashboardSubsectionHeader
+              title={labels.review.feedbackHistoryTitle}
+              actions={<DashboardStatusBadge>{reviewFeedbackItems.length} {labels.review.openCount}</DashboardStatusBadge>}
+            />
+            {reviewFeedbackItems.length ? reviewFeedbackItems.map((item) => (
+              <Card key={item.id}>
+                <CardHeader>
+                  <CardTitle>{item.userLabel} · {item.dateLabel}</CardTitle>
+                  {item.statusLabel ? (
+                    <CardDescription>{item.statusLabel}</CardDescription>
+                  ) : null}
+                  {item.workoutNote ? (
+                    <div className="mt-3 fc-note-box">
+                      <p className="fc-meta-label">{labels.review.workoutNote}</p>
+                      <p className="mt-1 fc-text-secondary">{item.workoutNote}</p>
+                    </div>
+                  ) : null}
+                  <ReviewThreadNotes
+                    notes={item.reviewNotes}
+                    title={labels.review.reviewHistory}
+                  />
+                </CardHeader>
+              </Card>
+            )) : <Card className="p-5 fc-text-muted">{labels.review.noFeedbackHistory}</Card>}
+          </div>
 
           <div className="grid gap-3 md:hidden">
             {reviewParticipants.map((row) => (
@@ -158,6 +219,7 @@ export function DashboardReviewSection({
                     <DashboardStatBox label={labels.review.stats.qualification} value={row.qualificationLabel} />
                     <DashboardStatBox label={labels.review.stats.debt} value={row.debtLabel ?? labels.participantReview.off} />
                     <DashboardStatBox label={labels.review.stats.reviews} value={row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel} />
+                    <DashboardStatBox label={labels.review.stats.commonReviewer} value={row.commonReviewerLabel} />
                   </div>
                 </CardContent>
               </Card>
@@ -178,7 +240,8 @@ export function DashboardReviewSection({
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.qualification}</th>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.days}</th>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.debt}</th>
-                    <th className="pb-3 font-medium">{labels.review.table.reviews}</th>
+                    <th className="pb-3 pr-4 font-medium">{labels.review.table.reviews}</th>
+                    <th className="pb-3 font-medium">{labels.review.table.commonReviewer}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -198,7 +261,8 @@ export function DashboardReviewSection({
                       <td className="py-3 pr-4">{row.qualificationLabel}</td>
                       <td className="py-3 pr-4">{row.documentedDays}</td>
                       <td className="py-3 pr-4">{row.debtLabel ?? labels.participantReview.off}</td>
-                      <td className="py-3">{row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel}</td>
+                      <td className="py-3 pr-4">{row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel}</td>
+                      <td className="py-3">{row.commonReviewerLabel}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -209,16 +273,16 @@ export function DashboardReviewSection({
       ) : (
         <div className="grid gap-6">
           <div className="grid gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="fc-heading text-lg">{labels.review.sicknessTitle}</h3>
-              <DashboardStatusBadge>{sicknessReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>
-            </div>
+            <DashboardSubsectionHeader
+              title={labels.review.sicknessTitle}
+              actions={<DashboardStatusBadge>{sicknessReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>}
+            />
             {sicknessReviewItems.length ? sicknessReviewItems.map((item) => (
               <Card key={item.id}>
                 <CardHeader>
                   <CardTitle>{item.userLabel} · {item.dateLabel}</CardTitle>
                   <CardDescription>{labels.review.sicknessBody}</CardDescription>
-                  {item.notes ? <p className="mt-2 text-sm text-[var(--fc-muted)]">{labels.review.commentPrefix} {item.notes}</p> : null}
+                  {item.notes ? <p className="mt-2 fc-text-muted">{labels.review.commentPrefix} {item.notes}</p> : null}
                 </CardHeader>
                 <CardContent>
                   <form action="/api/challenge/sickness-reviews" className="space-y-4" method="post">
@@ -231,16 +295,16 @@ export function DashboardReviewSection({
                   </form>
                 </CardContent>
               </Card>
-            )) : <Card className="p-5 text-sm text-[var(--fc-muted)]">{labels.review.noSickness}</Card>}
+            )) : <Card className="p-5 fc-text-muted">{labels.review.noSickness}</Card>}
           </div>
 
           <Separator className="bg-[var(--fc-border)]" />
 
           <div className="grid gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="fc-heading text-lg">{labels.review.primaryTitle}</h3>
-              <DashboardStatusBadge>{primaryReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>
-            </div>
+            <DashboardSubsectionHeader
+              title={labels.review.primaryTitle}
+              actions={<DashboardStatusBadge>{primaryReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>}
+            />
             {primaryReviewItems.length ? primaryReviewItems.map((item) => (
               <Card key={item.id}>
                 <CardHeader>
@@ -248,14 +312,17 @@ export function DashboardReviewSection({
                   <CardDescription>
                     {labels.review.claimPrefix} {item.claimedPushups} / {item.claimedSitups} · {labels.review.targetPrefix} {item.targetReps}
                   </CardDescription>
-                  {item.statusLabel ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{item.statusLabel}</p> : null}
+                  {item.statusLabel ? <p className="mt-1 fc-text-muted">{item.statusLabel}</p> : null}
                   {item.workoutNote ? (
-                    <div className="mt-3 rounded-[var(--fc-radius-sm)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-3 py-2">
-                      <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.review.workoutNote}</p>
-                      <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{item.workoutNote}</p>
+                    <div className="mt-3 fc-note-box">
+                      <p className="fc-meta-label">{labels.review.workoutNote}</p>
+                      <p className="mt-1 fc-text-secondary">{item.workoutNote}</p>
                     </div>
                   ) : null}
-                  {item.priorNote ? <p className="mt-2 text-sm text-[var(--fc-muted)]">{item.priorNote}</p> : null}
+                  <ReviewThreadNotes
+                    notes={item.reviewNotes}
+                    title={labels.review.reviewHistory}
+                  />
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-3 md:grid-cols-2">
@@ -278,16 +345,16 @@ export function DashboardReviewSection({
                   </form>
                 </CardContent>
               </Card>
-            )) : <Card className="p-5 text-sm text-[var(--fc-muted)]">{labels.review.noPrimary}</Card>}
+            )) : <Card className="p-5 fc-text-muted">{labels.review.noPrimary}</Card>}
           </div>
 
           <Separator className="bg-[var(--fc-border)]" />
 
           <div className="grid gap-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h3 className="fc-heading text-lg">{labels.review.escalationTitle}</h3>
-              <DashboardStatusBadge>{escalationReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>
-            </div>
+            <DashboardSubsectionHeader
+              title={labels.review.escalationTitle}
+              actions={<DashboardStatusBadge>{escalationReviewItems.length} {labels.review.openCount}</DashboardStatusBadge>}
+            />
             {escalationReviewItems.length ? escalationReviewItems.map((item) => (
               <Card key={item.id}>
                 <CardHeader>
@@ -296,13 +363,18 @@ export function DashboardReviewSection({
                     {labels.review.claimPrefix} {item.claimedPushups} / {item.claimedSitups} · {labels.review.targetPrefix} {item.targetReps}
                   </CardDescription>
                   {item.workoutNote ? (
-                    <div className="mt-3 rounded-[var(--fc-radius-sm)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-3 py-2">
-                      <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">{labels.review.workoutNote}</p>
-                      <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">{item.workoutNote}</p>
+                    <div className="mt-3 fc-note-box">
+                      <p className="fc-meta-label">{labels.review.workoutNote}</p>
+                      <p className="mt-1 fc-text-secondary">{item.workoutNote}</p>
                     </div>
                   ) : null}
-                  <p className="mt-2 text-sm text-[var(--fc-muted)]">{item.reviewerLabel} {labels.review.countsLabel} {item.reviewedPushups} / {item.reviewedSitups}.</p>
-                  {item.reviewComment ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.review.commentPrefix} {item.reviewComment}</p> : null}
+                  {item.reviewSummaryLabel ? (
+                    <p className="mt-2 fc-text-muted">{item.reviewSummaryLabel}</p>
+                  ) : null}
+                  <ReviewThreadNotes
+                    notes={item.reviewNotes}
+                    title={labels.review.reviewHistory}
+                  />
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-3 md:grid-cols-2">
@@ -321,7 +393,7 @@ export function DashboardReviewSection({
                   </form>
                 </CardContent>
               </Card>
-            )) : <Card className="p-5 text-sm text-[var(--fc-muted)]">{labels.review.noEscalation}</Card>}
+            )) : <Card className="p-5 fc-text-muted">{labels.review.noEscalation}</Card>}
           </div>
         </div>
       )}

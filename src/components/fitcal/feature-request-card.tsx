@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AppDictionary } from "@/i18n";
+import { DashboardCardTitle } from "@/components/fitcal/dashboard/dashboard-primitives";
 import { Button } from "@/components/ui/button";
 
 export function FeatureRequestCard({
@@ -22,8 +23,8 @@ export function FeatureRequestCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         {compact ? null : (
           <div>
-            <h2 className="fc-heading text-lg">{labels.title}</h2>
-            <p className="mt-1 text-sm text-[var(--fc-muted)]">
+            <DashboardCardTitle title={labels.title} />
+            <p className="mt-1 fc-text-muted">
               {enabled ? labels.description : labels.unavailable}
             </p>
           </div>
@@ -40,7 +41,7 @@ export function FeatureRequestCard({
       </div>
 
       {compact && !enabled ? (
-        <p className="mt-2 text-sm text-[var(--fc-muted)]">{labels.unavailable}</p>
+        <p className="mt-2 fc-text-muted">{labels.unavailable}</p>
       ) : null}
 
       {enabled && isOpen ? (

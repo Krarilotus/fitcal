@@ -23,7 +23,7 @@ export function RegisterPlanSelector({ labels }: { labels: RegisterLabels }) {
         value={mode === "light" ? "true" : "false"}
       />
 
-      <label className="flex items-start gap-3 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3 text-sm text-[var(--fc-ink)]">
+      <label className="flex items-start gap-3 fc-info-box text-sm text-[var(--fc-ink)]">
         <input
           checked={mode === "standard"}
           className="mt-1 h-4 w-4 accent-[var(--fc-accent)]"
@@ -38,7 +38,7 @@ export function RegisterPlanSelector({ labels }: { labels: RegisterLabels }) {
         </span>
       </label>
 
-      <label className="flex items-start gap-3 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3 text-sm text-[var(--fc-ink)]">
+      <label className="flex items-start gap-3 fc-info-box text-sm text-[var(--fc-ink)]">
         <input
           checked={mode === "student"}
           className="mt-1 h-4 w-4 accent-[var(--fc-accent)]"
@@ -53,7 +53,7 @@ export function RegisterPlanSelector({ labels }: { labels: RegisterLabels }) {
         </span>
       </label>
 
-      <label className="flex items-start gap-3 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3 text-sm text-[var(--fc-ink)]">
+      <label className="flex items-start gap-3 fc-info-box text-sm text-[var(--fc-ink)]">
         <input
           checked={mode === "light"}
           className="mt-1 h-4 w-4 accent-[var(--fc-accent)]"

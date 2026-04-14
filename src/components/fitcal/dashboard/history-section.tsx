@@ -81,7 +81,7 @@ export function DashboardHistorySection({
   }
 
   return (
-    <section className="fc-section fc-rise" data-fitcal-section id="timeline">
+    <section className="fc-section fc-rise" id="timeline">
       <DashboardSectionHeader title={labels.timeline.title} />
       {selectedTimelineEntry ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
@@ -99,7 +99,7 @@ export function DashboardHistorySection({
                       <p className="text-sm font-semibold">{day.dateLabel}</p>
                       <DashboardStatusBadge tone="warm">{day.statusLabel}</DashboardStatusBadge>
                     </div>
-                    <p className="mt-2 text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+                    <p className="mt-2 fc-meta-label">
                       {labels.timeline.recentTitle}
                     </p>
                     {day.pushupTotal != null && day.situpTotal != null ? (
@@ -107,7 +107,7 @@ export function DashboardHistorySection({
                         {day.pushupTotal} / {day.situpTotal}
                       </p>
                     ) : (
-                      <p className="mt-1 text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>
+                      <p className="mt-1 fc-text-muted">{labels.timeline.noEntry}</p>
                     )}
                   </Card>
                 </button>
@@ -116,7 +116,7 @@ export function DashboardHistorySection({
 
             <Card className="min-w-0 overflow-hidden">
               <CardHeader className="pb-3">
-                <CardDescription className="text-xs uppercase tracking-[0.18em]">
+                <CardDescription className="fc-meta-label">
                   {labels.timeline.catalogTitle}
                 </CardDescription>
               </CardHeader>
@@ -170,8 +170,8 @@ export function DashboardHistorySection({
             <CardContent className="space-y-4">
               {selectedTimelineEntry.pushupTotal != null &&
               selectedTimelineEntry.situpTotal != null ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
-                  <p className="text-sm font-medium text-[var(--fc-ink)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 fc-info-box">
+                  <p className="fc-text-emphasis">
                     {compactSetSummary}
                     {compactCountSummary ? (
                       <span className="text-[var(--fc-muted)]"> · {compactCountSummary}</span>
@@ -207,7 +207,7 @@ export function DashboardHistorySection({
                   ) : null}
                 </div>
               ) : (
-                <p className="text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</p>
+                <p className="fc-text-muted">{labels.timeline.noEntry}</p>
               )}
 
               {((selectedTimelineEntry.pushupOverTarget ?? 0) > 0 ||
@@ -226,36 +226,52 @@ export function DashboardHistorySection({
                 </div>
               ) : null}
 
-              {(selectedTimelineEntry.notes || selectedTimelineEntry.reviewNotes.length > 0) ? (
+              {(selectedTimelineEntry.notes ||
+                selectedTimelineEntry.reviewNotes.length > 0 ||
+                selectedTimelineEntry.reviewerSummaryLabel) ? (
                 <Separator className="bg-[var(--fc-border)]" />
               ) : null}
 
               {selectedTimelineEntry.notes ? (
-                <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+                <div className="fc-info-box">
+                  <p className="fc-meta-label">
                     {labels.timeline.workoutNote}
                   </p>
-                  <p className="mt-2 text-sm text-[var(--fc-ink-secondary)]">{selectedTimelineEntry.notes}</p>
+                  <p className="mt-2 fc-text-secondary">{selectedTimelineEntry.notes}</p>
                 </div>
               ) : null}
 
               {selectedTimelineEntry.reviewNotes.length > 0 ? (
-                <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-bg-raised)] px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--fc-muted)]">
+                <div className="fc-info-box">
+                  <p className="fc-meta-label">
                     {labels.timeline.reviewFeedback}
                   </p>
+                  {selectedTimelineEntry.reviewerSummaryLabel ? (
+                    <p className="mt-2 fc-text-emphasis">
+                      {labels.timeline.reviewedBySummary} {selectedTimelineEntry.reviewerSummaryLabel}
+                    </p>
+                  ) : null}
                   <div className="mt-2 grid gap-3">
                     {selectedTimelineEntry.reviewNotes.map((reviewNote) => (
                       <div key={reviewNote.id}>
-                        <p className="text-sm font-medium text-[var(--fc-ink)]">
-                          {labels.timeline.reviewedBy} {reviewNote.reviewerLabel}
+                        <p className="fc-text-emphasis">
+                          {reviewNote.stageLabel} · {labels.timeline.reviewedBy} {reviewNote.reviewerLabel}
                         </p>
-                        <p className="mt-1 text-sm text-[var(--fc-ink-secondary)]">
+                        <p className="mt-1 fc-text-secondary">
                           {reviewNote.note}
                         </p>
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : selectedTimelineEntry.reviewerSummaryLabel ? (
+                <div className="fc-info-box">
+                  <p className="fc-meta-label">
+                    {labels.timeline.reviewFeedback}
+                  </p>
+                  <p className="mt-2 fc-text-emphasis">
+                    {labels.timeline.reviewedBySummary} {selectedTimelineEntry.reviewerSummaryLabel}
+                  </p>
                 </div>
               ) : null}
 
@@ -343,7 +359,7 @@ export function DashboardHistorySection({
           </Card>
         </div>
       ) : (
-        <Card className="p-5 text-sm text-[var(--fc-muted)]">{labels.timeline.noEntry}</Card>
+        <Card className="p-5 fc-text-muted">{labels.timeline.noEntry}</Card>
       )}
     </section>
   );

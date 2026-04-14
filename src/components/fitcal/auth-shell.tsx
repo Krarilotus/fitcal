@@ -25,7 +25,7 @@ export function AuthShell({
     <div className="fc-shell min-h-screen px-4 py-6 text-[var(--fc-ink)] sm:px-6 sm:py-10">
       <div className="fc-noise pointer-events-none absolute inset-0 -z-20" />
       <div className="mx-auto w-full max-w-2xl">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--fc-muted)] fc-rise">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 fc-text-muted fc-rise">
           <Link href="/" className="inline-flex items-center gap-2 font-medium transition-colors hover:text-[var(--fc-ink)]">
             {backHomeLabel}
           </Link>
@@ -41,7 +41,7 @@ export function AuthShell({
         <div className="mt-8 fc-rise fc-rise-delay-2">
           <div className="space-y-5">{children}</div>
           <Separator className="mt-8 bg-[var(--fc-border)]" />
-          <div className="pt-4 text-sm text-[var(--fc-muted)] [&_a]:font-medium [&_a]:text-[var(--fc-accent-2)] [&_a]:transition-colors hover:[&_a]:text-[var(--fc-accent)]">
+          <div className="pt-4 fc-text-muted [&_a]:font-medium [&_a]:text-[var(--fc-accent-2)] [&_a]:transition-colors hover:[&_a]:text-[var(--fc-accent)]">
             {footer}
           </div>
         </div>

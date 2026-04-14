@@ -49,6 +49,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     participantRows,
     pendingApprovals,
     performancePoints,
+    reviewFeedbackItems,
     primaryReviewItems,
     profile,
     sicknessReviewItems,
@@ -69,7 +70,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <h1 className="fc-display text-[clamp(1.5rem,3vw,2.25rem)]">
               {user.name || user.email}
             </h1>
-            <p className="mt-1 text-sm text-[var(--fc-muted)]">
+            <p className="mt-1 fc-text-muted">
               {CHALLENGE_START_DATE} - {CHALLENGE_END_DATE}
             </p>
           </div>
@@ -109,6 +110,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           pendingApprovals={pendingApprovals}
           participantRows={participantRows}
           performancePoints={performancePoints}
+          reviewFeedbackItems={reviewFeedbackItems}
           primaryReviewItems={primaryReviewItems}
           profile={profile}
           sicknessReviewItems={sicknessReviewItems}

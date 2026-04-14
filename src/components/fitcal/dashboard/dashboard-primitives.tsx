@@ -16,7 +16,7 @@ export function DashboardSectionHeader({
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h2 className="fc-heading text-xl">{title}</h2>
-        {subtitle ? <p className="mt-1 text-sm text-[var(--fc-muted)]">{subtitle}</p> : null}
+        {subtitle ? <p className="mt-1 fc-text-muted">{subtitle}</p> : null}
       </div>
       {actions}
     </div>
@@ -29,6 +29,21 @@ export function DashboardCardTitle({
   title: string;
 }) {
   return <h3 className="fc-heading text-lg">{title}</h3>;
+}
+
+export function DashboardSubsectionHeader({
+  title,
+  actions,
+}: {
+  title: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <h3 className="fc-heading text-lg">{title}</h3>
+      {actions}
+    </div>
+  );
 }
 
 export function DashboardStatBox({

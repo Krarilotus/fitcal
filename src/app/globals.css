@@ -41,9 +41,6 @@
   --fc-scrollbar-thumb-hover: #52525b;
   --fc-scrollbar-track: #18181b;
 
-  --fc-panel-shadow: 0 1px 3px rgba(0,0,0,0.3);
-  --fc-panel-shadow-lg: 0 4px 16px rgba(0,0,0,0.25);
-
   --fc-radius: 8px;
   --fc-radius-sm: 6px;
   --fc-radius-md: 10px;
@@ -152,6 +149,46 @@ button, input, textarea, select {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--fc-muted);
+}
+
+/* ── Semantic text ── */
+.fc-text-muted {
+  font-size: 0.875rem;
+  color: var(--fc-muted);
+}
+
+.fc-text-emphasis {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fc-ink);
+}
+
+.fc-text-secondary {
+  font-size: 0.875rem;
+  color: var(--fc-ink-secondary);
+}
+
+.fc-meta-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--fc-muted);
+}
+
+/* ── Info boxes ── */
+.fc-info-box {
+  border-radius: var(--fc-radius);
+  border: 1px solid var(--fc-border);
+  background: var(--fc-bg-raised);
+  padding: 0.75rem 1rem;
+}
+
+.fc-note-box {
+  border-radius: var(--fc-radius-sm);
+  border: 1px solid var(--fc-border);
+  background: var(--fc-bg-raised);
+  padding: 0.5rem 0.75rem;
 }
 
 /* ── Panels ── */
@@ -401,18 +438,26 @@ button, input, textarea, select {
 .fc-panel-stage {
   position: relative;
   overflow: clip;
+  isolation: isolate;
 }
 
-.fc-panel-shell {
+.fc-panel-view {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   min-width: 0;
+  pointer-events: none;
 }
 
-.fc-panel-enter-forward {
-  animation: fc-panel-enter-forward 420ms cubic-bezier(0.22, 1, 0.36, 1);
+.fc-panel-view.is-active {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
-.fc-panel-enter-backward {
-  animation: fc-panel-enter-backward 420ms cubic-bezier(0.22, 1, 0.36, 1);
+.fc-panel-view.is-transition-target {
+  z-index: 2;
 }
 
 /* ── Timeline ── */
@@ -475,15 +520,6 @@ button, input, textarea, select {
   border-radius: 50%;
   background: var(--chip-color, var(--fc-accent));
 }
-
-/* ── Upload slab ── */
-.fc-upload-slab {
-  padding: 1.25rem 0;
-  border-bottom: 1px solid var(--fc-border);
-}
-
-.fc-upload-slab:first-child { padding-top: 0; }
-.fc-upload-slab:last-child { border-bottom: none; padding-bottom: 0; }
 
 /* ── Video rows ── */
 .fc-video-row {
@@ -620,29 +656,7 @@ button, input, textarea, select {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes fc-panel-enter-forward {
-  0% {
-    opacity: 0;
-    transform: translate3d(2.5rem, 0, 0);
-  }
 
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes fc-panel-enter-backward {
-  0% {
-    opacity: 0;
-    transform: translate3d(-2.5rem, 0, 0);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
 
 .fc-count-animated {
   animation: fc-pop 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms both;
@@ -705,14 +719,6 @@ button, input, textarea, select {
 }
 .fc-details[open] summary::after { transform: rotate(90deg); }
 
-/* ── Auth aside list ── */
-.fc-auth-aside-list {
-  display: grid;
-  gap: 0.3rem;
-  color: var(--fc-muted);
-  font-size: 0.85rem;
-}
-
 /* ── Grid helpers ── */
 .fc-grid-2 { display: grid; gap: 0.75rem; grid-template-columns: repeat(2, 1fr); }
 .fc-grid-3 { display: grid; gap: 0.75rem; grid-template-columns: repeat(3, 1fr); }
@@ -720,7 +726,7 @@ button, input, textarea, select {
 /* ── Dashboard sections ── */
 .fc-section {
   display: grid;
-  gap: 1rem;
+  gap: 1.5rem;
   scroll-margin-top: 5rem;
 }
 
@@ -771,11 +777,10 @@ button, input, textarea, select {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fc-panel-enter-forward,
-  .fc-panel-enter-backward,
   .fc-rise,
   .fc-count-animated {
     animation: none !important;
+    transition: none !important;
     transform: none !important;
     opacity: 1 !important;
   }

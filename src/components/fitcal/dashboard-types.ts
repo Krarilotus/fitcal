@@ -3,6 +3,7 @@ import type { DayCompletionState } from "@/lib/challenge";
 export type ReviewFeedbackNote = {
   id: string;
   reviewerLabel: string;
+  stageLabel: string;
   note: string;
 };
 
@@ -29,6 +30,7 @@ export type OpenDay = {
   situpSet2: number;
   notes: string;
   reviewStatusLabel: string | null;
+  reviewerSummaryLabel: string | null;
   reviewNotes: ReviewFeedbackNote[];
   videos: TimelineVideo[];
 };
@@ -51,6 +53,7 @@ export type TimelineEntry = {
   pushupOverTarget: number | null;
   situpOverTarget: number | null;
   notes: string | null;
+  reviewerSummaryLabel: string | null;
   reviewNotes: ReviewFeedbackNote[];
   deletingLastVideoRemovesClaim: boolean;
   isEditableClaim: boolean;
@@ -129,6 +132,7 @@ export type ParticipantRow = {
   pendingReviewCount: number;
   debtLabel: string | null;
   reviewLabel: string;
+  commonReviewerLabel: string;
 };
 
 export type ReviewVideo = {
@@ -145,8 +149,8 @@ export type PrimaryReviewItem = {
   claimedPushups: number;
   claimedSitups: number;
   statusLabel: string | null;
-  priorNote: string | null;
   workoutNote: string | null;
+  reviewNotes: ReviewFeedbackNote[];
   videos: ReviewVideo[];
 };
 
@@ -160,10 +164,20 @@ export type EscalationReviewItem = {
   claimedSitups: number;
   reviewedPushups: number;
   reviewedSitups: number;
-  reviewComment: string | null;
-  reviewerLabel: string;
   workoutNote: string | null;
+  reviewNotes: ReviewFeedbackNote[];
+  reviewSummaryLabel: string | null;
   videos: ReviewVideo[];
+};
+
+export type ReviewFeedbackItem = {
+  id: string;
+  challengeDate: string;
+  dateLabel: string;
+  userLabel: string;
+  statusLabel: string | null;
+  workoutNote: string | null;
+  reviewNotes: ReviewFeedbackNote[];
 };
 
 export type SicknessReviewItem = {

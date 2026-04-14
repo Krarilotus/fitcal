@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAsReviewer } from "../helpers/auth";
+import { loginAsParticipant, loginAsReviewer } from "../helpers/auth";
 import { disconnectTestDb, prisma } from "../helpers/db";
 import { resetE2EState } from "../helpers/reset";
 
@@ -17,17 +17,19 @@ function getTimelineDateLabel(challengeDate: string) {
 
 test("dashboard invite and approval areas work in their new sections", async ({ page }) => {
   await loginAsReviewer(page);
+  const profileSection = page.locator("#profile");
+  const overviewSection = page.locator("#overview");
 
   await page.getByRole("button", { name: "Profil" }).click();
-  await page.getByLabel("E-Mail der Person").fill("invitee@fitcal.test");
+  await profileSection.getByLabel("E-Mail der Person").fill("invitee@fitcal.test");
   await page.getByRole("button", { name: "Einladung senden" }).click();
   await expect(page).toHaveURL(/\/dashboard\?success=/);
   await expect(page.getByText(/Einladung verschickt/i)).toBeVisible();
   await page.getByRole("button", { name: "Profil" }).click();
-  await expect(page.getByText("invitee@fitcal.test")).toBeVisible();
+  await expect(profileSection.getByText("invitee@fitcal.test")).toBeVisible();
 
   await page.getByRole("button", { name: "Übersicht" }).click();
-  await page.getByRole("button", { name: "Annehmen" }).first().click();
+  await overviewSection.getByRole("button", { name: "Annehmen" }).first().click();
   await expect(page.getByText(/Freigabe gespeichert/i)).toBeVisible();
 
   const approvedUser = await prisma.user.findUnique({
@@ -36,13 +38,62 @@ test("dashboard invite and approval areas work in their new sections", async ({ 
   expect(approvedUser?.registrationStatus).toBe("APPROVED");
 
   await page.getByRole("button", { name: "Übersicht" }).click();
-  await page.getByRole("button", { name: "Ablehnen" }).first().click();
+  await overviewSection.getByRole("button", { name: "Ablehnen" }).first().click();
   await expect(page.getByText(/Freigabe gespeichert/i)).toBeVisible();
 
   const rejectedUser = await prisma.user.findUnique({
     where: { email: "reject-me@fitcal.test" },
   });
   expect(rejectedUser?.registrationStatus).toBe("REJECTED");
+});
+
+test("upload draft state persists while switching dashboard panels", async ({ page }) => {
+  await loginAsReviewer(page);
+  await page.getByRole("button", { name: "Uploads" }).click();
+
+  const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
+  const pushupSet1 = uploadForm.locator('input[name="pushupSet1"]');
+  const pushupSet2 = uploadForm.locator('input[name="pushupSet2"]');
+  const situpSet1 = uploadForm.locator('input[name="situpSet1"]');
+  const situpSet2 = uploadForm.locator('input[name="situpSet2"]');
+  const notes = uploadForm.locator('textarea[name="notes"]');
+  const videos = uploadForm.locator('input[name="videos"]');
+
+  await pushupSet1.fill("14");
+  await pushupSet2.fill("13");
+  await situpSet1.fill("12");
+  await situpSet2.fill("11");
+  await notes.fill("Draft upload state should survive panel switches.");
+  await videos.setInputFiles({
+    name: "draft-proof.mp4",
+    mimeType: "video/mp4",
+    buffer: Buffer.from("draft fake mp4"),
+  });
+
+  await expect
+    .poll(() =>
+      videos.evaluate(
+        (node) => (node as HTMLInputElement).files?.[0]?.name ?? null,
+      ),
+    )
+    .toBe("draft-proof.mp4");
+
+  await page.getByRole("button", { name: "Profil" }).click();
+  await expect(page.locator("#profile")).toBeVisible();
+  await page.getByRole("button", { name: "Uploads" }).click();
+
+  await expect(pushupSet1).toHaveValue("14");
+  await expect(pushupSet2).toHaveValue("13");
+  await expect(situpSet1).toHaveValue("12");
+  await expect(situpSet2).toHaveValue("11");
+  await expect(notes).toHaveValue("Draft upload state should survive panel switches.");
+  await expect
+    .poll(() =>
+      videos.evaluate(
+        (node) => (node as HTMLInputElement).files?.[0]?.name ?? null,
+      ),
+    )
+    .toBe("draft-proof.mp4");
 });
 
 test("review area shows participant progress and can approve a workout", async ({ page }) => {
@@ -107,6 +158,128 @@ test("review area can accept a sickness request", async ({ page }) => {
     },
   });
   expect(sicknessSubmission?.status).toBe("SICK_VERIFIED");
+});
+
+test("review notes are visible for uploaders and reviewers across primary and arbitration stages", async ({
+  page,
+}) => {
+  const participant = await prisma.user.findUniqueOrThrow({
+    where: { email: "participant@fitcal.test" },
+  });
+  const reviewer = await prisma.user.findUniqueOrThrow({
+    where: { email: "reviewer@fitcal.test" },
+  });
+  const submission = await prisma.dailySubmission.create({
+    data: {
+      userId: participant.id,
+      challengeDate: "2026-04-08",
+      status: "COMPLETED",
+      reviewStatus: "PENDING",
+      pushupSets: "[9,9]",
+      situpSets: "[9,9]",
+      notes: "Ursprüngliche Upload-Notiz",
+      submittedAt: new Date("2026-04-08T12:00:00.000Z"),
+    },
+  });
+
+  await prisma.dailyVideo.create({
+    data: {
+      dailySubmissionId: submission.id,
+      originalName: "thread-proof.mp4",
+      storedName: "thread-proof.mp4",
+      storedPath: "data/e2e-uploads/thread-proof.mp4",
+      mimeType: "video/mp4",
+      sizeBytes: 2048,
+      orderIndex: 0,
+    },
+  });
+
+  const coReviewer = await prisma.user.create({
+    data: {
+      email: "co-reviewer@fitcal.test",
+      passwordHash: reviewer.passwordHash,
+      name: "Klara Co",
+      registrationStatus: "APPROVED",
+      registrationApprovedAt: new Date(),
+    },
+  });
+
+  const primaryReview = await prisma.workoutReview.create({
+    data: {
+      dailySubmissionId: submission.id,
+      reviewerUserId: reviewer.id,
+      stage: "PRIMARY",
+      decision: "REDUCE",
+      countedPushups: 17,
+      countedSitups: 16,
+      notes: "Erstreview: bitte sauberer zählen.",
+    },
+  });
+
+  await prisma.workoutReview.create({
+    data: {
+      dailySubmissionId: submission.id,
+      reviewerUserId: coReviewer.id,
+      stage: "ARBITRATION",
+      decision: "REJECT_REVIEW",
+      countedPushups: 17,
+      countedSitups: 16,
+      notes: "Prüf-Review: bitte neu einreichen.",
+      basedOnReviewId: primaryReview.id,
+    },
+  });
+
+  await prisma.dailySubmission.update({
+    where: { id: submission.id },
+    data: {
+      reviewStatus: "REVISION_REQUESTED",
+      verifiedPushupTotal: null,
+      verifiedSitupTotal: null,
+      reviewedAt: null,
+    },
+  });
+
+  await loginAsParticipant(page);
+  await page.getByRole("button", { name: "Timeline" }).click();
+  await page
+    .locator("#timeline")
+    .getByRole("button")
+    .filter({ hasText: "08.04." })
+    .first()
+    .click();
+  await expect(page.locator("#timeline")).toContainText(
+    "Erstreview · Review von Rita Reviewer",
+  );
+  await expect(page.locator("#timeline")).toContainText(
+    "Reviewt von Rita Reviewer, Klara Co",
+  );
+  await expect(page.locator("#timeline")).toContainText(
+    "Erstreview: bitte sauberer zählen.",
+  );
+  await expect(page.locator("#timeline")).toContainText(
+    "Prüf-Review · Review von Klara Co",
+  );
+  await expect(page.locator("#timeline")).toContainText(
+    "Prüf-Review: bitte neu einreichen.",
+  );
+
+  await page.request.post("/api/auth/logout");
+  await loginAsReviewer(page);
+  await page.getByRole("button", { name: "Review" }).click();
+  await expect(page.locator("#review")).toContainText(
+    "Rückmeldungen zu deinen Reviews",
+  );
+  await expect(page.locator("#review")).toContainText("Paul Participant · 08.04.");
+  await expect(page.locator("#review")).toContainText(
+    "Erstreview · Rita Reviewer",
+  );
+  await expect(page.locator("#review")).toContainText(
+    "Prüf-Review · Klara Co",
+  );
+  await expect(page.locator("#review")).toContainText(
+    "Prüf-Review: bitte neu einreichen.",
+  );
+  await expect(page.locator("#review")).toContainText("Klara Co, Rita Reviewer · 1x");
 });
 
 test("dashboard profile and measurement entries can be saved", async ({ page }) => {
