@@ -49,6 +49,10 @@ type PanelTransitionDirection = "forward" | "backward";
 
 /* ── Scroll-driven crossfade configuration ── */
 const FADE_SCROLL_DISTANCE = 1500;
+/** Friction coefficient for touch momentum (px/ms² deceleration). */
+const TOUCH_FRICTION = 0.003;
+/** Minimum velocity (px/ms) below which momentum stops. */
+const TOUCH_MIN_VELOCITY = 0.05;
 
 function normalizeWheelDelta(event: WheelEvent): number {
   if (event.deltaMode === 1) return event.deltaY * 32;
@@ -169,6 +173,9 @@ export function DashboardTabs({
   const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const uploadPrimaryInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const touchLastYRef = useRef<number | null>(null);
+  const touchLastTimeRef = useRef<number>(0);
+  const touchVelocityRef = useRef(0);
+  const momentumRafRef = useRef<number | null>(null);
   const activeTabRef = useRef(activeTab);
   const fadeProgressRef = useRef(0);
   const fadeDirectionRef = useRef<PanelTransitionDirection | null>(null);
@@ -426,11 +433,17 @@ export function DashboardTabs({
     }
 
     function handleTouchStart(event: TouchEvent) {
+      if (momentumRafRef.current !== null) {
+        cancelAnimationFrame(momentumRafRef.current);
+        momentumRafRef.current = null;
+      }
       if (event.touches.length !== 1 || shouldIgnorePanelScrollGesture(event.target)) {
         touchLastYRef.current = null;
         return;
       }
       touchLastYRef.current = event.touches[0]?.clientY ?? null;
+      touchLastTimeRef.current = performance.now();
+      touchVelocityRef.current = 0;
     }
 
     function handleTouchMove(event: TouchEvent) {
@@ -438,8 +451,17 @@ export function DashboardTabs({
       const currentY = event.touches[0]?.clientY;
       if (typeof currentY !== "number") return;
 
+      const now = performance.now();
+      const dt = now - touchLastTimeRef.current;
       const delta = touchLastYRef.current - currentY;
       touchLastYRef.current = currentY;
+      touchLastTimeRef.current = now;
+
+      // Exponential moving average for velocity (px/ms), positive = scrolling down
+      if (dt > 0) {
+        const instantVelocity = delta / dt;
+        touchVelocityRef.current = 0.7 * touchVelocityRef.current + 0.3 * instantVelocity;
+      }
 
       const isFading = fadeDirectionRef.current !== null;
 
@@ -463,7 +485,42 @@ export function DashboardTabs({
     }
 
     function handleTouchEnd() {
+      const velocity = touchVelocityRef.current;
       touchLastYRef.current = null;
+      touchVelocityRef.current = 0;
+
+      // If fading, simulate momentum continuation
+      if (fadeDirectionRef.current !== null && Math.abs(velocity) > TOUCH_MIN_VELOCITY) {
+        let v = velocity;
+        let lastT = performance.now();
+
+        function momentumTick() {
+          const now = performance.now();
+          const dt = now - lastT;
+          lastT = now;
+
+          // Decelerate
+          const sign = v > 0 ? 1 : -1;
+          v = sign * Math.max(0, Math.abs(v) - TOUCH_FRICTION * dt);
+
+          if (Math.abs(v) < TOUCH_MIN_VELOCITY || fadeDirectionRef.current === null) {
+            momentumRafRef.current = null;
+            return;
+          }
+
+          const delta = v * dt;
+          advanceScrollTransition(delta);
+
+          // advanceScrollTransition may have committed/cancelled, check again
+          if (fadeDirectionRef.current !== null) {
+            momentumRafRef.current = requestAnimationFrame(momentumTick);
+          } else {
+            momentumRafRef.current = null;
+          }
+        }
+
+        momentumRafRef.current = requestAnimationFrame(momentumTick);
+      }
     }
 
     window.addEventListener("wheel", handleWheel, { passive: false });
@@ -476,6 +533,10 @@ export function DashboardTabs({
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
+      if (momentumRafRef.current !== null) {
+        cancelAnimationFrame(momentumRafRef.current);
+        momentumRafRef.current = null;
+      }
     };
   }, [tabs]);
 
