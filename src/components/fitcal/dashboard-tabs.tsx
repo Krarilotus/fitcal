@@ -50,22 +50,12 @@ type PanelTransitionDirection = "forward" | "backward";
 /* ── Scroll-driven crossfade configuration ── */
 
 /**
- * Height of the invisible sentinel zone at the bottom of each active panel.
- * Scrolling into this zone drives the forward tab transition.  Native scroll
- * momentum is fully preserved because no `preventDefault` is needed — the
- * browser simply scrolls through this extra space while the scroll handler
- * maps the position to fade progress.
+ * Height of the invisible sentinel zones at the top and bottom of each panel.
+ * Scrolling into the bottom sentinel drives forward transitions;
+ * scrolling into the top sentinel drives backward transitions.
+ * Native scroll momentum is fully preserved — no preventDefault needed.
  */
 const SCROLL_SENTINEL_HEIGHT = 400;
-
-/** Accumulated-delta distance for **backward** (wheel / touch) transitions. */
-const FADE_SCROLL_DISTANCE = 1500;
-
-function normalizeWheelDelta(event: WheelEvent): number {
-  if (event.deltaMode === 1) return event.deltaY * 32;
-  if (event.deltaMode === 2) return event.deltaY * window.innerHeight;
-  return event.deltaY;
-}
 
 function outgoingOpacity(p: number) {
   return p <= 0 ? 1 : p >= 0.35 ? 0 : 1 - p / 0.35;
@@ -179,7 +169,6 @@ export function DashboardTabs({
   const uploadSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const uploadPrimaryInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const touchLastYRef = useRef<number | null>(null);
   const activeTabRef = useRef(activeTab);
   const fadeProgressRef = useRef(0);
   const fadeDirectionRef = useRef<PanelTransitionDirection | null>(null);
@@ -210,11 +199,17 @@ export function DashboardTabs({
     setActiveTab(nextTab);
 
     if (!options?.preserveScroll) {
-      window.scrollTo({ top: 0, behavior: "auto" });
+      /* Scroll to just past the top sentinel so content starts at its
+         natural position and the backward sentinel is scrollable. */
+      const nextIdx = tabs.findIndex((t) => t.key === nextTab);
+      const hasPrev = nextIdx > 0;
+      window.scrollTo({ top: hasPrev ? SCROLL_SENTINEL_HEIGHT : 0, behavior: "auto" });
     }
 
     requestAnimationFrame(() => {
-      scrollCommitGuardRef.current = false;
+      requestAnimationFrame(() => {
+        scrollCommitGuardRef.current = false;
+      });
     });
   }
 
@@ -345,6 +340,8 @@ export function DashboardTabs({
 
       scrollCommitGuardRef.current = true;
       activeTabRef.current = target;
+
+      const dir = fadeDirectionRef.current;
       fadeDirectionRef.current = null;
       transitionTargetRef.current = null;
       fadeProgressRef.current = 0;
@@ -352,11 +349,23 @@ export function DashboardTabs({
       setTransitionTarget(null);
       setFadeProgress(0);
 
-      /* After React renders the new panel we need to place the scroll so the
-         user doesn't land inside the new panel's bottom sentinel.  Using two
-         rAF frames ensures the DOM has been updated. */
+      /* Position scroll so the new panel's content starts at its natural
+         top — just past the top sentinel (if present).  Two rAF frames
+         ensure the DOM has been updated with the new sentinel layout. */
       requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: "auto" });
+        const targetIdx = tabs.findIndex((t) => t.key === target);
+        const newHasPrev = targetIdx > 0;
+        if (dir === "forward") {
+          window.scrollTo({ top: newHasPrev ? SCROLL_SENTINEL_HEIGHT : 0, behavior: "auto" });
+        } else {
+          /* Backward commit: land at the bottom of content, just above the
+             bottom sentinel, so the page doesn't jump to the top. */
+          const docHeight = document.documentElement.scrollHeight;
+          const viewHeight = window.innerHeight;
+          const maxScroll = docHeight - viewHeight;
+          const bottomSentinelStart = maxScroll - SCROLL_SENTINEL_HEIGHT;
+          window.scrollTo({ top: Math.max(0, bottomSentinelStart), behavior: "auto" });
+        }
         requestAnimationFrame(() => {
           scrollCommitGuardRef.current = false;
         });
@@ -370,8 +379,6 @@ export function DashboardTabs({
       setTransitionTarget(null);
       setFadeProgress(0);
     }
-
-    /* ── Forward transitions: scroll-sentinel-based ── */
 
     function getNeighborTab(direction: PanelTransitionDirection): TabKey | null {
       const idx = tabs.findIndex((t) => t.key === activeTabRef.current);
@@ -389,27 +396,64 @@ export function DashboardTabs({
       const viewHeight = window.innerHeight;
       const maxScroll = docHeight - viewHeight;
 
-      /* Only activate when the active tab has a next neighbor (sentinel exists). */
       const activeIdx = tabs.findIndex((t) => t.key === activeTabRef.current);
+      const hasPrev = activeIdx > 0;
       const hasNext = activeIdx >= 0 && activeIdx < tabs.length - 1;
 
+      /* ── Top sentinel: backward transition ── */
+      if (hasPrev && scrollY < SCROLL_SENTINEL_HEIGHT) {
+        /* Progress 1 = fully scrolled to top (scrollY=0), 0 = at sentinel edge */
+        const backwardProgress = Math.min(1, 1 - scrollY / SCROLL_SENTINEL_HEIGHT);
+
+        if (fadeDirectionRef.current === "forward") cancelTransition();
+
+        if (!fadeDirectionRef.current && backwardProgress > 0) {
+          const prev = getNeighborTab("backward");
+          if (prev) {
+            fadeDirectionRef.current = "backward";
+            transitionTargetRef.current = prev;
+            setTransitionTarget(prev);
+          }
+        }
+
+        if (fadeDirectionRef.current === "backward") {
+          fadeProgressRef.current = backwardProgress;
+          if (!scrollRafPending) {
+            scrollRafPending = true;
+            requestAnimationFrame(() => {
+              scrollRafPending = false;
+              if (fadeProgressRef.current >= 1) {
+                commitTransition();
+              } else {
+                setFadeProgress(fadeProgressRef.current);
+              }
+            });
+          }
+          return;
+        }
+      } else if (fadeDirectionRef.current === "backward") {
+        /* Scrolled back out of the top sentinel — cancel backward fade. */
+        cancelTransition();
+      }
+
+      /* ── Bottom sentinel: forward transition ── */
       if (!hasNext) {
         if (fadeDirectionRef.current === "forward") cancelTransition();
         return;
       }
 
-      const sentinelStart = maxScroll - SCROLL_SENTINEL_HEIGHT;
+      const bottomSentinelStart = maxScroll - SCROLL_SENTINEL_HEIGHT;
 
-      if (scrollY <= sentinelStart) {
-        /* Scrolled back out of the sentinel — cancel any active forward fade. */
+      if (scrollY <= bottomSentinelStart) {
         if (fadeDirectionRef.current === "forward") cancelTransition();
         return;
       }
 
-      /* We're inside the sentinel zone. */
-      const progress = Math.min(1, (scrollY - sentinelStart) / SCROLL_SENTINEL_HEIGHT);
+      const forwardProgress = Math.min(1, (scrollY - bottomSentinelStart) / SCROLL_SENTINEL_HEIGHT);
 
-      if (!fadeDirectionRef.current) {
+      if (fadeDirectionRef.current === "backward") cancelTransition();
+
+      if (!fadeDirectionRef.current && forwardProgress > 0) {
         const next = getNeighborTab("forward");
         if (!next) return;
         fadeDirectionRef.current = "forward";
@@ -418,7 +462,7 @@ export function DashboardTabs({
       }
 
       if (fadeDirectionRef.current !== "forward") return;
-      fadeProgressRef.current = progress;
+      fadeProgressRef.current = forwardProgress;
 
       if (!scrollRafPending) {
         scrollRafPending = true;
@@ -431,29 +475,6 @@ export function DashboardTabs({
           }
         });
       }
-    }
-
-    /* ── Backward transitions: wheel + touch delta based ── */
-
-    function startBackwardTransition(targetKey: TabKey, initialDelta: number) {
-      fadeDirectionRef.current = "backward";
-      transitionTargetRef.current = targetKey;
-      fadeProgressRef.current = Math.abs(initialDelta) / FADE_SCROLL_DISTANCE;
-      setTransitionTarget(targetKey);
-      setFadeProgress(fadeProgressRef.current);
-    }
-
-    function advanceBackwardTransition(deltaY: number) {
-      if (fadeDirectionRef.current !== "backward") return;
-      /* deltaY < 0 means scrolling up → advance backward transition */
-      if (deltaY < 0) {
-        fadeProgressRef.current = Math.min(1, fadeProgressRef.current + Math.abs(deltaY) / FADE_SCROLL_DISTANCE);
-      } else {
-        fadeProgressRef.current = Math.max(0, fadeProgressRef.current - Math.abs(deltaY) / FADE_SCROLL_DISTANCE);
-      }
-      if (fadeProgressRef.current >= 1) { commitTransition(); return; }
-      if (fadeProgressRef.current <= 0) { cancelTransition(); return; }
-      setFadeProgress(fadeProgressRef.current);
     }
 
     function shouldIgnoreGesture(target: EventTarget | null) {
@@ -477,81 +498,22 @@ export function DashboardTabs({
       );
     }
 
+    /* Wheel handler only prevents default during an active fade so the
+       desktop scroll doesn't fight the transition. On mobile, native
+       scroll + the scroll handler handles everything. */
     function handleWheel(event: WheelEvent) {
       if (shouldIgnoreGesture(event.target) || Math.abs(event.deltaY) < 5) return;
-
-      const delta = normalizeWheelDelta(event);
-
-      /* Forward transitions are handled by the scroll handler (sentinel). */
-      if (fadeDirectionRef.current === "forward") return;
-
-      const isFadingBackward = fadeDirectionRef.current === "backward";
-
-      if (!isFadingBackward) {
-        /* Only start backward (scroll-up at page top). */
-        if (delta < 0 && window.scrollY <= 20) {
-          const prev = getNeighborTab("backward");
-          if (!prev) return;
-          event.preventDefault();
-          startBackwardTransition(prev, Math.abs(delta));
-        }
-        return;
-      }
-
-      event.preventDefault();
-      advanceBackwardTransition(delta);
-    }
-
-    function handleTouchStart(event: TouchEvent) {
-      if (event.touches.length !== 1 || shouldIgnoreGesture(event.target)) {
-        touchLastYRef.current = null;
-        return;
-      }
-      touchLastYRef.current = event.touches[0]?.clientY ?? null;
-    }
-
-    function handleTouchMove(event: TouchEvent) {
-      if (touchLastYRef.current == null) return;
-      const currentY = event.touches[0]?.clientY;
-      if (typeof currentY !== "number") return;
-
-      const delta = touchLastYRef.current - currentY;
-      touchLastYRef.current = currentY;
-
-      /* Forward transitions are fully handled by the scroll handler. */
-      if (fadeDirectionRef.current === "forward") return;
-
-      if (fadeDirectionRef.current === "backward") {
+      if (fadeDirectionRef.current) {
         event.preventDefault();
-        advanceBackwardTransition(delta);
-        return;
       }
-
-      /* Start a backward transition when dragging down from the page top. */
-      if (delta < 0 && window.scrollY <= 20) {
-        const prev = getNeighborTab("backward");
-        if (!prev) return;
-        event.preventDefault();
-        startBackwardTransition(prev, Math.abs(delta));
-      }
-    }
-
-    function handleTouchEnd() {
-      touchLastYRef.current = null;
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("wheel", handleWheel, { passive: false });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [tabs]);
 
@@ -573,6 +535,7 @@ export function DashboardTabs({
     }
 
     const tabIndex = tabs.findIndex((t) => t.key === tabKey);
+    const hasPrev = tabIndex > 0;
     const hasNext = tabIndex >= 0 && tabIndex < tabs.length - 1;
 
     return (
@@ -582,6 +545,9 @@ export function DashboardTabs({
         data-panel-key={tabKey}
         style={{ opacity: panelOpacity }}
       >
+        {isActive && hasPrev && (
+          <div aria-hidden className="fc-scroll-sentinel" style={{ height: SCROLL_SENTINEL_HEIGHT }} />
+        )}
         {content}
         {isActive && hasNext && (
           <div aria-hidden className="fc-scroll-sentinel" style={{ height: SCROLL_SENTINEL_HEIGHT }} />
