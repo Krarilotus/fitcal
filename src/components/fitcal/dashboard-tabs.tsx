@@ -48,13 +48,18 @@ type TabKey =
 type PanelTransitionDirection = "forward" | "backward";
 
 /* ── Scroll-driven crossfade configuration ── */
+
+/**
+ * Height of the invisible sentinel zone at the bottom of each active panel.
+ * Scrolling into this zone drives the forward tab transition.  Native scroll
+ * momentum is fully preserved because no `preventDefault` is needed — the
+ * browser simply scrolls through this extra space while the scroll handler
+ * maps the position to fade progress.
+ */
+const SCROLL_SENTINEL_HEIGHT = 400;
+
+/** Accumulated-delta distance for **backward** (wheel / touch) transitions. */
 const FADE_SCROLL_DISTANCE = 1500;
-/** Progress threshold at which a touch release auto-commits the transition. */
-const TOUCH_COMMIT_THRESHOLD = 0.25;
-/** Minimum flick velocity (px/ms) that forces a commit regardless of progress. */
-const TOUCH_FLICK_VELOCITY = 0.4;
-/** Speed of auto-animate (progress units per ms) after touch release. */
-const TOUCH_ANIMATE_SPEED = 0.0025;
 
 function normalizeWheelDelta(event: WheelEvent): number {
   if (event.deltaMode === 1) return event.deltaY * 32;
@@ -175,13 +180,11 @@ export function DashboardTabs({
   const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const uploadPrimaryInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const touchLastYRef = useRef<number | null>(null);
-  const touchLastTimeRef = useRef<number>(0);
-  const touchVelocityRef = useRef(0);
-  const momentumRafRef = useRef<number | null>(null);
   const activeTabRef = useRef(activeTab);
   const fadeProgressRef = useRef(0);
   const fadeDirectionRef = useRef<PanelTransitionDirection | null>(null);
   const transitionTargetRef = useRef<TabKey | null>(null);
+  const scrollCommitGuardRef = useRef(false);
   const claimEditorFocusTokenRef = useRef(0);
 
   /* ── Tab switching ── */
@@ -201,10 +204,18 @@ export function DashboardTabs({
   function switchToTab(nextTab: TabKey, options?: { preserveScroll?: boolean }) {
     if (nextTab === activeTab) return;
     if (fadeDirectionRef.current) cancelFade();
+
+    scrollCommitGuardRef.current = true;
+    activeTabRef.current = nextTab;
+    setActiveTab(nextTab);
+
     if (!options?.preserveScroll) {
       window.scrollTo({ top: 0, behavior: "auto" });
     }
-    setActiveTab(nextTab);
+
+    requestAnimationFrame(() => {
+      scrollCommitGuardRef.current = false;
+    });
   }
 
   /* ── Upload claim editor focus ── */
@@ -331,13 +342,25 @@ export function DashboardTabs({
     function commitTransition() {
       const target = transitionTargetRef.current;
       if (!target) return;
-      window.scrollTo({ top: 0, behavior: "auto" });
+
+      scrollCommitGuardRef.current = true;
+      activeTabRef.current = target;
       fadeDirectionRef.current = null;
       transitionTargetRef.current = null;
       fadeProgressRef.current = 0;
       setActiveTab(target);
       setTransitionTarget(null);
       setFadeProgress(0);
+
+      /* After React renders the new panel we need to place the scroll so the
+         user doesn't land inside the new panel's bottom sentinel.  Using two
+         rAF frames ensures the DOM has been updated. */
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        requestAnimationFrame(() => {
+          scrollCommitGuardRef.current = false;
+        });
+      });
     }
 
     function cancelTransition() {
@@ -348,23 +371,82 @@ export function DashboardTabs({
       setFadeProgress(0);
     }
 
-    function startScrollTransition(
-      direction: PanelTransitionDirection,
-      targetKey: TabKey,
-      initialDelta: number,
-    ) {
-      fadeDirectionRef.current = direction;
+    /* ── Forward transitions: scroll-sentinel-based ── */
+
+    function getNeighborTab(direction: PanelTransitionDirection): TabKey | null {
+      const idx = tabs.findIndex((t) => t.key === activeTabRef.current);
+      const next = direction === "forward" ? idx + 1 : idx - 1;
+      return tabs[next]?.key ?? null;
+    }
+
+    let scrollRafPending = false;
+
+    function handleScroll() {
+      if (scrollCommitGuardRef.current) return;
+
+      const scrollY = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight;
+      const viewHeight = window.innerHeight;
+      const maxScroll = docHeight - viewHeight;
+
+      /* Only activate when the active tab has a next neighbor (sentinel exists). */
+      const activeIdx = tabs.findIndex((t) => t.key === activeTabRef.current);
+      const hasNext = activeIdx >= 0 && activeIdx < tabs.length - 1;
+
+      if (!hasNext) {
+        if (fadeDirectionRef.current === "forward") cancelTransition();
+        return;
+      }
+
+      const sentinelStart = maxScroll - SCROLL_SENTINEL_HEIGHT;
+
+      if (scrollY <= sentinelStart) {
+        /* Scrolled back out of the sentinel — cancel any active forward fade. */
+        if (fadeDirectionRef.current === "forward") cancelTransition();
+        return;
+      }
+
+      /* We're inside the sentinel zone. */
+      const progress = Math.min(1, (scrollY - sentinelStart) / SCROLL_SENTINEL_HEIGHT);
+
+      if (!fadeDirectionRef.current) {
+        const next = getNeighborTab("forward");
+        if (!next) return;
+        fadeDirectionRef.current = "forward";
+        transitionTargetRef.current = next;
+        setTransitionTarget(next);
+      }
+
+      if (fadeDirectionRef.current !== "forward") return;
+      fadeProgressRef.current = progress;
+
+      if (!scrollRafPending) {
+        scrollRafPending = true;
+        requestAnimationFrame(() => {
+          scrollRafPending = false;
+          if (fadeProgressRef.current >= 1) {
+            commitTransition();
+          } else {
+            setFadeProgress(fadeProgressRef.current);
+          }
+        });
+      }
+    }
+
+    /* ── Backward transitions: wheel + touch delta based ── */
+
+    function startBackwardTransition(targetKey: TabKey, initialDelta: number) {
+      fadeDirectionRef.current = "backward";
       transitionTargetRef.current = targetKey;
       fadeProgressRef.current = Math.abs(initialDelta) / FADE_SCROLL_DISTANCE;
       setTransitionTarget(targetKey);
       setFadeProgress(fadeProgressRef.current);
     }
 
-    function advanceScrollTransition(deltaY: number) {
-      const dir = fadeDirectionRef.current;
-      if (!dir) return;
-      const sameDir = (dir === "forward" && deltaY > 0) || (dir === "backward" && deltaY < 0);
-      if (sameDir) {
+    function advanceBackwardTransition(deltaY: number) {
+      if (fadeDirectionRef.current !== "backward") return;
+      /* deltaY < 0 means scrolling up → advance backward transition */
+      if (deltaY < 0) {
         fadeProgressRef.current = Math.min(1, fadeProgressRef.current + Math.abs(deltaY) / FADE_SCROLL_DISTANCE);
       } else {
         fadeProgressRef.current = Math.max(0, fadeProgressRef.current - Math.abs(deltaY) / FADE_SCROLL_DISTANCE);
@@ -374,15 +456,7 @@ export function DashboardTabs({
       setFadeProgress(fadeProgressRef.current);
     }
 
-    function isNearPageEdge(edge: "top" | "bottom") {
-      const scrollTop = window.scrollY;
-      const viewportHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      if (edge === "top") return scrollTop <= 20;
-      return scrollTop + viewportHeight >= documentHeight - 20;
-    }
-
-    function shouldIgnorePanelScrollGesture(target: EventTarget | null) {
+    function shouldIgnoreGesture(target: EventTarget | null) {
       if (!(target instanceof Element)) return false;
       return Boolean(
         target.closest(
@@ -403,49 +477,37 @@ export function DashboardTabs({
       );
     }
 
-    function getNeighborTab(direction: PanelTransitionDirection): TabKey | null {
-      const idx = tabs.findIndex((t) => t.key === activeTabRef.current);
-      const next = direction === "forward" ? idx + 1 : idx - 1;
-      return tabs[next]?.key ?? null;
-    }
-
     function handleWheel(event: WheelEvent) {
-      if (shouldIgnorePanelScrollGesture(event.target) || Math.abs(event.deltaY) < 5) return;
+      if (shouldIgnoreGesture(event.target) || Math.abs(event.deltaY) < 5) return;
 
       const delta = normalizeWheelDelta(event);
-      const isFading = fadeDirectionRef.current !== null;
 
-      if (!isFading) {
-        if (delta > 0 && isNearPageEdge("bottom")) {
-          const next = getNeighborTab("forward");
-          if (!next) return;
-          event.preventDefault();
-          startScrollTransition("forward", next, Math.abs(delta));
-        } else if (delta < 0 && isNearPageEdge("top")) {
+      /* Forward transitions are handled by the scroll handler (sentinel). */
+      if (fadeDirectionRef.current === "forward") return;
+
+      const isFadingBackward = fadeDirectionRef.current === "backward";
+
+      if (!isFadingBackward) {
+        /* Only start backward (scroll-up at page top). */
+        if (delta < 0 && window.scrollY <= 20) {
           const prev = getNeighborTab("backward");
           if (!prev) return;
           event.preventDefault();
-          startScrollTransition("backward", prev, Math.abs(delta));
+          startBackwardTransition(prev, Math.abs(delta));
         }
         return;
       }
 
       event.preventDefault();
-      advanceScrollTransition(delta);
+      advanceBackwardTransition(delta);
     }
 
     function handleTouchStart(event: TouchEvent) {
-      if (momentumRafRef.current !== null) {
-        cancelAnimationFrame(momentumRafRef.current);
-        momentumRafRef.current = null;
-      }
-      if (event.touches.length !== 1 || shouldIgnorePanelScrollGesture(event.target)) {
+      if (event.touches.length !== 1 || shouldIgnoreGesture(event.target)) {
         touchLastYRef.current = null;
         return;
       }
       touchLastYRef.current = event.touches[0]?.clientY ?? null;
-      touchLastTimeRef.current = performance.now();
-      touchVelocityRef.current = 0;
     }
 
     function handleTouchMove(event: TouchEvent) {
@@ -453,95 +515,43 @@ export function DashboardTabs({
       const currentY = event.touches[0]?.clientY;
       if (typeof currentY !== "number") return;
 
-      const now = performance.now();
-      const dt = now - touchLastTimeRef.current;
       const delta = touchLastYRef.current - currentY;
       touchLastYRef.current = currentY;
-      touchLastTimeRef.current = now;
 
-      // Exponential moving average for velocity (px/ms), positive = scrolling down
-      if (dt > 0) {
-        const instantVelocity = delta / dt;
-        touchVelocityRef.current = 0.7 * touchVelocityRef.current + 0.3 * instantVelocity;
-      }
+      /* Forward transitions are fully handled by the scroll handler. */
+      if (fadeDirectionRef.current === "forward") return;
 
-      const isFading = fadeDirectionRef.current !== null;
-
-      if (isFading) {
+      if (fadeDirectionRef.current === "backward") {
         event.preventDefault();
-        advanceScrollTransition(delta);
+        advanceBackwardTransition(delta);
         return;
       }
 
-      if (delta > 0 && isNearPageEdge("bottom")) {
-        const next = getNeighborTab("forward");
-        if (!next) return;
-        event.preventDefault();
-        startScrollTransition("forward", next, Math.abs(delta));
-      } else if (delta < 0 && isNearPageEdge("top")) {
+      /* Start a backward transition when dragging down from the page top. */
+      if (delta < 0 && window.scrollY <= 20) {
         const prev = getNeighborTab("backward");
         if (!prev) return;
         event.preventDefault();
-        startScrollTransition("backward", prev, Math.abs(delta));
+        startBackwardTransition(prev, Math.abs(delta));
       }
     }
 
     function handleTouchEnd() {
-      const velocity = touchVelocityRef.current;
-      const progress = fadeProgressRef.current;
       touchLastYRef.current = null;
-      touchVelocityRef.current = 0;
-
-      if (fadeDirectionRef.current === null) return;
-
-      // Determine whether to commit or cancel based on progress + flick velocity
-      const dir = fadeDirectionRef.current;
-      const flickingForward = (dir === "forward" && velocity > TOUCH_FLICK_VELOCITY)
-        || (dir === "backward" && velocity < -TOUCH_FLICK_VELOCITY);
-      const flickingBackward = (dir === "forward" && velocity < -TOUCH_FLICK_VELOCITY)
-        || (dir === "backward" && velocity > TOUCH_FLICK_VELOCITY);
-
-      const shouldCommit = flickingForward || (!flickingBackward && progress >= TOUCH_COMMIT_THRESHOLD);
-      const targetProgress = shouldCommit ? 1 : 0;
-
-      let lastT = performance.now();
-
-      function animateTick() {
-        const now = performance.now();
-        const dt = now - lastT;
-        lastT = now;
-
-        const step = TOUCH_ANIMATE_SPEED * dt;
-        if (targetProgress === 1) {
-          fadeProgressRef.current = Math.min(1, fadeProgressRef.current + step);
-        } else {
-          fadeProgressRef.current = Math.max(0, fadeProgressRef.current - step);
-        }
-
-        if (fadeProgressRef.current >= 1) { commitTransition(); momentumRafRef.current = null; return; }
-        if (fadeProgressRef.current <= 0) { cancelTransition(); momentumRafRef.current = null; return; }
-
-        setFadeProgress(fadeProgressRef.current);
-        momentumRafRef.current = requestAnimationFrame(animateTick);
-      }
-
-      momentumRafRef.current = requestAnimationFrame(animateTick);
     }
 
+    window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("wheel", handleWheel, { passive: false });
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
     window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    window.addEventListener("touchend", handleTouchEnd, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
 
     return () => {
+      window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
-      if (momentumRafRef.current !== null) {
-        cancelAnimationFrame(momentumRafRef.current);
-        momentumRafRef.current = null;
-      }
     };
   }, [tabs]);
 
@@ -562,6 +572,9 @@ export function DashboardTabs({
       panelOpacity = 0;
     }
 
+    const tabIndex = tabs.findIndex((t) => t.key === tabKey);
+    const hasNext = tabIndex >= 0 && tabIndex < tabs.length - 1;
+
     return (
       <div
         aria-hidden={!isActive}
@@ -570,6 +583,9 @@ export function DashboardTabs({
         style={{ opacity: panelOpacity }}
       >
         {content}
+        {isActive && hasNext && (
+          <div aria-hidden className="fc-scroll-sentinel" style={{ height: SCROLL_SENTINEL_HEIGHT }} />
+        )}
       </div>
     );
   }
