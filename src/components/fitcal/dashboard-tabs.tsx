@@ -49,10 +49,12 @@ type PanelTransitionDirection = "forward" | "backward";
 
 /* ── Scroll-driven crossfade configuration ── */
 const FADE_SCROLL_DISTANCE = 1500;
-/** Friction coefficient for touch momentum (px/ms² deceleration). */
-const TOUCH_FRICTION = 0.003;
-/** Minimum velocity (px/ms) below which momentum stops. */
-const TOUCH_MIN_VELOCITY = 0.05;
+/** Progress threshold at which a touch release auto-commits the transition. */
+const TOUCH_COMMIT_THRESHOLD = 0.25;
+/** Minimum flick velocity (px/ms) that forces a commit regardless of progress. */
+const TOUCH_FLICK_VELOCITY = 0.4;
+/** Speed of auto-animate (progress units per ms) after touch release. */
+const TOUCH_ANIMATE_SPEED = 0.0025;
 
 function normalizeWheelDelta(event: WheelEvent): number {
   if (event.deltaMode === 1) return event.deltaY * 32;
@@ -486,41 +488,44 @@ export function DashboardTabs({
 
     function handleTouchEnd() {
       const velocity = touchVelocityRef.current;
+      const progress = fadeProgressRef.current;
       touchLastYRef.current = null;
       touchVelocityRef.current = 0;
 
-      // If fading, simulate momentum continuation
-      if (fadeDirectionRef.current !== null && Math.abs(velocity) > TOUCH_MIN_VELOCITY) {
-        let v = velocity;
-        let lastT = performance.now();
+      if (fadeDirectionRef.current === null) return;
 
-        function momentumTick() {
-          const now = performance.now();
-          const dt = now - lastT;
-          lastT = now;
+      // Determine whether to commit or cancel based on progress + flick velocity
+      const dir = fadeDirectionRef.current;
+      const flickingForward = (dir === "forward" && velocity > TOUCH_FLICK_VELOCITY)
+        || (dir === "backward" && velocity < -TOUCH_FLICK_VELOCITY);
+      const flickingBackward = (dir === "forward" && velocity < -TOUCH_FLICK_VELOCITY)
+        || (dir === "backward" && velocity > TOUCH_FLICK_VELOCITY);
 
-          // Decelerate
-          const sign = v > 0 ? 1 : -1;
-          v = sign * Math.max(0, Math.abs(v) - TOUCH_FRICTION * dt);
+      const shouldCommit = flickingForward || (!flickingBackward && progress >= TOUCH_COMMIT_THRESHOLD);
+      const targetProgress = shouldCommit ? 1 : 0;
 
-          if (Math.abs(v) < TOUCH_MIN_VELOCITY || fadeDirectionRef.current === null) {
-            momentumRafRef.current = null;
-            return;
-          }
+      let lastT = performance.now();
 
-          const delta = v * dt;
-          advanceScrollTransition(delta);
+      function animateTick() {
+        const now = performance.now();
+        const dt = now - lastT;
+        lastT = now;
 
-          // advanceScrollTransition may have committed/cancelled, check again
-          if (fadeDirectionRef.current !== null) {
-            momentumRafRef.current = requestAnimationFrame(momentumTick);
-          } else {
-            momentumRafRef.current = null;
-          }
+        const step = TOUCH_ANIMATE_SPEED * dt;
+        if (targetProgress === 1) {
+          fadeProgressRef.current = Math.min(1, fadeProgressRef.current + step);
+        } else {
+          fadeProgressRef.current = Math.max(0, fadeProgressRef.current - step);
         }
 
-        momentumRafRef.current = requestAnimationFrame(momentumTick);
+        if (fadeProgressRef.current >= 1) { commitTransition(); momentumRafRef.current = null; return; }
+        if (fadeProgressRef.current <= 0) { cancelTransition(); momentumRafRef.current = null; return; }
+
+        setFadeProgress(fadeProgressRef.current);
+        momentumRafRef.current = requestAnimationFrame(animateTick);
       }
+
+      momentumRafRef.current = requestAnimationFrame(animateTick);
     }
 
     window.addEventListener("wheel", handleWheel, { passive: false });
