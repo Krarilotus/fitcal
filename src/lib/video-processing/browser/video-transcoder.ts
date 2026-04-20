@@ -22,6 +22,8 @@ import { assertBrowserVideoCompressionSupport } from "@/lib/video-processing/bro
 import type { PreparedUploadVideo } from "@/lib/video-processing/upload-form-data";
 
 type MediabunnyModule = typeof import("mediabunny");
+type FfmpegModule = typeof import("@ffmpeg/ffmpeg");
+type FfmpegUtilModule = typeof import("@ffmpeg/util");
 
 export type VideoPreparationErrorCode =
   | "encoder_load_failed"
@@ -55,10 +57,46 @@ export interface PrepareUploadVideosOptions {
 }
 
 let sharedMediabunnyModulePromise: Promise<MediabunnyModule> | null = null;
+let sharedFfmpegModulePromise: Promise<FfmpegModule> | null = null;
+let sharedFfmpegUtilModulePromise: Promise<FfmpegUtilModule> | null = null;
+let sharedFfmpegInstancePromise: Promise<InstanceType<FfmpegModule["FFmpeg"]>> | null = null;
 
 async function getMediabunnyModule() {
   sharedMediabunnyModulePromise ??= import("mediabunny");
   return sharedMediabunnyModulePromise;
+}
+
+async function getFfmpegModule() {
+  sharedFfmpegModulePromise ??= import("@ffmpeg/ffmpeg");
+  return sharedFfmpegModulePromise;
+}
+
+async function getFfmpegUtilModule() {
+  sharedFfmpegUtilModulePromise ??= import("@ffmpeg/util");
+  return sharedFfmpegUtilModulePromise;
+}
+
+async function getSharedFfmpegInstance() {
+  sharedFfmpegInstancePromise ??= (async () => {
+    const [{ FFmpeg }, { toBlobURL }] = await Promise.all([
+      getFfmpegModule(),
+      getFfmpegUtilModule(),
+    ]);
+    const ffmpeg = new FFmpeg();
+    const basePath = "/vendor/ffmpeg";
+
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${basePath}/ffmpeg-core.js`, "text/javascript"),
+      wasmURL: await toBlobURL(`${basePath}/ffmpeg-core.wasm`, "application/wasm"),
+    });
+
+    return ffmpeg;
+  })().catch((error) => {
+    sharedFfmpegInstancePromise = null;
+    throw error;
+  });
+
+  return sharedFfmpegInstancePromise;
 }
 
 function sanitizeBaseName(fileName: string) {
@@ -103,6 +141,75 @@ function buildVideoConversionOptions(plan: VideoCompressionPlan) {
     latencyMode: TARGET_VIDEO_LATENCY_MODE,
     width: plan.outputWidth,
   };
+}
+
+function buildFfmpegScaleFilter(plan: VideoCompressionPlan) {
+  return `scale=w=${plan.outputWidth}:h=${plan.outputHeight}:force_original_aspect_ratio=decrease:force_divisible_by=2`;
+}
+
+export function buildFfmpegArgs(
+  inputFileName: string,
+  outputFileName: string,
+  plan: VideoCompressionPlan,
+) {
+  const bitrate = `${plan.videoBitrateKbps}k`;
+  const bufferSize = `${plan.videoBitrateKbps * 2}k`;
+
+  return [
+    "-i",
+    inputFileName,
+    "-an",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-pix_fmt",
+    "yuv420p",
+    "-movflags",
+    "+faststart",
+    "-r",
+    String(plan.targetFps),
+    "-vf",
+    buildFfmpegScaleFilter(plan),
+    "-b:v",
+    bitrate,
+    "-maxrate",
+    bitrate,
+    "-bufsize",
+    bufferSize,
+    outputFileName,
+  ];
+}
+
+export async function transcodeAttemptWithEncoderFallback({
+  file,
+  ffmpegTranscode,
+  mediabunnyTranscode,
+  onFallback,
+  onProgress,
+  plan,
+}: {
+  file: File;
+  ffmpegTranscode: (
+    file: File,
+    plan: VideoCompressionPlan,
+    onProgress?: (value: number) => void,
+  ) => Promise<File>;
+  mediabunnyTranscode: (
+    file: File,
+    plan: VideoCompressionPlan,
+    onProgress?: (value: number) => void,
+  ) => Promise<File>;
+  onFallback?: (error: unknown) => void;
+  onProgress?: (value: number) => void;
+  plan: VideoCompressionPlan;
+}) {
+  try {
+    return await mediabunnyTranscode(file, plan, onProgress);
+  } catch (error) {
+    onFallback?.(error);
+    return ffmpegTranscode(file, plan, onProgress);
+  }
 }
 
 async function transcodeAttemptWithMediabunny(
@@ -159,6 +266,50 @@ async function transcodeAttemptWithMediabunny(
   });
 }
 
+async function transcodeAttemptWithFfmpeg(
+  file: File,
+  plan: VideoCompressionPlan,
+  onProgress?: (value: number) => void,
+) {
+  const ffmpeg = await getSharedFfmpegInstance();
+  const inputFileName = `input-${crypto.randomUUID()}.${file.name.split(".").pop() || "mp4"}`;
+  const outputFileName = `output-${crypto.randomUUID()}.${TARGET_VIDEO_CONTAINER_EXTENSION}`;
+  const progressHandler = ({ progress }: { progress: number }) => {
+    onProgress?.(Math.min(1, Math.max(0, progress)));
+  };
+
+  ffmpeg.on("progress", progressHandler);
+
+  try {
+    await ffmpeg.writeFile(inputFileName, new Uint8Array(await file.arrayBuffer()));
+
+    const exitCode = await ffmpeg.exec(buildFfmpegArgs(inputFileName, outputFileName, plan));
+
+    if (exitCode !== 0) {
+      throw new Error(`FFmpeg ist mit Exit-Code ${exitCode} fehlgeschlagen.`);
+    }
+
+    const data = await ffmpeg.readFile(outputFileName);
+
+    if (!(data instanceof Uint8Array) || data.byteLength <= 0) {
+      throw new Error("Die FFmpeg-Fallback-Kompression hat keine MP4-Datei erzeugt.");
+    }
+
+    const outputBytes = Uint8Array.from(data);
+
+    return new File([outputBytes], buildOutputFileName(file.name), {
+      lastModified: Date.now(),
+      type: TARGET_VIDEO_MIME_TYPE,
+    });
+  } finally {
+    ffmpeg.off("progress", progressHandler);
+    await Promise.allSettled([
+      ffmpeg.deleteFile(inputFileName),
+      ffmpeg.deleteFile(outputFileName),
+    ]);
+  }
+}
+
 async function transcodeSingleVideo(
   mediabunny: MediabunnyModule,
   file: File,
@@ -173,15 +324,31 @@ async function transcodeSingleVideo(
     totalFiles: options.totalFiles,
   });
 
-  const runAttempt = async (plan: VideoCompressionPlan) =>
-    transcodeAttemptWithMediabunny(mediabunny, file, plan, (value) => {
-      options.onEncodingProgress?.({
-        currentFileIndex: index + 1,
-        currentFileName: file.name,
-        totalFiles: options.totalFiles,
-        value,
-      });
+  const reportProgress = (value: number) => {
+    options.onEncodingProgress?.({
+      currentFileIndex: index + 1,
+      currentFileName: file.name,
+      totalFiles: options.totalFiles,
+      value,
     });
+  };
+
+  const runAttempt = async (plan: VideoCompressionPlan) => {
+    return transcodeAttemptWithEncoderFallback({
+      ffmpegTranscode: transcodeAttemptWithFfmpeg,
+      file,
+      mediabunnyTranscode: (nextFile, nextPlan, onProgress) =>
+        transcodeAttemptWithMediabunny(mediabunny, nextFile, nextPlan, onProgress),
+      onFallback: (error) => {
+        console.warn(
+          "[fitcal-upload] mediabunny compression failed, retrying with ffmpeg.wasm",
+          error,
+        );
+      },
+      onProgress: reportProgress,
+      plan,
+    });
+  };
 
   let plan = buildVideoCompressionPlan({
     durationSeconds: metadata.durationSeconds,
@@ -226,12 +393,7 @@ export async function prepareUploadVideosForSubmission(
       assertBrowserVideoCompressionSupport();
       mediabunny = await getMediabunnyModule();
     } catch (error) {
-      throw new VideoPreparationError(
-        "encoder_load_failed",
-        error instanceof Error
-          ? error.message
-          : "Der lokale Video-Encoder konnte nicht geladen werden.",
-      );
+      console.warn("[fitcal-upload] mediabunny unavailable, using ffmpeg.wasm fallback", error);
     }
 
     options.onEncoderReady?.();
@@ -250,15 +412,54 @@ export async function prepareUploadVideosForSubmission(
       continue;
     }
 
-    if (!mediabunny) {
-      throw new VideoPreparationError(
-        "encoder_load_failed",
-        "Der lokale Video-Encoder konnte nicht geladen werden.",
-      );
-    }
-
     try {
-      preparedVideos.push(await transcodeSingleVideo(mediabunny, file, index, options));
+      if (mediabunny) {
+        preparedVideos.push(await transcodeSingleVideo(mediabunny, file, index, options));
+      } else {
+        const metadata = await readBrowserVideoMetadata(file);
+
+        options.onEncodingStart?.({
+          currentFileIndex: index + 1,
+          currentFileName: file.name,
+          totalFiles: options.totalFiles,
+        });
+
+        const runAttempt = async (plan: VideoCompressionPlan) =>
+          transcodeAttemptWithFfmpeg(file, plan, (value) => {
+            options.onEncodingProgress?.({
+              currentFileIndex: index + 1,
+              currentFileName: file.name,
+              totalFiles: options.totalFiles,
+              value,
+            });
+          });
+
+        let plan = buildVideoCompressionPlan({
+          durationSeconds: metadata.durationSeconds,
+          height: metadata.height,
+          width: metadata.width,
+        });
+        let transcodedFile = await runAttempt(plan);
+
+        if (transcodedFile.size > TARGET_UPLOAD_VIDEO_BYTES) {
+          plan = deriveRetryCompressionPlan(plan, transcodedFile.size);
+          transcodedFile = await runAttempt(plan);
+        }
+
+        if (transcodedFile.size > TARGET_UPLOAD_VIDEO_BYTES) {
+          throw new VideoPreparationError(
+            "compression_too_large",
+            "Das komprimierte Video bleibt ueber 15 MB.",
+          );
+        }
+
+        preparedVideos.push({
+          file: transcodedFile,
+          outputSizeBytes: transcodedFile.size,
+          originalSizeBytes: file.size,
+          wasCompressed: true,
+        });
+      }
     } catch (error) {
       if (error instanceof VideoPreparationError) {
         throw error;
