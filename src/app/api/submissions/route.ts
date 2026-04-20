@@ -11,7 +11,6 @@ import {
 import { prisma } from "@/lib/db";
 import { ensureDailyUploadDirectory } from "@/lib/storage";
 import {
-  assertSubmissionMatchesRules,
   canEditSubmissionBeforeReview,
   getVideoDisplayNames,
   getVideoFiles,
@@ -89,10 +88,6 @@ export async function POST(request: Request) {
 
     if (parsed.challengeDate < CHALLENGE_START_DATE || !canSubmitForDate(parsed.challengeDate)) {
       throw new Error("Uploads sind nur für heute und gestern erlaubt.");
-    }
-
-    if (!user.isLightParticipant) {
-      assertSubmissionMatchesRules(parsed);
     }
 
     const existing = await prisma.dailySubmission.findUnique({
