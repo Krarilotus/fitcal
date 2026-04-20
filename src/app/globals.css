@@ -381,6 +381,7 @@ button, input, textarea, select {
   background: var(--fc-bg-raised);
   backdrop-filter: blur(12px);
   overflow-x: auto;
+  align-items: center;
 }
 
 .fc-scroll-x {
@@ -435,29 +436,9 @@ button, input, textarea, select {
   color: white;
 }
 
-.fc-panel-stage {
-  position: relative;
-  overflow: clip;
-  isolation: isolate;
-}
-
-.fc-panel-view {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  min-width: 0;
-  pointer-events: none;
-}
-
-.fc-panel-view.is-active {
-  position: relative;
-  z-index: 1;
-  pointer-events: auto;
-}
-
-.fc-panel-view.is-transition-target {
-  z-index: 2;
+.fc-dashboard-flow {
+  display: grid;
+  gap: clamp(3.5rem, 8vw, 5.5rem);
 }
 
 /* ── Timeline ── */
@@ -730,10 +711,22 @@ button, input, textarea, select {
   scroll-margin-top: 5rem;
 }
 
-.fc-section + .fc-section {
-  margin-top: 0.5rem;
-  padding-top: 1.25rem;
+.fc-dashboard-flow > .fc-section {
+  position: relative;
+}
+
+.fc-dashboard-flow > .fc-section::before {
+  content: "";
+  position: absolute;
+  top: calc(clamp(3.5rem, 8vw, 5.5rem) * -0.5);
+  left: 0;
+  right: 0;
   border-top: 1px solid var(--fc-border);
+  opacity: 0.7;
+}
+
+.fc-dashboard-flow > .fc-section:first-child::before {
+  display: none;
 }
 
 /* ── Status message ── */
@@ -773,6 +766,9 @@ button, input, textarea, select {
   }
 
   .fc-has-bottom-nav { padding-bottom: 4.5rem; }
+  .fc-dashboard-flow > .fc-section {
+    scroll-margin-top: 1.5rem;
+  }
   .fc-grid-2, .fc-grid-3 { grid-template-columns: 1fr; }
 }
 
