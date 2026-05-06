@@ -243,6 +243,28 @@ export interface ChallengeOverview {
   days: ChallengeDaySummary[];
 }
 
+export function canApplyJokerToDay(input: {
+  challengeDate: string;
+  isLightParticipant?: boolean;
+  jokerBalance: number;
+  now?: Date;
+  status: DayCompletionState;
+}) {
+  if (input.isLightParticipant || input.jokerBalance < 1) {
+    return false;
+  }
+
+  if (input.status === "slack") {
+    return true;
+  }
+
+  if (input.status === "open" || input.status === "sickPending") {
+    return canSubmitForDate(input.challengeDate, input.now);
+  }
+
+  return false;
+}
+
 export function getChallengeOverview({
   joinedChallengeDate,
   records,
@@ -349,11 +371,13 @@ export function getChallengeOverview({
         !isLightParticipant &&
         (status === "open" || status === "free" || status === "sickPending" || status === "slack") &&
         canSubmitForDate(cursor, now),
-      canUseJoker:
-        !isLightParticipant &&
-        (status === "open" || status === "sickPending" || status === "slack") &&
-        jokerBalance > 0 &&
-        canSubmitForDate(cursor, now),
+      canUseJoker: canApplyJokerToDay({
+        challengeDate: cursor,
+        isLightParticipant,
+        jokerBalance,
+        now,
+        status,
+      }),
       isCurrentDay,
       isPreviousDay,
       debtCents: dayDebtCents,

@@ -237,6 +237,14 @@
       jokersFree: "Jokers free",
       days: "Days",
       off: "Off",
+      retroactiveJokerTitle: "Clean up slack days with a joker",
+      retroactiveJokerDescription:
+        "You can spend saved jokers retroactively on days that are currently counted as slack.",
+      retroactiveJokerDebt: "This day currently adds {debt} in debt.",
+      retroactiveJokerHint:
+        "Once you apply a joker, the slack day disappears and the debt is recalculated right away.",
+      retroactiveJokerNoBalance:
+        "As soon as you have another joker available, you can clean up these slack days retroactively.",
     },
     uploads: {
       title: "Open days",

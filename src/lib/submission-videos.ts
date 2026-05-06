@@ -100,3 +100,15 @@ export async function removeReplacedSubmissionVideo(
 
   await rm(previousStoredPath, { force: true });
 }
+
+export async function removeStoredSubmissionVideos(storedPaths: string[]) {
+  if (!storedPaths.length) {
+    return;
+  }
+
+  await Promise.all(storedPaths.map((storedPath) => rm(storedPath, { force: true })));
+  await rm(path.dirname(storedPaths[0]), {
+    recursive: true,
+    force: true,
+  });
+}

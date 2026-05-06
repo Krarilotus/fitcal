@@ -114,6 +114,13 @@ export type OverviewSummary = {
   dailyMessage: string | null;
 };
 
+export type RetroactiveJokerDay = {
+  challengeDate: string;
+  dateLabel: string;
+  debtLabel: string;
+  canApply: boolean;
+};
+
 export type ParticipantRow = {
   id: string;
   name: string;

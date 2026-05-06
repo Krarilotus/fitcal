@@ -1,5 +1,8 @@
 import type { AppDictionary } from "@/i18n";
-import type { OverviewSummary } from "@/components/fitcal/dashboard-types";
+import type {
+  OverviewSummary,
+  RetroactiveJokerDay,
+} from "@/components/fitcal/dashboard-types";
 import type { PendingApprovalSummary } from "@/lib/dashboard-data";
 import {
   DashboardActionButton,
@@ -15,12 +18,16 @@ export function DashboardOverviewSection({
   labels,
   overview,
   pendingApprovals,
+  retroactiveJokerDays,
 }: {
   canReview: boolean;
   labels: DashboardLabels;
   overview: OverviewSummary;
   pendingApprovals: PendingApprovalSummary[];
+  retroactiveJokerDays: RetroactiveJokerDay[];
 }) {
+  const hasRetroactiveJokerActions = retroactiveJokerDays.some((day) => day.canApply);
+
   return (
     <section className="fc-section fc-rise" id="overview">
       <div className="fc-card-lg">
@@ -44,6 +51,46 @@ export function DashboardOverviewSection({
           <StatBox label={labels.overview.days} value={overview.documentedDays} />
         </div>
         {overview.dailyMessage ? <p className="fc-daily-message">{overview.dailyMessage}</p> : null}
+        {!overview.isLightParticipant && retroactiveJokerDays.length > 0 ? (
+          <div className="mt-5 border-t border-[var(--fc-border)] pt-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="fc-heading text-base">{labels.overview.retroactiveJokerTitle}</h3>
+                <p className="mt-1 fc-text-muted">
+                  {labels.overview.retroactiveJokerDescription}
+                </p>
+              </div>
+              <DashboardStatusBadge tone={hasRetroactiveJokerActions ? "accent" : "warm"}>
+                {labels.overview.jokersFree}: {overview.monthJokersRemaining}
+              </DashboardStatusBadge>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {retroactiveJokerDays.map((day) => (
+                <div className="fc-info-box" key={day.challengeDate}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="fc-text-emphasis">{day.dateLabel}</p>
+                      <p className="mt-1 fc-text-muted">
+                        {labels.overview.retroactiveJokerDebt.replace("{debt}", day.debtLabel)}
+                      </p>
+                    </div>
+                    <form action="/api/challenge/joker" method="post">
+                      <input name="challengeDate" type="hidden" value={day.challengeDate} />
+                      <DashboardActionButton disabled={!day.canApply} type="submit">
+                        {labels.uploads.useJoker}
+                      </DashboardActionButton>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 fc-text-muted">
+              {hasRetroactiveJokerActions
+                ? labels.overview.retroactiveJokerHint
+                : labels.overview.retroactiveJokerNoBalance}
+            </p>
+          </div>
+        ) : null}
         {canReview ? (
           <div className="mt-5 border-t border-[var(--fc-border)] pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3">

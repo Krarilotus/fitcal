@@ -25,6 +25,7 @@ import type {
   PerformancePoint,
   PrimaryReviewItem,
   ProfileSummary,
+  RetroactiveJokerDay,
   ReviewFeedbackItem,
   SicknessReviewItem,
   TimelineEntry,
@@ -100,6 +101,7 @@ export function DashboardTabs({
   reviewFeedbackItems,
   primaryReviewItems,
   profile,
+  retroactiveJokerDays,
   sicknessReviewItems,
   timelineEntries,
 }: {
@@ -119,6 +121,7 @@ export function DashboardTabs({
   reviewFeedbackItems: ReviewFeedbackItem[];
   primaryReviewItems: PrimaryReviewItem[];
   profile: ProfileSummary;
+  retroactiveJokerDays: RetroactiveJokerDay[];
   sicknessReviewItems: SicknessReviewItem[];
   timelineEntries: TimelineEntry[];
 }) {
@@ -353,6 +356,7 @@ export function DashboardTabs({
           labels={labels}
           overview={overview}
           pendingApprovals={pendingApprovals}
+          retroactiveJokerDays={retroactiveJokerDays}
         />
 
         <DashboardUploadSection
