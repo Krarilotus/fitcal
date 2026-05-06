@@ -237,14 +237,6 @@
       jokersFree: "Joker frei",
       days: "Tage",
       off: "Aus",
-      retroactiveJokerTitle: "Slack-Tage mit Joker bereinigen",
-      retroactiveJokerDescription:
-        "Du kannst angesparte Joker nachträglich auf bereits gezählte Slack-Tage legen.",
-      retroactiveJokerDebt: "Aktuell belastet dieser Tag dich mit {debt}.",
-      retroactiveJokerHint:
-        "Sobald du einen Joker setzt, verschwindet der Slack-Tag und die Schulden werden direkt neu berechnet.",
-      retroactiveJokerNoBalance:
-        "Sobald wieder ein Joker frei ist, kannst du diese Slack-Tage nachträglich bereinigen.",
     },
     uploads: {
       title: "Offene Tage",

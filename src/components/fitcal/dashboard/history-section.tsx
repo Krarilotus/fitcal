@@ -165,6 +165,23 @@ export function DashboardHistorySection({
                   <p className="text-sm font-medium text-[var(--fc-warm)]">{selectedTimelineEntry.debtLabel}</p>
                 ) : null}
               </div>
+              {selectedTimelineEntry.status === "slack" ? (
+                <div className="mt-3">
+                  <form action="/api/challenge/joker" method="post">
+                    <input
+                      name="challengeDate"
+                      type="hidden"
+                      value={selectedTimelineEntry.challengeDate}
+                    />
+                    <DashboardActionButton
+                      disabled={!selectedTimelineEntry.canUseJoker}
+                      type="submit"
+                    >
+                      {labels.uploads.useJoker}
+                    </DashboardActionButton>
+                  </form>
+                </div>
+              ) : null}
             </CardHeader>
 
             <CardContent className="space-y-4">

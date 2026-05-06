@@ -25,7 +25,6 @@ import type {
   PerformancePoint,
   PrimaryReviewItem,
   ProfileSummary,
-  RetroactiveJokerDay,
   ReviewFeedbackItem,
   ReviewFeedbackNote,
   SicknessReviewItem,
@@ -36,7 +35,6 @@ import {
   CHALLENGE_FREE_DAYS,
   CHALLENGE_START_DATE,
   MAX_VIDEO_FILES_PER_DAY,
-  canApplyJokerToDay,
   canSubmitForDate,
   formatCurrencyFromCents,
   getChallengeDayIndex,
@@ -86,7 +84,6 @@ export type DashboardPageData = {
   reviewFeedbackItems: ReviewFeedbackItem[];
   primaryReviewItems: PrimaryReviewItem[];
   profile: ProfileSummary;
-  retroactiveJokerDays: RetroactiveJokerDay[];
   sicknessReviewItems: SicknessReviewItem[];
   timelineEntries: TimelineEntry[];
 };
@@ -283,7 +280,9 @@ function buildTimelineEntries(
       challengeDate: day.challengeDate,
       dateLabel: formatChallengeDate(locale, day.challengeDate),
       repsTarget: day.repsTarget,
+      status: day.status,
       statusLabel: getDayStatusLabel(day.status, labels.statusLabels),
+      canUseJoker: day.canUseJoker,
       debtLabel: day.debtCents > 0 ? formatCurrencyFromCents(day.debtCents) : null,
       pushupTotal: totals?.pushupTotal ?? null,
       situpTotal: totals?.situpTotal ?? null,
@@ -845,26 +844,6 @@ function buildOverviewSummary(
   };
 }
 
-function buildRetroactiveJokerDays(
-  user: CurrentUser,
-  locale: Locale,
-  overview: ReturnType<typeof getChallengeOverview>,
-): RetroactiveJokerDay[] {
-  return overview.days
-    .filter((day) => day.status === "slack")
-    .map((day) => ({
-      challengeDate: day.challengeDate,
-      dateLabel: formatChallengeDate(locale, day.challengeDate),
-      debtLabel: formatCurrencyFromCents(day.debtCents),
-      canApply: canApplyJokerToDay({
-        challengeDate: day.challengeDate,
-        isLightParticipant: user.isLightParticipant,
-        jokerBalance: overview.jokerBalance,
-        status: day.status,
-      }),
-    }));
-}
-
 function buildProfileSummary(
   user: CurrentUser,
   locale: Locale,
@@ -986,7 +965,6 @@ export async function getDashboardPageData(params: {
     reviewFeedbackItems,
     primaryReviewItems,
     profile: buildProfileSummary(user, locale, latestMeasurement),
-    retroactiveJokerDays: buildRetroactiveJokerDays(user, locale, challengeOverview),
     sicknessReviewItems,
     timelineEntries: buildTimelineEntries(user, locale, labels, challengeOverview),
   };

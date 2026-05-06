@@ -52,7 +52,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     reviewFeedbackItems,
     primaryReviewItems,
     profile,
-    retroactiveJokerDays,
     sicknessReviewItems,
     timelineEntries,
   } = await getDashboardPageData({
@@ -114,7 +113,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           reviewFeedbackItems={reviewFeedbackItems}
           primaryReviewItems={primaryReviewItems}
           profile={profile}
-          retroactiveJokerDays={retroactiveJokerDays}
           sicknessReviewItems={sicknessReviewItems}
           timelineEntries={timelineEntries}
         />

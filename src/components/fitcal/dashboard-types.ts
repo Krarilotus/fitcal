@@ -39,7 +39,9 @@ export type TimelineEntry = {
   challengeDate: string;
   dateLabel: string;
   repsTarget: number;
+  status: DayCompletionState;
   statusLabel: string;
+  canUseJoker: boolean;
   debtLabel: string | null;
   pushupTotal: number | null;
   situpTotal: number | null;
@@ -112,13 +114,6 @@ export type OverviewSummary = {
   monthJokersRemaining: number;
   documentedDays: number;
   dailyMessage: string | null;
-};
-
-export type RetroactiveJokerDay = {
-  challengeDate: string;
-  dateLabel: string;
-  debtLabel: string;
-  canApply: boolean;
 };
 
 export type ParticipantRow = {
