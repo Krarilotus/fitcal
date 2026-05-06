@@ -253,6 +253,8 @@
         "In der Light-Variante speicherst du nur deine Wiederholungen als Selbsteintrag.",
       fullHint:
         "Alles \u00fcber dem Tagesziel wird automatisch aus deinen Sets berechnet und nur auf offene Schulden angerechnet.",
+      partialClaimHint:
+        "Wenn du unter dem Tagesziel von {target} pro \u00dcbung bleibst, wird der Tag als teilweise gewertet und anteilige Schulden werden berechnet.",
       videos: "Videos",
       compressionHint:
         "Videos über {size} MB werden vor dem Upload automatisch komprimiert.",

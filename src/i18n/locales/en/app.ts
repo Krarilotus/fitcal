@@ -253,6 +253,8 @@
         "In the light plan, you only save your reps as a self-reported entry.",
       fullHint:
         "Anything above the daily target is calculated automatically from your sets and only applied to open debt.",
+      partialClaimHint:
+        "If you stay below the daily target of {target} per exercise, the day will be counted as partial and proportional debt will be charged.",
       videos: "Videos",
       compressionHint:
         "Videos above {size} MB are compressed automatically before upload.",

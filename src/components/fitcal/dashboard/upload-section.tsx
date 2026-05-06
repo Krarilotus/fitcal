@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { type ChangeEvent, type Dispatch, type MutableRefObject, type SetStateAction, useEffect, useState } from "react";
 import type { AppDictionary } from "@/i18n";
 import type { OpenDay, OverviewSummary } from "@/components/fitcal/dashboard-types";
 import {
@@ -50,6 +50,13 @@ type SubmissionResponsePayload = {
   errorCode?: string;
 };
 
+type UploadSetDraft = {
+  pushupSet1: number;
+  pushupSet2: number;
+  situpSet1: number;
+  situpSet2: number;
+};
+
 /* ── Formatting helpers ── */
 
 function formatLocalizedNumber(locale: Locale, value: number, digits = 1) {
@@ -65,6 +72,26 @@ function formatFileSizeLabel(locale: Locale, sizeBytes: number) {
   }
 
   return `${formatLocalizedNumber(locale, sizeBytes / (1024 * 1024), 1)} MB`;
+}
+
+function normalizeSetValue(value: string) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function buildUploadSetDraft(day: OpenDay): UploadSetDraft {
+  return {
+    pushupSet1: day.pushupSet1,
+    pushupSet2: day.pushupSet2,
+    situpSet1: day.situpSet1,
+    situpSet2: day.situpSet2,
+  };
+}
+
+function buildInitialUploadSetDrafts(openDays: OpenDay[]) {
+  return Object.fromEntries(
+    openDays.map((day) => [day.challengeDate, buildUploadSetDraft(day)]),
+  ) as Record<string, UploadSetDraft>;
 }
 
 /* ── Upload label helpers ── */
@@ -474,6 +501,21 @@ export function DashboardUploadSection({
   const renderedOpenDays = openDays.filter(
     (day) => day.showByDefault || expandedClaimEditors[day.challengeDate],
   );
+  const [uploadSetDrafts, setUploadSetDrafts] = useState<Record<string, UploadSetDraft>>(() =>
+    buildInitialUploadSetDrafts(openDays),
+  );
+
+  useEffect(() => {
+    setUploadSetDrafts((current) => {
+      const next = { ...current };
+
+      for (const day of openDays) {
+        next[day.challengeDate] ??= buildUploadSetDraft(day);
+      }
+
+      return next;
+    });
+  }, [openDays]);
 
   function handleUploadVideoSelection(
     challengeDate: string,
@@ -525,6 +567,25 @@ export function DashboardUploadSection({
     }));
   }
 
+  function handleSetDraftChange(
+    challengeDate: string,
+    field: keyof UploadSetDraft,
+    value: string,
+  ) {
+    setUploadSetDrafts((current) => ({
+      ...current,
+      [challengeDate]: {
+        ...(current[challengeDate] ?? {
+          pushupSet1: 0,
+          pushupSet2: 0,
+          situpSet1: 0,
+          situpSet2: 0,
+        }),
+        [field]: normalizeSetValue(value),
+      },
+    }));
+  }
+
   return (
     <section className="fc-section fc-rise" id="uploads">
       <SectionHeader title={labels.uploads.title} />
@@ -544,6 +605,15 @@ export function DashboardUploadSection({
                 const isUploading = uploadActivity != null;
                 const uploadError = uploadErrors[day.challengeDate];
                 const uploadActivityMessage = getUploadActivityMessage(labels.uploads, uploadActivity);
+                const draftSets = uploadSetDrafts[day.challengeDate] ?? buildUploadSetDraft(day);
+                const pushupTotal = draftSets.pushupSet1 + draftSets.pushupSet2;
+                const situpTotal = draftSets.situpSet1 + draftSets.situpSet2;
+                const hasStartedClaim =
+                  day.hasExistingClaim || pushupTotal > 0 || situpTotal > 0;
+                const showsPartialClaimHint =
+                  !overview.isLightParticipant &&
+                  hasStartedClaim &&
+                  (pushupTotal < day.targetReps || situpTotal < day.targetReps);
                 const replaceVideoId = claimEditorReplacementTargets[day.challengeDate] ?? null;
                 const replacementVideo =
                   replaceVideoId != null
@@ -633,14 +703,23 @@ export function DashboardUploadSection({
                         value={replaceVideoId ?? ""}
                       />
                       <div className="fc-grid-2">
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" defaultValue={day.pushupSet1} disabled={isUploading} min="0" name="pushupSet1" placeholder="0" ref={(node) => {
+                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" defaultValue={day.pushupSet1} disabled={isUploading} min="0" name="pushupSet1" onChange={(event) => handleSetDraftChange(day.challengeDate, "pushupSet1", event.target.value)} placeholder="0" ref={(node) => {
                           uploadPrimaryInputRefs.current[day.challengeDate] = node;
                         }} type="number" /></label>
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" defaultValue={day.pushupSet2} disabled={isUploading} min="0" name="pushupSet2" placeholder="0" type="number" /></label>
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" defaultValue={day.situpSet1} disabled={isUploading} min="0" name="situpSet1" placeholder="0" type="number" /></label>
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" defaultValue={day.situpSet2} disabled={isUploading} min="0" name="situpSet2" placeholder="0" type="number" /></label>
+                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" defaultValue={day.pushupSet2} disabled={isUploading} min="0" name="pushupSet2" onChange={(event) => handleSetDraftChange(day.challengeDate, "pushupSet2", event.target.value)} placeholder="0" type="number" /></label>
+                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" defaultValue={day.situpSet1} disabled={isUploading} min="0" name="situpSet1" onChange={(event) => handleSetDraftChange(day.challengeDate, "situpSet1", event.target.value)} placeholder="0" type="number" /></label>
+                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" defaultValue={day.situpSet2} disabled={isUploading} min="0" name="situpSet2" onChange={(event) => handleSetDraftChange(day.challengeDate, "situpSet2", event.target.value)} placeholder="0" type="number" /></label>
                       </div>
                       <p className="fc-text-muted">{overview.isLightParticipant ? labels.uploads.lightHint : labels.uploads.fullHint}</p>
+                      {showsPartialClaimHint ? (
+                        <div className="fc-info-box">
+                          <p className="fc-text-secondary">
+                            {replaceTemplate(labels.uploads.partialClaimHint, {
+                              target: day.targetReps,
+                            })}
+                          </p>
+                        </div>
+                      ) : null}
                       <div className={`grid gap-3 ${overview.isLightParticipant ? "sm:grid-cols-1" : "sm:grid-cols-[1.1fr_0.9fr]"}`}>
                         {!overview.isLightParticipant ? (
                           <div className="space-y-3">
