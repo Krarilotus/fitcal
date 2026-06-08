@@ -312,6 +312,8 @@
       title: "Recent days",
       recentTitle: "Recent",
       catalogTitle: "Choose from history",
+      olderSelectLabel: "Older days",
+      olderSelectPlaceholder: "Choose an older day",
       targetPrefix: "Target",
       perExercise: "per exercise",
       countsPrefix: "Counts:",

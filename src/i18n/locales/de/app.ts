@@ -310,6 +310,8 @@
       title: "Letzte Tage",
       recentTitle: "Zuletzt",
       catalogTitle: "Verlauf auswählen",
+      olderSelectLabel: "Ältere Tage",
+      olderSelectPlaceholder: "Älteren Tag auswählen",
       targetPrefix: "Ziel",
       perExercise: "je \u00dcbung",
       countsPrefix: "Z\u00e4hlt:",

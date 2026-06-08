@@ -264,7 +264,7 @@ function buildTimelineEntries(
   labels: DashboardLabels,
   overview: ReturnType<typeof getChallengeOverview>,
 ): TimelineEntry[] {
-  return overview.days.slice(-12).reverse().map((day) => {
+  return overview.days.slice().reverse().map((day) => {
     const submission = user.dailySubmissions.find(
       (entry) => entry.challengeDate === day.challengeDate,
     );

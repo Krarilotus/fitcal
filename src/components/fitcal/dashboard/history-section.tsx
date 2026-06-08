@@ -56,6 +56,8 @@ export function DashboardHistorySection({
   );
 
   const recentTimelineEntries = timelineEntries.slice(0, 3);
+  const quickTimelineEntries = timelineEntries.slice(0, 12);
+  const olderTimelineEntries = timelineEntries.slice(12);
   const compactSetSummary =
     selectedTimelineEntry != null
       ? `${selectedTimelineEntry.pushupSet1 ?? 0};${selectedTimelineEntry.pushupSet2 ?? 0}/${selectedTimelineEntry.situpSet1 ?? 0};${selectedTimelineEntry.situpSet2 ?? 0}`
@@ -122,7 +124,7 @@ export function DashboardHistorySection({
               </CardHeader>
               <CardContent>
                 <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
-                  {timelineEntries.map((day) => (
+                  {quickTimelineEntries.map((day) => (
                     <button
                       className={`shrink-0 rounded-[var(--fc-radius-sm)] border px-3 py-2 text-left text-sm transition-colors ${
                         selectedTimelineEntry.challengeDate === day.challengeDate
@@ -138,6 +140,33 @@ export function DashboardHistorySection({
                     </button>
                   ))}
                 </div>
+                {olderTimelineEntries.length ? (
+                  <label className="mt-3 block fc-input-group">
+                    <span className="fc-input-label">{labels.timeline.olderSelectLabel}</span>
+                    <select
+                      className="fc-input"
+                      onChange={(event) => {
+                        if (event.target.value) {
+                          setSelectedTimelineDate(event.target.value);
+                        }
+                      }}
+                      value={
+                        olderTimelineEntries.some(
+                          (day) => day.challengeDate === selectedTimelineEntry.challengeDate,
+                        )
+                          ? selectedTimelineEntry.challengeDate
+                          : ""
+                      }
+                    >
+                      <option value="">{labels.timeline.olderSelectPlaceholder}</option>
+                      {olderTimelineEntries.map((day) => (
+                        <option key={day.challengeDate} value={day.challengeDate}>
+                          {day.dateLabel} - {day.statusLabel}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
               </CardContent>
             </Card>
           </div>
