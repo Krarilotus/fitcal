@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { RegistrationApprovalDecision, RegistrationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
-import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
+import { getAppBaseUrl } from "@/lib/auth/url";
 import {
   sendEmailVerificationMail,
   sendRegistrationApprovedMail,
@@ -11,6 +11,7 @@ import {
 import { createEmailVerificationToken } from "@/lib/auth/email-verification";
 import { registerSchema } from "@/lib/auth/validation";
 import { normalizeMeasurementDate } from "@/lib/measurements";
+import { getApiMessages, localizedUrl } from "@/lib/i18n-api";
 
 function hashInviteToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -18,6 +19,7 @@ function hashInviteToken(token: string) {
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const messages = (await getApiMessages()).auth;
 
   try {
     const parsed = registerSchema.parse({
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
 
     if (existingUser) {
       return NextResponse.redirect(
-        getAppUrl("/register?error=E-Mail%20existiert%20bereits", request),
+        localizedUrl(request, "/register", "error", messages.emailExists),
       );
     }
 
@@ -68,11 +70,11 @@ export async function POST(request: Request) {
         : null;
 
       if (invite && invite.email !== parsed.email) {
-        throw new Error("Die Einladung gehört zu einer anderen E-Mail-Adresse.");
+        throw new Error(messages.inviteWrongEmail);
       }
 
       if (inviteToken && !invite) {
-        throw new Error("Die Einladung ist ungültig oder abgelaufen.");
+        throw new Error(messages.inviteInvalid);
       }
 
       const approvers = await tx.user.findMany({
@@ -118,7 +120,7 @@ export async function POST(request: Request) {
             measuredAt: normalizeMeasurementDate(),
             waistCircumferenceCm: parsed.waistCircumferenceCm,
             weightKg: parsed.weightKg,
-            notes: "Startwert bei Registrierung",
+            notes: messages.startMeasurementNotes,
           },
         });
       }
@@ -169,24 +171,23 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.redirect(
-        getAppUrl(
-          "/login?success=Account%20erstellt.%20Bitte%20bestaetige%20zuerst%20deine%20E-Mail-Adresse.",
-          request,
-        ),
+        localizedUrl(request, "/login", "success", messages.registrationCreated),
       );
     }
 
     const pendingMessage = result.hadInvite
-      ? "/login?success=Registrierung%20gesendet.%20Bitte%20bestaetige%20deine%20E-Mail-Adresse.%20Dein%20Einladender%20hat%20bereits%20zugestimmt,%20die%20anderen%20Teilnehmer%20muessen%20deinen%20Zugang%20aber%20noch%20freigeben."
-      : "/login?success=Registrierungsanfrage%20gesendet.%20Bitte%20bestaetige%20deine%20E-Mail-Adresse.%20Danach%20muessen%20bestehende%20Nutzer%20deinen%20Zugang%20noch%20freigeben.";
-
-    return NextResponse.redirect(getAppUrl(pendingMessage, request));
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Registrierung fehlgeschlagen";
+      ? messages.registrationSentInvited
+      : messages.registrationSent;
 
     return NextResponse.redirect(
-      getAppUrl(`/register?error=${encodeURIComponent(message)}`, request),
+      localizedUrl(request, "/login", "success", pendingMessage),
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : messages.registrationFailed;
+
+    return NextResponse.redirect(
+      localizedUrl(request, "/register", "error", message),
     );
   }
 }

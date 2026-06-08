@@ -5,17 +5,19 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { prisma } from "@/lib/db";
 import { preservesSubmissionWithoutVideos } from "@/lib/submission";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export const runtime = "nodejs";
 
-function successRedirect(request: Request, search: string) {
-  return NextResponse.redirect(getAppUrl(`/dashboard?success=${search}`, request), {
+function successRedirect(request: Request, message: string) {
+  return NextResponse.redirect(dashboardMessageUrl(request, "success", message), {
     status: 303,
   });
 }
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).videos;
 
   if (!user) {
     return NextResponse.redirect(getAppUrl("/login", request), { status: 303 });
@@ -26,7 +28,7 @@ export async function POST(request: Request) {
     const videoId = formData.get("videoId");
 
     if (typeof videoId !== "string" || !videoId) {
-      throw new Error("Video konnte nicht gefunden werden.");
+      throw new Error(messages.missing);
     }
 
     const video = await prisma.dailyVideo.findFirst({
@@ -54,7 +56,7 @@ export async function POST(request: Request) {
     });
 
     if (!video) {
-      throw new Error("Dieses Video gehört nicht zu deinem Account.");
+      throw new Error(messages.notYours);
     }
 
     const isLastVideo = video.dailySubmission._count.videos <= 1;
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
 
       return successRedirect(
         request,
-        "Letztes%20Video%20gel%C3%B6scht%2C%20Workout-Claim%20entfernt",
+        messages.lastDeletedClaimRemoved,
       );
     }
 
@@ -95,12 +97,12 @@ export async function POST(request: Request) {
       await rm(path.dirname(video.storedPath), { recursive: true, force: true });
     }
 
-    return successRedirect(request, "Video%20gel%C3%B6scht");
+    return successRedirect(request, messages.deleted);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Video konnte nicht gelöscht werden.";
+      error instanceof Error ? error.message : messages.deleteFailed;
 
-    return NextResponse.redirect(getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request), {
+    return NextResponse.redirect(dashboardMessageUrl(request, "error", message), {
       status: 303,
     });
   }

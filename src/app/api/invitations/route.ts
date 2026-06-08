@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { sendAppInviteMail } from "@/lib/auth/email";
 import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
 import { inviteSchema } from "@/lib/auth/validation";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 const INVITE_DURATION_DAYS = 14;
 
@@ -19,6 +20,7 @@ function hashInviteToken(token: string) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).dashboardActions;
 
   if (
     !user ||
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
     });
 
     if (existingUser) {
-      throw new Error("Diese E-Mail ist bereits registriert.");
+      throw new Error(messages.inviteExistingUser);
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -70,14 +72,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      getAppUrl("/dashboard?success=Einladung%20verschickt", request),
+      dashboardMessageUrl(request, "success", messages.inviteSent),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Einladung konnte nicht verschickt werden.";
+      error instanceof Error ? error.message : messages.inviteSendFailed;
 
     return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
+      dashboardMessageUrl(request, "error", message),
     );
   }
 }

@@ -10,11 +10,13 @@ import {
   sendRegistrationApprovedMail,
   sendRegistrationRejectedMail,
 } from "@/lib/auth/email";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 const REVIEW_REWARD_CENTS = 5;
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).dashboardActions;
 
   if (
     !user ||
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
 
   if (!approvalId || !decision) {
     return NextResponse.redirect(
-      getAppUrl("/dashboard?error=Freigabe%20konnte%20nicht%20verarbeitet%20werden", request),
+      dashboardMessageUrl(request, "error", messages.approvalInvalid),
     );
   }
 
@@ -52,19 +54,19 @@ export async function POST(request: Request) {
       });
 
       if (!approval) {
-        throw new Error("Die Anfrage existiert nicht mehr.");
+        throw new Error(messages.approvalMissing);
       }
 
       if (approval.reviewerUserId !== user.id) {
-        throw new Error("Diese Anfrage gehört nicht zu dir.");
+        throw new Error(messages.approvalNotYours);
       }
 
       if (approval.decision !== RegistrationApprovalDecision.PENDING) {
-        throw new Error("Diese Anfrage wurde bereits bearbeitet.");
+        throw new Error(messages.approvalAlreadyDone);
       }
 
       if (approval.applicant.registrationStatus !== RegistrationStatus.PENDING) {
-        throw new Error("Diese Registrierung ist bereits abgeschlossen.");
+        throw new Error(messages.approvalClosed);
       }
 
       await tx.registrationApproval.update({
@@ -159,16 +161,16 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.redirect(
-      getAppUrl("/dashboard?success=Freigabe%20gespeichert", request),
+      dashboardMessageUrl(request, "success", messages.approvalSaved),
     );
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
-        : "Freigabe konnte nicht verarbeitet werden.";
+        : messages.approvalInvalid;
 
     return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
+      dashboardMessageUrl(request, "error", message),
     );
   }
 }

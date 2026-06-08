@@ -3,9 +3,11 @@ import { RegistrationStatus } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { getAppUrl } from "@/lib/auth/url";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).dashboardActions;
 
   if (
     !user ||
@@ -20,7 +22,7 @@ export async function POST(request: Request) {
 
   if (typeof inviteId !== "string" || !inviteId.trim()) {
     return NextResponse.redirect(
-      getAppUrl("/dashboard?error=Einladung%20konnte%20nicht%20zurueckgezogen%20werden.", request),
+      dashboardMessageUrl(request, "error", messages.inviteRevokeFailed),
     );
   }
 
@@ -34,11 +36,11 @@ export async function POST(request: Request) {
 
   if (deleted.count === 0) {
     return NextResponse.redirect(
-      getAppUrl("/dashboard?error=Einladung%20wurde%20nicht%20gefunden%20oder%20ist%20bereits%20verwendet.", request),
+      dashboardMessageUrl(request, "error", messages.inviteRevokeMissing),
     );
   }
 
   return NextResponse.redirect(
-    getAppUrl("/dashboard?success=Einladung%20zurueckgezogen", request),
+    dashboardMessageUrl(request, "success", messages.inviteRevoked),
   );
 }

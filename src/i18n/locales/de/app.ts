@@ -28,6 +28,92 @@
     },
   },
   api: {
+    auth: {
+      loginFailed: "Login fehlgeschlagen.",
+      pendingApproval: "Dein Account wartet noch auf Freigabe.",
+      rejected: "Dein Account wurde nicht freigegeben.",
+      emailExists: "E-Mail existiert bereits.",
+      inviteWrongEmail: "Die Einladung gehört zu einer anderen E-Mail-Adresse.",
+      inviteInvalid: "Die Einladung ist ungültig oder abgelaufen.",
+      registrationFailed: "Registrierung fehlgeschlagen.",
+      registrationCreated:
+        "Account erstellt. Bitte bestätige zuerst deine E-Mail-Adresse.",
+      registrationSentInvited:
+        "Registrierung gesendet. Bitte bestätige deine E-Mail-Adresse. Dein Einladender hat bereits zugestimmt, die anderen Teilnehmer müssen deinen Zugang aber noch freigeben.",
+      registrationSent:
+        "Registrierungsanfrage gesendet. Bitte bestätige deine E-Mail-Adresse. Danach müssen bestehende Nutzer deinen Zugang noch freigeben.",
+      passwordResetSent:
+        "Wenn die Adresse existiert, wurde ein Link versendet.",
+      passwordResetCreateFailed: "Reset-Link konnte nicht erstellt werden.",
+      resetLinkInvalid: "Der Reset-Link ist ungültig oder abgelaufen.",
+      passwordChanged: "Passwort erfolgreich geändert.",
+      passwordChangeFailed: "Passwort konnte nicht gesetzt werden.",
+      verificationLinkInvalid: "Der Bestätigungslink ist ungültig.",
+      verificationLinkExpired:
+        "Der Bestätigungslink ist ungültig oder abgelaufen.",
+      emailVerified:
+        "E-Mail-Adresse erfolgreich bestätigt. Du kannst dich jetzt einloggen.",
+      verificationSent:
+        "Wenn die Adresse existiert, wurde ein Bestätigungslink versendet.",
+      verificationCreateFailed:
+        "Bestätigungslink konnte nicht erstellt werden.",
+      startMeasurementNotes: "Startwert bei Registrierung",
+    },
+    challenge: {
+      jokerLightDisabled: "Die Light-Variante nutzt keine Joker.",
+      jokerCannotApply: "Der Tag kann nicht mehr gejokert werden.",
+      jokerNoneLeft: "Kein angesparter Joker mehr frei.",
+      jokerSaved: "Joker gespeichert.",
+      jokerNotes: "Joker genutzt",
+      sicknessReviewInvalid: "Die Krankmeldungs-Entscheidung ist ungültig.",
+      sicknessReviewMissing: "Die Krankmeldung wurde nicht gefunden.",
+      sicknessReviewNotYours: "Diese Krankmeldung gehört nicht zu dir.",
+      sicknessReviewAlreadyDone: "Diese Krankmeldung wurde bereits bewertet.",
+      sicknessReviewClosed: "Diese Krankmeldung ist bereits abgeschlossen.",
+      sicknessReviewSaved: "Krankmeldung bewertet.",
+      sicknessReviewSaveFailed: "Krankmeldung konnte nicht bewertet werden.",
+    },
+    dashboardActions: {
+      profileSaved: "Profil gespeichert.",
+      profileSaveFailed: "Profil konnte nicht gespeichert werden.",
+      measurementSaved: "Messwert gespeichert.",
+      measurementSaveFailed: "Messwert konnte nicht gespeichert werden.",
+      inviteExistingUser: "Diese E-Mail ist bereits registriert.",
+      inviteSent: "Einladung verschickt.",
+      inviteSendFailed: "Einladung konnte nicht verschickt werden.",
+      inviteRevokeFailed: "Einladung konnte nicht zurückgezogen werden.",
+      inviteRevokeMissing:
+        "Einladung wurde nicht gefunden oder ist bereits verwendet.",
+      inviteRevoked: "Einladung zurückgezogen.",
+      approvalInvalid: "Freigabe konnte nicht verarbeitet werden.",
+      approvalMissing: "Die Anfrage existiert nicht mehr.",
+      approvalNotYours: "Diese Anfrage gehört nicht zu dir.",
+      approvalAlreadyDone: "Diese Anfrage wurde bereits bearbeitet.",
+      approvalClosed: "Diese Registrierung ist bereits abgeschlossen.",
+      approvalSaved: "Freigabe gespeichert.",
+      featureInvalid: "Bitte beschreibe dein Feature kurz und klar.",
+      featureSuccess: "Feature-Request gesendet (#{number})",
+      featureUnexpected: "Feature-Request konnte nicht erstellt werden.",
+    },
+    submissions: {
+      entrySaved: "Eintrag gespeichert.",
+      workoutSaved: "Trainingstag gespeichert.",
+      unauthorized: "Nicht eingeloggt.",
+      afterChallengeStart: "Uploads sind erst ab Challenge-Start erlaubt.",
+      claimLocked: "Dieser Claim kann nicht mehr geändert werden.",
+      newUploadsWindow: "Neue Uploads sind nur für heute und gestern erlaubt.",
+      videoNotYours: "Dieses Video gehört nicht zu deinem Account.",
+      replaceSingleVideo: "Bitte wähle genau ein neues Video aus.",
+      videoCount: "Bitte lade zwischen 1 und 4 Videos hoch.",
+      videoTooLarge: "Jede Videodatei darf höchstens 100 MB groß sein.",
+      saveFailed: "Submission konnte nicht gespeichert werden.",
+      claimMissing: "Der Claim konnte nicht gefunden werden.",
+      claimNotYours: "Dieser Claim gehört nicht zu deinem Account.",
+      claimDeleteLocked:
+        "Dieser Claim kann nicht mehr bearbeitet oder gelöscht werden.",
+      claimDeleted: "Workout-Claim gelöscht.",
+      claimDeleteFailed: "Claim konnte nicht gelöscht werden.",
+    },
     sickness: {
       invalidRange: "Bitte wähle einen gültigen Zeitraum.",
       rangeOutsideChallenge: "Der Zeitraum muss innerhalb der Challenge liegen.",
@@ -43,6 +129,39 @@
       successSingle: "Männer-Grippe zur Abstimmung eingereicht",
       successMultiple: "{days} Krankheitstage zur Abstimmung eingereicht",
       saveFailed: "Krankmeldung konnte nicht gespeichert werden.",
+    },
+    videos: {
+      missing: "Video konnte nicht gefunden werden.",
+      notYours: "Dieses Video gehört nicht zu deinem Account.",
+      chooseReplacement: "Bitte wähle ein neues Video aus.",
+      tooLarge: "Jede Videodatei darf höchstens 100 MB groß sein.",
+      replaced: "Video ersetzt.",
+      replaceFailed: "Video konnte nicht ersetzt werden.",
+      deleted: "Video gelöscht.",
+      lastDeletedClaimRemoved:
+        "Letztes Video gelöscht, Workout-Claim entfernt.",
+      deleteFailed: "Video konnte nicht gelöscht werden.",
+    },
+    workoutReviews: {
+      saveFailed: "Review konnte nicht gespeichert werden.",
+      submissionMissing: "Der Eintrag existiert nicht mehr.",
+      noSelfReview: "Eigene Uploads kannst du nicht reviewen.",
+      notReviewable: "Dieser Eintrag ist nicht reviewbar.",
+      documentedOnly: "Nur dokumentierte Uploads können reviewt werden.",
+      notPrimaryPending:
+        "Dieser Eintrag wartet gerade nicht auf ein Erstreview.",
+      primaryAlreadyDone: "Du hast diesen Eintrag bereits primär geprüft.",
+      invalidPrimaryDecision:
+        "Bitte wähle eine gültige Review-Entscheidung.",
+      notArbitrationPending:
+        "Dieser Eintrag wartet gerade nicht auf eine Prüfentscheidung.",
+      primaryMissing: "Das Erstreview wurde nicht gefunden.",
+      arbitrationDifferentReviewer:
+        "Das Prüf-Review muss von einer anderen Person kommen.",
+      arbitrationAlreadyDone: "Die Prüfentscheidung wurde bereits abgegeben.",
+      invalidArbitrationDecision:
+        "Bitte wähle eine gültige Prüfentscheidung.",
+      saved: "Review gespeichert.",
     },
   },
   authShell: {

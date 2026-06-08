@@ -45,18 +45,27 @@ export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput 
   };
 }
 
-export function getVideoFiles(formData: FormData) {
+export function getVideoFiles(
+  formData: FormData,
+  messages: {
+    videoCount: string;
+    videoTooLarge: string;
+  } = {
+    videoCount: "Bitte lade zwischen 1 und 4 Videos hoch.",
+    videoTooLarge: "Jede Videodatei darf höchstens 100 MB groß sein.",
+  },
+) {
   const files = formData
     .getAll("videos")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
   if (files.length < 1 || files.length > MAX_VIDEO_FILES_PER_DAY) {
-    throw new Error("Bitte lade zwischen 1 und 4 Videos hoch.");
+    throw new Error(messages.videoCount);
   }
 
   for (const file of files) {
     if (file.size > MAX_VIDEO_SIZE_BYTES) {
-      throw new Error("Jede Videodatei darf hoechstens 100 MB gross sein.");
+      throw new Error(messages.videoTooLarge);
     }
   }
 

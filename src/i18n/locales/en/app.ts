@@ -28,6 +28,91 @@
     },
   },
   api: {
+    auth: {
+      loginFailed: "Login failed.",
+      pendingApproval: "Your account is waiting for approval.",
+      rejected: "Your account was not approved.",
+      emailExists: "Email already exists.",
+      inviteWrongEmail: "The invite belongs to a different email address.",
+      inviteInvalid: "The invite is invalid or expired.",
+      registrationFailed: "Registration failed.",
+      registrationCreated:
+        "Account created. Please verify your email address first.",
+      registrationSentInvited:
+        "Registration sent. Please verify your email address. Your inviter has already approved you, but the other participants still need to approve your access.",
+      registrationSent:
+        "Registration request sent. Please verify your email address. Afterwards existing users still need to approve your access.",
+      passwordResetSent:
+        "If the address exists, a link has been sent.",
+      passwordResetCreateFailed: "Reset link could not be created.",
+      resetLinkInvalid: "The reset link is invalid or expired.",
+      passwordChanged: "Password changed successfully.",
+      passwordChangeFailed: "Password could not be set.",
+      verificationLinkInvalid: "The verification link is invalid.",
+      verificationLinkExpired:
+        "The verification link is invalid or expired.",
+      emailVerified:
+        "Email address verified successfully. You can now sign in.",
+      verificationSent:
+        "If the address exists, a verification link has been sent.",
+      verificationCreateFailed: "Verification link could not be created.",
+      startMeasurementNotes: "Initial value during registration",
+    },
+    challenge: {
+      jokerLightDisabled: "The light plan does not use jokers.",
+      jokerCannotApply: "This day can no longer be marked as joker.",
+      jokerNoneLeft: "No saved joker is available.",
+      jokerSaved: "Joker saved.",
+      jokerNotes: "Joker used",
+      sicknessReviewInvalid: "The sickness decision is invalid.",
+      sicknessReviewMissing: "The sickness claim was not found.",
+      sicknessReviewNotYours: "This sickness claim does not belong to you.",
+      sicknessReviewAlreadyDone: "This sickness claim was already reviewed.",
+      sicknessReviewClosed: "This sickness claim is already closed.",
+      sicknessReviewSaved: "Sickness claim reviewed.",
+      sicknessReviewSaveFailed: "Sickness claim could not be reviewed.",
+    },
+    dashboardActions: {
+      profileSaved: "Profile saved.",
+      profileSaveFailed: "Profile could not be saved.",
+      measurementSaved: "Measurement saved.",
+      measurementSaveFailed: "Measurement could not be saved.",
+      inviteExistingUser: "This email is already registered.",
+      inviteSent: "Invite sent.",
+      inviteSendFailed: "Invite could not be sent.",
+      inviteRevokeFailed: "Invite could not be revoked.",
+      inviteRevokeMissing:
+        "Invite was not found or has already been used.",
+      inviteRevoked: "Invite revoked.",
+      approvalInvalid: "Approval could not be processed.",
+      approvalMissing: "The request no longer exists.",
+      approvalNotYours: "This request does not belong to you.",
+      approvalAlreadyDone: "This request was already handled.",
+      approvalClosed: "This registration is already closed.",
+      approvalSaved: "Approval saved.",
+      featureInvalid: "Please describe your feature briefly and clearly.",
+      featureSuccess: "Feature request sent (#{number})",
+      featureUnexpected: "Feature request could not be created.",
+    },
+    submissions: {
+      entrySaved: "Entry saved.",
+      workoutSaved: "Workout day saved.",
+      unauthorized: "Not signed in.",
+      afterChallengeStart: "Uploads are only allowed after challenge start.",
+      claimLocked: "This claim can no longer be changed.",
+      newUploadsWindow: "New uploads are only allowed for today and yesterday.",
+      videoNotYours: "This video does not belong to your account.",
+      replaceSingleVideo: "Please choose exactly one new video.",
+      videoCount: "Please upload between 1 and 4 videos.",
+      videoTooLarge: "Each video file may be at most 100 MB.",
+      saveFailed: "Submission could not be saved.",
+      claimMissing: "The claim could not be found.",
+      claimNotYours: "This claim does not belong to your account.",
+      claimDeleteLocked:
+        "This claim can no longer be edited or deleted.",
+      claimDeleted: "Workout claim deleted.",
+      claimDeleteFailed: "Claim could not be deleted.",
+    },
     sickness: {
       invalidRange: "Please choose a valid date range.",
       rangeOutsideChallenge: "The range must be within the challenge.",
@@ -43,6 +128,39 @@
       successSingle: "Man flu submitted for review",
       successMultiple: "{days} sick days submitted for review",
       saveFailed: "Sickness claim could not be saved.",
+    },
+    videos: {
+      missing: "Video could not be found.",
+      notYours: "This video does not belong to your account.",
+      chooseReplacement: "Please choose a new video.",
+      tooLarge: "Each video file may be at most 100 MB.",
+      replaced: "Video replaced.",
+      replaceFailed: "Video could not be replaced.",
+      deleted: "Video deleted.",
+      lastDeletedClaimRemoved:
+        "Last video deleted, workout claim removed.",
+      deleteFailed: "Video could not be deleted.",
+    },
+    workoutReviews: {
+      saveFailed: "Review could not be saved.",
+      submissionMissing: "The entry no longer exists.",
+      noSelfReview: "You cannot review your own uploads.",
+      notReviewable: "This entry is not reviewable.",
+      documentedOnly: "Only documented uploads can be reviewed.",
+      notPrimaryPending:
+        "This entry is not waiting for a primary review right now.",
+      primaryAlreadyDone: "You have already reviewed this entry as primary reviewer.",
+      invalidPrimaryDecision:
+        "Please choose a valid review decision.",
+      notArbitrationPending:
+        "This entry is not waiting for an arbitration decision right now.",
+      primaryMissing: "The primary review was not found.",
+      arbitrationDifferentReviewer:
+        "The arbitration review must come from another person.",
+      arbitrationAlreadyDone: "The arbitration decision was already submitted.",
+      invalidArbitrationDecision:
+        "Please choose a valid arbitration decision.",
+      saved: "Review saved.",
     },
   },
   authShell: {

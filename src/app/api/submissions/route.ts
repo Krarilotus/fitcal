@@ -23,6 +23,7 @@ import {
   removeReplacedSubmissionVideo,
   type PersistedSubmissionVideo,
 } from "@/lib/submission-videos";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export const runtime = "nodejs";
 
@@ -34,17 +35,20 @@ function redirectTo(url: string | URL) {
   return NextResponse.redirect(url, { status: 303 });
 }
 
-function successRedirectUrl(user: { isLightParticipant: boolean }, request: Request) {
-  return getAppUrl(
-    user.isLightParticipant
-      ? "/dashboard?success=Eintrag%20gespeichert"
-      : "/dashboard?success=Trainingstag%20gespeichert",
+function successRedirectUrl(
+  user: { isLightParticipant: boolean },
+  request: Request,
+  messages: Awaited<ReturnType<typeof getApiMessages>>["submissions"],
+) {
+  return dashboardMessageUrl(
     request,
+    "success",
+    user.isLightParticipant ? messages.entrySaved : messages.workoutSaved,
   );
 }
 
 function errorRedirectUrl(message: string, request: Request) {
-  return getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request);
+  return dashboardMessageUrl(request, "error", message);
 }
 
 function inferSubmissionErrorCode(message: string) {
@@ -62,13 +66,14 @@ function inferSubmissionErrorCode(message: string) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).submissions;
 
   if (!user) {
     if (wantsJsonResponse(request)) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Nicht eingeloggt.",
+          error: messages.unauthorized,
           errorCode: "unauthorized",
           redirectUrl: getAppUrl("/login", request),
         },
@@ -87,7 +92,7 @@ export async function POST(request: Request) {
       typeof replaceVideoIdValue === "string" ? replaceVideoIdValue.trim() : "";
 
     if (parsed.challengeDate < CHALLENGE_START_DATE) {
-      throw new Error("Uploads sind erst ab Challenge-Start erlaubt.");
+      throw new Error(messages.afterChallengeStart);
     }
 
     const existing = await prisma.dailySubmission.findUnique({
@@ -119,11 +124,11 @@ export async function POST(request: Request) {
       });
 
     if (existing && !canEditExistingSubmission) {
-      throw new Error("Dieser Claim kann nicht mehr geändert werden.");
+      throw new Error(messages.claimLocked);
     }
 
     if (!existing && !canSubmitForDate(parsed.challengeDate)) {
-      throw new Error("Neue Uploads sind nur für heute und gestern erlaubt.");
+      throw new Error(messages.newUploadsWindow);
     }
 
     const appendedVideos: PersistedSubmissionVideo[] = [];
@@ -146,20 +151,20 @@ export async function POST(request: Request) {
           : null;
 
         if (replaceVideoId && !replacementTarget) {
-          throw new Error("Dieses Video gehört nicht zu deinem Account.");
+          throw new Error(messages.videoNotYours);
         }
 
         if (replaceVideoId) {
           if (rawFiles.length !== 1) {
-            throw new Error("Bitte wähle genau ein neues Video aus.");
+            throw new Error(messages.replaceSingleVideo);
           }
         } else if (rawFiles.length > MAX_VIDEO_FILES_PER_DAY) {
-          throw new Error("Bitte lade zwischen 1 und 4 Videos hoch.");
+          throw new Error(messages.videoCount);
         }
 
         for (const file of rawFiles) {
           if (file.size > MAX_VIDEO_SIZE_BYTES) {
-            throw new Error("Jede Videodatei darf höchstens 100 MB groß sein.");
+            throw new Error(messages.videoTooLarge);
           }
         }
 
@@ -167,11 +172,11 @@ export async function POST(request: Request) {
           !replaceVideoId &&
           existing.videos.length + rawFiles.length > MAX_VIDEO_FILES_PER_DAY
         ) {
-          throw new Error("Bitte lade zwischen 1 und 4 Videos hoch.");
+          throw new Error(messages.videoCount);
         }
 
         if (!replaceVideoId && existing.videos.length + rawFiles.length < 1) {
-          throw new Error("Bitte lade zwischen 1 und 4 Videos hoch.");
+          throw new Error(messages.videoCount);
         }
 
         if (replaceVideoId && replacementTarget) {
@@ -203,7 +208,7 @@ export async function POST(request: Request) {
           );
         }
       } else {
-        const files = getVideoFiles(formData);
+        const files = getVideoFiles(formData, messages);
         const displayNames = getVideoDisplayNames(formData, files);
         const { folderPath } = await ensureDailyUploadDirectory(
           user.name || user.email,
@@ -314,7 +319,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const redirectUrl = successRedirectUrl(user, request);
+    const redirectUrl = successRedirectUrl(user, request, messages);
 
     if (wantsJsonResponse(request)) {
       return NextResponse.json({
@@ -326,7 +331,7 @@ export async function POST(request: Request) {
     return redirectTo(redirectUrl);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Submission konnte nicht gespeichert werden.";
+      error instanceof Error ? error.message : messages.saveFailed;
     const redirectUrl = errorRedirectUrl(message, request);
 
     if (wantsJsonResponse(request)) {

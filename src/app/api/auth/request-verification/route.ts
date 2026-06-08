@@ -4,20 +4,8 @@ import { sendEmailVerificationMail } from "@/lib/auth/email";
 import { createEmailVerificationToken } from "@/lib/auth/email-verification";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
 import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
-
-function getMessages(locale: string) {
-  if (locale === "en") {
-    return {
-      success: "If the address exists, a verification link has been sent.",
-      fallbackError: "Verification link could not be created.",
-    };
-  }
-
-  return {
-    success: "Wenn die Adresse existiert, wurde ein Bestaetigungslink versendet.",
-    fallbackError: "Bestaetigungslink konnte nicht erstellt werden.",
-  };
-}
+import { getDictionary } from "@/i18n";
+import { defaultLocale, supportedLocales, type Locale } from "@/lib/preferences";
 
 function getSafeRedirectPath(rawValue: FormDataEntryValue | null) {
   if (typeof rawValue !== "string") {
@@ -35,9 +23,13 @@ function getSafeRedirectPath(rawValue: FormDataEntryValue | null) {
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const locale = typeof formData.get("locale") === "string" ? String(formData.get("locale")) : "de";
+  const localeValue =
+    typeof formData.get("locale") === "string" ? String(formData.get("locale")) : defaultLocale;
+  const locale = supportedLocales.includes(localeValue as Locale)
+    ? (localeValue as Locale)
+    : defaultLocale;
   const redirectPath = getSafeRedirectPath(formData.get("redirectTo"));
-  const messages = getMessages(locale);
+  const messages = getDictionary(locale).api.auth;
 
   try {
     const parsed = forgotPasswordSchema.parse({
@@ -66,13 +58,13 @@ export async function POST(request: Request) {
 
     return NextResponse.redirect(
       getAppUrl(
-        `${redirectPath}?success=${encodeURIComponent(messages.success)}`,
+        `${redirectPath}?success=${encodeURIComponent(messages.verificationSent)}`,
         request,
       ),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : messages.fallbackError;
+      error instanceof Error ? error.message : messages.verificationCreateFailed;
 
     return NextResponse.redirect(
       getAppUrl(`${redirectPath}?error=${encodeURIComponent(message)}`, request),

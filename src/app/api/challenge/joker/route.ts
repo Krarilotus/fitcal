@@ -9,6 +9,7 @@ import {
 } from "@/lib/challenge";
 import { getSubmissionTotals } from "@/lib/submission";
 import { removeStoredSubmissionVideos } from "@/lib/submission-videos";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,7 @@ function buildChallengeRecords(user: NonNullable<Awaited<ReturnType<typeof getCu
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).challenge;
 
   if (!user) {
     return redirectTo(getAppUrl("/login", request));
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
 
   if (user.isLightParticipant) {
     return redirectTo(
-      getAppUrl("/dashboard?error=Die%20Light-Variante%20nutzt%20keine%20Joker", request),
+      dashboardMessageUrl(request, "error", messages.jokerLightDisabled),
     );
   }
 
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
 
   if (!challengeDate || challengeDate < CHALLENGE_START_DATE) {
     return redirectTo(
-      getAppUrl("/dashboard?error=Der%20Tag%20kann%20nicht%20mehr%20gejokert%20werden", request),
+      dashboardMessageUrl(request, "error", messages.jokerCannotApply),
     );
   }
 
@@ -70,11 +72,12 @@ export async function POST(request: Request) {
     })
   ) {
     return redirectTo(
-      getAppUrl(
-        overview.jokerBalance < 1
-          ? "/dashboard?error=Kein%20angesparter%20Joker%20mehr%20frei"
-          : "/dashboard?error=Der%20Tag%20kann%20nicht%20mehr%20gejokert%20werden",
+      dashboardMessageUrl(
         request,
+        "error",
+        overview.jokerBalance < 1
+          ? messages.jokerNoneLeft
+          : messages.jokerCannotApply,
       ),
     );
   }
@@ -136,7 +139,7 @@ export async function POST(request: Request) {
         reviewedAt: null,
         pushupSets: "[0,0]",
         situpSets: "[0,0]",
-        notes: "Joker genutzt",
+        notes: messages.jokerNotes,
         submittedAt: new Date(),
       },
       create: {
@@ -146,11 +149,11 @@ export async function POST(request: Request) {
         reviewStatus: "NOT_REQUIRED",
         pushupSets: "[0,0]",
         situpSets: "[0,0]",
-        notes: "Joker genutzt",
+        notes: messages.jokerNotes,
         submittedAt: new Date(),
       },
     });
   });
 
-  return redirectTo(getAppUrl("/dashboard?success=Joker%20gespeichert", request));
+  return redirectTo(dashboardMessageUrl(request, "success", messages.jokerSaved));
 }

@@ -4,9 +4,11 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { measurementSchema } from "@/lib/auth/validation";
 import { normalizeMeasurementDate } from "@/lib/measurements";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).dashboardActions;
 
   if (!user) {
     return NextResponse.redirect(getAppUrl("/login", request));
@@ -37,14 +39,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      getAppUrl("/dashboard?success=Messwert%20gespeichert", request),
+      dashboardMessageUrl(request, "success", messages.measurementSaved),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Messwert konnte nicht gespeichert werden.";
+      error instanceof Error ? error.message : messages.measurementSaveFailed;
 
     return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
+      dashboardMessageUrl(request, "error", message),
     );
   }
 }

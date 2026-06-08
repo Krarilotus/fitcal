@@ -216,6 +216,12 @@ function buildOpenDays(
         : [];
       const pushupSets = submission ? deserializeSets(submission.pushupSets) : [];
       const situpSets = submission ? deserializeSets(submission.situpSets) : [];
+      const isEditableClaim = submission
+        ? canEditSubmissionBeforeReview({
+            challengeDate: submission.challengeDate,
+            reviewCount: submission.workoutReviews.length,
+          })
+        : false;
 
       return {
         challengeDate: day.challengeDate,
@@ -226,12 +232,7 @@ function buildOpenDays(
         isQualificationDay: isFreeChallengeDay(day.challengeDate),
         canUseJoker: day.canUseJoker,
         hasExistingClaim: Boolean(submission),
-        isEditableClaim: submission
-          ? canEditSubmissionBeforeReview({
-              challengeDate: submission.challengeDate,
-              reviewCount: submission.workoutReviews.length,
-            })
-          : false,
+        isEditableClaim,
         canAddVideos:
           Boolean(submission) &&
           isEditableClaim &&

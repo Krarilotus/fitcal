@@ -3,9 +3,11 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { profileSchema } from "@/lib/auth/validation";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).dashboardActions;
 
   if (!user) {
     return NextResponse.redirect(getAppUrl("/login", request));
@@ -34,14 +36,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      getAppUrl("/dashboard?success=Profil%20gespeichert", request),
+      dashboardMessageUrl(request, "success", messages.profileSaved),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Profil konnte nicht gespeichert werden.";
+      error instanceof Error ? error.message : messages.profileSaveFailed;
 
     return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
+      dashboardMessageUrl(request, "error", message),
     );
   }
 }
