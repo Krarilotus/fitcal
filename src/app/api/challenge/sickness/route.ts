@@ -6,11 +6,9 @@ import {
 import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import {
-  CHALLENGE_END_DATE,
   CHALLENGE_START_DATE,
   addDaysToDateKey,
   differenceInDays,
-  getOpenUploadDateKeys,
   isWithinChallenge,
 } from "@/lib/challenge";
 import { prisma } from "@/lib/db";
@@ -20,7 +18,7 @@ const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function buildDateRange(startDate: string, endDate: string) {
   if (!DATE_KEY_PATTERN.test(startDate) || !DATE_KEY_PATTERN.test(endDate)) {
-    throw new Error("Bitte wähle einen gültigen Zeitraum.");
+    throw new Error("Bitte waehle einen gueltigen Zeitraum.");
   }
 
   if (!isWithinChallenge(startDate) || !isWithinChallenge(endDate)) {
@@ -61,22 +59,13 @@ export async function POST(request: Request) {
     const consent = String(formData.get("consent") || "");
     const notes = String(formData.get("notes") || "").trim();
     const dateKeys = buildDateRange(startDate, endDate);
-    const openUploadDateKeys = getOpenUploadDateKeys();
-    const earliestAllowedDate = openUploadDateKeys[1] ?? openUploadDateKeys[0];
 
-    if (
-      !earliestAllowedDate ||
-      dateKeys.some((dateKey) => (
-        dateKey < earliestAllowedDate ||
-        dateKey < CHALLENGE_START_DATE ||
-        dateKey > CHALLENGE_END_DATE
-      ))
-    ) {
-      throw new Error("Die Krankmeldung ist nur ab gestern und für kommende Challenge-Tage möglich.");
+    if (dateKeys.some((dateKey) => dateKey < CHALLENGE_START_DATE)) {
+      throw new Error("Die Krankmeldung ist nur innerhalb der Challenge moeglich.");
     }
 
     if (consent !== "on") {
-      throw new Error("Bitte bestätige die Männergrippe-Erklärung.");
+      throw new Error("Bitte bestaetige die Maennergrippe-Erklaerung.");
     }
 
     const reviewers = await prisma.user.findMany({
@@ -93,7 +82,7 @@ export async function POST(request: Request) {
     });
 
     if (reviewers.length === 0) {
-      throw new Error("Es gibt aktuell keine anderen Vollteilnehmer für die Bestätigung.");
+      throw new Error("Es gibt aktuell keine anderen Vollteilnehmer fuer die Bestaetigung.");
     }
 
     const existingSubmissions = await prisma.dailySubmission.findMany({
@@ -108,10 +97,14 @@ export async function POST(request: Request) {
       },
     });
 
-    const blockedSubmission = existingSubmissions.find((submission) => submission.videos.length > 0);
+    const blockedSubmission = existingSubmissions.find((submission) =>
+      submission.videos.length > 0 ||
+      submission.status === "COMPLETED" ||
+      submission.status === "JOKER"
+    );
 
     if (blockedSubmission) {
-      throw new Error(`Für den ${blockedSubmission.challengeDate} gibt es bereits Uploads.`);
+      throw new Error(`Fuer den ${blockedSubmission.challengeDate} gibt es bereits einen Workout- oder Joker-Eintrag.`);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -131,7 +124,7 @@ export async function POST(request: Request) {
             reviewedAt: null,
             pushupSets: "[0,0]",
             situpSets: "[0,0]",
-            notes: notes || "Männer-Grippe gemeldet",
+            notes: notes || "Maenner-Grippe gemeldet",
             submittedAt: new Date(),
           },
           create: {
@@ -141,7 +134,7 @@ export async function POST(request: Request) {
             reviewStatus: "NOT_REQUIRED",
             pushupSets: "[0,0]",
             situpSets: "[0,0]",
-            notes: notes || "Männer-Grippe gemeldet",
+            notes: notes || "Maenner-Grippe gemeldet",
             submittedAt: new Date(),
           },
           select: {
@@ -170,7 +163,7 @@ export async function POST(request: Request) {
     return NextResponse.redirect(
       getAppUrl(`/dashboard?success=${encodeURIComponent(
         dateKeys.length === 1
-          ? "Männer-Grippe zur Abstimmung eingereicht"
+          ? "Maenner-Grippe zur Abstimmung eingereicht"
           : `${dateKeys.length} Krankheitstage zur Abstimmung eingereicht`,
       )}`, request),
     );
