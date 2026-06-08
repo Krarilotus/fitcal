@@ -27,6 +27,24 @@
       en: "English",
     },
   },
+  api: {
+    sickness: {
+      invalidRange: "Please choose a valid date range.",
+      rangeOutsideChallenge: "The range must be within the challenge.",
+      endBeforeStart: "The end date cannot be before the start date.",
+      rangeTooLong: "Please submit at most {days} sick days at once.",
+      lightDisabled: "The light plan does not use sickness claims.",
+      onlyWithinChallenge: "Sickness claims are only possible within the challenge.",
+      consentRequired: "Please confirm the man-flu declaration.",
+      noReviewers: "There are currently no other full participants to confirm this.",
+      blockedSubmission:
+        "There is already a workout or joker entry for {date}.",
+      defaultNotes: "Man flu reported",
+      successSingle: "Man flu submitted for review",
+      successMultiple: "{days} sick days submitted for review",
+      saveFailed: "Sickness claim could not be saved.",
+    },
+  },
   authShell: {
     backHome: "\u2190 Home",
   },

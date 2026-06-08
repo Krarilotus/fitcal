@@ -12,27 +12,33 @@ import {
   isWithinChallenge,
 } from "@/lib/challenge";
 import { prisma } from "@/lib/db";
+import { getDictionary } from "@/i18n";
+import { getPreferredLocale } from "@/lib/preferences";
 
 const MAX_SICKNESS_RANGE_DAYS = 31;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-function buildDateRange(startDate: string, endDate: string) {
+function buildDateRange(
+  startDate: string,
+  endDate: string,
+  messages: ReturnType<typeof getDictionary>["api"]["sickness"],
+) {
   if (!DATE_KEY_PATTERN.test(startDate) || !DATE_KEY_PATTERN.test(endDate)) {
-    throw new Error("Bitte wähle einen gültigen Zeitraum.");
+    throw new Error(messages.invalidRange);
   }
 
   if (!isWithinChallenge(startDate) || !isWithinChallenge(endDate)) {
-    throw new Error("Der Zeitraum muss innerhalb der Challenge liegen.");
+    throw new Error(messages.rangeOutsideChallenge);
   }
 
   const rangeLength = differenceInDays(startDate, endDate) + 1;
 
   if (rangeLength < 1) {
-    throw new Error("Das Enddatum darf nicht vor dem Startdatum liegen.");
+    throw new Error(messages.endBeforeStart);
   }
 
   if (rangeLength > MAX_SICKNESS_RANGE_DAYS) {
-    throw new Error(`Bitte reiche maximal ${MAX_SICKNESS_RANGE_DAYS} Krankheitstage auf einmal ein.`);
+    throw new Error(messages.rangeTooLong.replace("{days}", String(MAX_SICKNESS_RANGE_DAYS)));
   }
 
   return Array.from({ length: rangeLength }, (_, index) => addDaysToDateKey(startDate, index));
@@ -40,6 +46,8 @@ function buildDateRange(startDate: string, endDate: string) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const locale = await getPreferredLocale();
+  const messages = getDictionary(locale).api.sickness;
 
   if (!user) {
     return NextResponse.redirect(getAppUrl("/login", request));
@@ -47,7 +55,7 @@ export async function POST(request: Request) {
 
   if (user.isLightParticipant) {
     return NextResponse.redirect(
-      getAppUrl("/dashboard?error=Die%20Light-Variante%20nutzt%20keine%20Krankmeldungen", request),
+      getAppUrl(`/dashboard?error=${encodeURIComponent(messages.lightDisabled)}`, request),
     );
   }
 
@@ -58,14 +66,14 @@ export async function POST(request: Request) {
     const endDate = String(formData.get("endDate") || startDate);
     const consent = String(formData.get("consent") || "");
     const notes = String(formData.get("notes") || "").trim();
-    const dateKeys = buildDateRange(startDate, endDate);
+    const dateKeys = buildDateRange(startDate, endDate, messages);
 
     if (dateKeys.some((dateKey) => dateKey < CHALLENGE_START_DATE)) {
-      throw new Error("Die Krankmeldung ist nur innerhalb der Challenge möglich.");
+      throw new Error(messages.onlyWithinChallenge);
     }
 
     if (consent !== "on") {
-      throw new Error("Bitte bestätige die Männergrippe-Erklärung.");
+      throw new Error(messages.consentRequired);
     }
 
     const reviewers = await prisma.user.findMany({
@@ -82,7 +90,7 @@ export async function POST(request: Request) {
     });
 
     if (reviewers.length === 0) {
-      throw new Error("Es gibt aktuell keine anderen Vollteilnehmer für die Bestätigung.");
+      throw new Error(messages.noReviewers);
     }
 
     const existingSubmissions = await prisma.dailySubmission.findMany({
@@ -104,7 +112,9 @@ export async function POST(request: Request) {
     );
 
     if (blockedSubmission) {
-      throw new Error(`Für den ${blockedSubmission.challengeDate} gibt es bereits einen Workout- oder Joker-Eintrag.`);
+      throw new Error(
+        messages.blockedSubmission.replace("{date}", blockedSubmission.challengeDate),
+      );
     }
 
     await prisma.$transaction(async (tx) => {
@@ -124,7 +134,7 @@ export async function POST(request: Request) {
             reviewedAt: null,
             pushupSets: "[0,0]",
             situpSets: "[0,0]",
-            notes: notes || "Männer-Grippe gemeldet",
+            notes: notes || messages.defaultNotes,
             submittedAt: new Date(),
           },
           create: {
@@ -134,7 +144,7 @@ export async function POST(request: Request) {
             reviewStatus: "NOT_REQUIRED",
             pushupSets: "[0,0]",
             situpSets: "[0,0]",
-            notes: notes || "Männer-Grippe gemeldet",
+            notes: notes || messages.defaultNotes,
             submittedAt: new Date(),
           },
           select: {
@@ -163,13 +173,13 @@ export async function POST(request: Request) {
     return NextResponse.redirect(
       getAppUrl(`/dashboard?success=${encodeURIComponent(
         dateKeys.length === 1
-          ? "Männer-Grippe zur Abstimmung eingereicht"
-          : `${dateKeys.length} Krankheitstage zur Abstimmung eingereicht`,
+          ? messages.successSingle
+          : messages.successMultiple.replace("{days}", String(dateKeys.length)),
       )}`, request),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Krankmeldung konnte nicht gespeichert werden.";
+      error instanceof Error ? error.message : messages.saveFailed;
 
     return NextResponse.redirect(
       getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),

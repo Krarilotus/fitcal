@@ -27,6 +27,24 @@
       en: "English",
     },
   },
+  api: {
+    sickness: {
+      invalidRange: "Bitte wähle einen gültigen Zeitraum.",
+      rangeOutsideChallenge: "Der Zeitraum muss innerhalb der Challenge liegen.",
+      endBeforeStart: "Das Enddatum darf nicht vor dem Startdatum liegen.",
+      rangeTooLong: "Bitte reiche maximal {days} Krankheitstage auf einmal ein.",
+      lightDisabled: "Die Light-Variante nutzt keine Krankmeldungen.",
+      onlyWithinChallenge: "Die Krankmeldung ist nur innerhalb der Challenge möglich.",
+      consentRequired: "Bitte bestätige die Männergrippe-Erklärung.",
+      noReviewers: "Es gibt aktuell keine anderen Vollteilnehmer für die Bestätigung.",
+      blockedSubmission:
+        "Für den {date} gibt es bereits einen Workout- oder Joker-Eintrag.",
+      defaultNotes: "Männer-Grippe gemeldet",
+      successSingle: "Männer-Grippe zur Abstimmung eingereicht",
+      successMultiple: "{days} Krankheitstage zur Abstimmung eingereicht",
+      saveFailed: "Krankmeldung konnte nicht gespeichert werden.",
+    },
+  },
   authShell: {
     backHome: "\u2190 Startseite",
   },
