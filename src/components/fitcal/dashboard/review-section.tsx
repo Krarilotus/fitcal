@@ -97,7 +97,7 @@ export function DashboardReviewSection({
     [reviewParticipants],
   );
   const openReviewCount = useMemo(
-    () => reviewParticipants.reduce((sum, row) => sum + (row.isSelf ? 0 : row.pendingReviewCount), 0),
+    () => reviewParticipants.reduce((sum, row) => sum + row.pendingReviewCount, 0),
     [reviewParticipants],
   );
 
@@ -218,7 +218,7 @@ export function DashboardReviewSection({
                     <DashboardStatBox label={labels.review.stats.days} value={row.documentedDays} />
                     <DashboardStatBox label={labels.review.stats.qualification} value={row.qualificationLabel} />
                     <DashboardStatBox label={labels.review.stats.debt} value={row.debtLabel ?? labels.participantReview.off} />
-                    <DashboardStatBox label={labels.review.stats.reviews} value={row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel} />
+                    <DashboardStatBox label={labels.review.stats.reviews} value={row.reviewLabel} />
                     <DashboardStatBox label={labels.review.stats.commonReviewer} value={row.commonReviewerLabel} />
                   </div>
                 </CardContent>
@@ -261,7 +261,7 @@ export function DashboardReviewSection({
                       <td className="py-3 pr-4">{row.qualificationLabel}</td>
                       <td className="py-3 pr-4">{row.documentedDays}</td>
                       <td className="py-3 pr-4">{row.debtLabel ?? labels.participantReview.off}</td>
-                      <td className="py-3 pr-4">{row.isSelf ? labels.review.selfReviewDisabled : row.reviewLabel}</td>
+                      <td className="py-3 pr-4">{row.reviewLabel}</td>
                       <td className="py-3">{row.commonReviewerLabel}</td>
                     </tr>
                   ))}
