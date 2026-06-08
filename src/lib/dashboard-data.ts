@@ -35,7 +35,6 @@ import {
   CHALLENGE_FREE_DAYS,
   CHALLENGE_START_DATE,
   MAX_VIDEO_FILES_PER_DAY,
-  canSubmitForDate,
   formatCurrencyFromCents,
   getChallengeDayIndex,
   getChallengeOverview,
@@ -206,7 +205,7 @@ function buildOpenDays(
           reviewCount: submission.workoutReviews.length,
         });
 
-      return day.canUpload || (isEditableClaim && canSubmitForDate(day.challengeDate));
+      return day.canUpload || isEditableClaim;
     })
     .map((day) => {
       const submission = user.dailySubmissions.find(
@@ -235,7 +234,7 @@ function buildOpenDays(
           : false,
         canAddVideos:
           Boolean(submission) &&
-          canSubmitForDate(day.challengeDate) &&
+          isEditableClaim &&
           (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
         pushupSet1: pushupSets[0] ?? 0,
         pushupSet2: pushupSets[1] ?? 0,
@@ -315,7 +314,12 @@ function buildTimelineEntries(
         : false,
       canAddVideos:
         Boolean(submission) &&
-        canSubmitForDate(day.challengeDate) &&
+        (submission
+          ? canEditSubmissionBeforeReview({
+              challengeDate: submission.challengeDate,
+              reviewCount: submission.workoutReviews.length,
+            })
+          : false) &&
         (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
       videos:
         submission?.videos.map((video) => ({

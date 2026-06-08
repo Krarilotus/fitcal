@@ -4,7 +4,6 @@ import {
   MAX_SETS_PER_EXERCISE,
   MAX_VIDEO_FILES_PER_DAY,
   MAX_VIDEO_SIZE_BYTES,
-  canSubmitForDate,
 } from "@/lib/challenge";
 
 export const dailySubmissionSchema = z.object({
@@ -141,5 +140,5 @@ export function canEditSubmissionBeforeReview(input: {
   challengeDate: string;
   reviewCount: number;
 }) {
-  return canSubmitForDate(input.challengeDate) && input.reviewCount === 0;
+  return input.reviewCount === 0;
 }

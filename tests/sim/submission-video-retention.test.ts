@@ -35,7 +35,7 @@ test("not-required review status also preserves the submission", () => {
   );
 });
 
-test("claims can only be edited during the active upload window before any review exists", () => {
+test("claims can be edited until the first review exists", () => {
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const olderDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
@@ -61,6 +61,6 @@ test("claims can only be edited during the active upload window before any revie
       challengeDate: olderDate,
       reviewCount: 0,
     }),
-    false,
+    true,
   );
 });

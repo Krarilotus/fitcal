@@ -86,8 +86,8 @@ export async function POST(request: Request) {
     const replaceVideoId =
       typeof replaceVideoIdValue === "string" ? replaceVideoIdValue.trim() : "";
 
-    if (parsed.challengeDate < CHALLENGE_START_DATE || !canSubmitForDate(parsed.challengeDate)) {
-      throw new Error("Uploads sind nur für heute und gestern erlaubt.");
+    if (parsed.challengeDate < CHALLENGE_START_DATE) {
+      throw new Error("Uploads sind erst ab Challenge-Start erlaubt.");
     }
 
     const existing = await prisma.dailySubmission.findUnique({
@@ -120,6 +120,10 @@ export async function POST(request: Request) {
 
     if (existing && !canEditExistingSubmission) {
       throw new Error("Dieser Claim kann nicht mehr geändert werden.");
+    }
+
+    if (!existing && !canSubmitForDate(parsed.challengeDate)) {
+      throw new Error("Neue Uploads sind nur für heute und gestern erlaubt.");
     }
 
     const appendedVideos: PersistedSubmissionVideo[] = [];
