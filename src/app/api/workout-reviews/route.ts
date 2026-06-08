@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { prisma } from "@/lib/db";
 import { getSetsTotal } from "@/lib/submission";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 import {
   parseArbitrationWorkoutReviewAction,
   parsePrimaryWorkoutReviewAction,
@@ -30,6 +31,7 @@ function parseCount(value: FormDataEntryValue | null, max = MAX_REVIEW_COUNT) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).workoutReviews;
 
   if (
     !user ||
@@ -47,7 +49,7 @@ export async function POST(request: Request) {
 
   if (!submissionId || (mode !== "primary" && mode !== "arbitration")) {
     return NextResponse.redirect(
-      getAppUrl("/dashboard?error=Review%20konnte%20nicht%20gespeichert%20werden", request),
+      dashboardMessageUrl(request, "error", messages.saveFailed),
     );
   }
 
@@ -79,22 +81,22 @@ export async function POST(request: Request) {
       });
 
       if (!submission) {
-        throw new Error("Der Eintrag existiert nicht mehr.");
+        throw new Error(messages.submissionMissing);
       }
 
       if (submission.userId === user.id) {
-        throw new Error("Eigene Uploads kannst du nicht reviewen.");
+        throw new Error(messages.noSelfReview);
       }
 
       if (
         submission.user.registrationStatus !== RegistrationStatus.APPROVED ||
         submission.user.isLightParticipant
       ) {
-        throw new Error("Dieser Eintrag ist nicht reviewbar.");
+        throw new Error(messages.notReviewable);
       }
 
       if (submission.status !== "COMPLETED" || submission.videos.length === 0) {
-        throw new Error("Nur dokumentierte Uploads können reviewt werden.");
+        throw new Error(messages.documentedOnly);
       }
 
       const rawPushups = getSetsTotal(submission.pushupSets);
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
           submission.reviewStatus !== WorkoutReviewStatus.PENDING &&
           submission.reviewStatus !== WorkoutReviewStatus.REVISION_REQUESTED
         ) {
-          throw new Error("Dieser Eintrag wartet gerade nicht auf ein Erstreview.");
+          throw new Error(messages.notPrimaryPending);
         }
 
         if (
@@ -115,13 +117,13 @@ export async function POST(request: Request) {
               review.reviewerUserId === user.id,
           )
         ) {
-          throw new Error("Du hast diesen Eintrag bereits primär geprüft.");
+          throw new Error(messages.primaryAlreadyDone);
         }
 
         const primaryAction = parsePrimaryWorkoutReviewAction(decisionValue);
 
         if (!primaryAction) {
-          throw new Error("Bitte wähle eine gültige Review-Entscheidung.");
+          throw new Error(messages.invalidPrimaryDecision);
         }
 
         const { countedPushups, countedSitups, decision } =
@@ -180,7 +182,7 @@ export async function POST(request: Request) {
       }
 
       if (submission.reviewStatus !== WorkoutReviewStatus.ESCALATED) {
-        throw new Error("Dieser Eintrag wartet gerade nicht auf eine Prüfentscheidung.");
+        throw new Error(messages.notArbitrationPending);
       }
 
       const primaryReview = [...submission.workoutReviews]
@@ -188,11 +190,11 @@ export async function POST(request: Request) {
         .find((review) => review.stage === WorkoutReviewStage.PRIMARY);
 
       if (!primaryReview) {
-        throw new Error("Das Erstreview wurde nicht gefunden.");
+        throw new Error(messages.primaryMissing);
       }
 
       if (primaryReview.reviewerUserId === user.id) {
-        throw new Error("Das Prüf-Review muss von einer anderen Person kommen.");
+        throw new Error(messages.arbitrationDifferentReviewer);
       }
 
       const existingArbitration = submission.workoutReviews.find(
@@ -202,7 +204,7 @@ export async function POST(request: Request) {
       );
 
       if (existingArbitration) {
-        throw new Error("Die Prüfentscheidung wurde bereits abgegeben.");
+        throw new Error(messages.arbitrationAlreadyDone);
       }
 
       const arbitrationAction = parseArbitrationWorkoutReviewAction(decisionValue);
@@ -215,7 +217,7 @@ export async function POST(request: Request) {
             : null;
 
       if (!arbitrationAction || !arbitrationDecision) {
-        throw new Error("Bitte wähle eine gültige Prüfentscheidung.");
+        throw new Error(messages.invalidArbitrationDecision);
       }
 
       await tx.workoutReview.create({
@@ -264,14 +266,14 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      getAppUrl("/dashboard?success=Review%20gespeichert", request),
+      dashboardMessageUrl(request, "success", messages.saved),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Review konnte nicht gespeichert werden.";
+      error instanceof Error ? error.message : messages.saveFailed;
 
     return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
+      dashboardMessageUrl(request, "error", message),
     );
   }
 }

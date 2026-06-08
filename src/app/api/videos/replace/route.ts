@@ -7,6 +7,7 @@ import {
   persistReplacementSubmissionVideo,
   removeReplacedSubmissionVideo,
 } from "@/lib/submission-videos";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,7 @@ function redirectTo(url: string | URL) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).videos;
 
   if (!user) {
     return redirectTo(getAppUrl("/login", request));
@@ -27,15 +29,15 @@ export async function POST(request: Request) {
     const replacement = formData.get("replacementVideo");
 
     if (typeof videoId !== "string" || !videoId) {
-      throw new Error("Video konnte nicht gefunden werden.");
+      throw new Error(messages.missing);
     }
 
     if (!(replacement instanceof File) || replacement.size <= 0) {
-      throw new Error("Bitte wähle ein neues Video aus.");
+      throw new Error(messages.chooseReplacement);
     }
 
     if (replacement.size > MAX_VIDEO_SIZE_BYTES) {
-      throw new Error("Jede Videodatei darf höchstens 100 MB groß sein.");
+      throw new Error(messages.tooLarge);
     }
 
     const video = await prisma.dailyVideo.findFirst({
@@ -55,7 +57,7 @@ export async function POST(request: Request) {
     });
 
     if (!video) {
-      throw new Error("Dieses Video gehört nicht zu deinem Account.");
+      throw new Error(messages.notYours);
     }
 
     const persistedReplacement = await persistReplacementSubmissionVideo({
@@ -84,11 +86,11 @@ export async function POST(request: Request) {
 
     await removeReplacedSubmissionVideo(video.storedPath, persistedReplacement.storedPath);
 
-    return redirectTo(getAppUrl("/dashboard?success=Video%20ersetzt", request));
+    return redirectTo(dashboardMessageUrl(request, "success", messages.replaced));
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Video konnte nicht ersetzt werden.";
+      error instanceof Error ? error.message : messages.replaceFailed;
 
-    return redirectTo(getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request));
+    return redirectTo(dashboardMessageUrl(request, "error", message));
   }
 }

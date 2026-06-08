@@ -4,6 +4,9 @@ import { z } from "zod";
 import { getAppUrl } from "@/lib/auth/url";
 import { getCurrentUser } from "@/lib/auth/session";
 import { createGitHubFeatureRequestIssue } from "@/lib/github/feature-requests";
+import { getDictionary } from "@/i18n";
+import { defaultLocale, supportedLocales, type Locale } from "@/lib/preferences";
+import { withMessage } from "@/lib/i18n-api";
 
 const featureRequestSchema = z.object({
   title: z.string().trim().max(120).optional().default(""),
@@ -12,19 +15,11 @@ const featureRequestSchema = z.object({
 });
 
 function getFeatureRequestMessages(locale: string) {
-  if (locale === "en") {
-    return {
-      invalid: "Please describe your feature request briefly and clearly.",
-      success: (issueNumber: number) => `Feature request sent (#${issueNumber})`,
-      unexpected: "Feature request could not be created.",
-    };
-  }
+  const normalizedLocale = supportedLocales.includes(locale as Locale)
+    ? (locale as Locale)
+    : defaultLocale;
 
-  return {
-    invalid: "Bitte beschreibe dein Feature kurz und klar.",
-    success: (issueNumber: number) => `Feature-Request gesendet (#${issueNumber})`,
-    unexpected: "Feature-Request konnte nicht erstellt werden.",
-  };
+  return getDictionary(normalizedLocale).api.dashboardActions;
 }
 
 function redirectToDashboardMessage(
@@ -70,14 +65,14 @@ export async function POST(request: Request) {
     return redirectToDashboardMessage(
       request,
       "success",
-      messages.success(issue.number),
+      withMessage(messages.featureSuccess, { number: issue.number }),
     );
   } catch (error) {
     const messages = getFeatureRequestMessages(requestedLocale);
     const message =
       error instanceof z.ZodError
-        ? messages.invalid
-        : messages.unexpected;
+        ? messages.featureInvalid
+        : messages.featureUnexpected;
 
     return redirectToDashboardMessage(request, "error", message);
   }

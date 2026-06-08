@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { AppDictionary } from "@/i18n";
 import { DashboardHistorySection } from "@/components/fitcal/dashboard/history-section";
@@ -32,10 +32,8 @@ import type {
 import type { ActiveInviteSummary, PendingApprovalSummary } from "@/lib/dashboard-data";
 import type { Locale } from "@/lib/preferences";
 
-/* ── Tab & animation types ── */
-
 type DashboardLabels = AppDictionary["dashboard"];
-type TabKey =
+type SectionKey =
   | "overview"
   | "uploads"
   | "timeline"
@@ -45,29 +43,7 @@ type TabKey =
   | "rechner"
   | "profile";
 
-type PanelTransitionDirection = "forward" | "backward";
-
-/* ── Scroll-driven crossfade configuration ── */
-
-/**
- * Height of the invisible sentinel zones at the top and bottom of each panel.
- * Scrolling into the bottom sentinel drives forward transitions;
- * scrolling into the top sentinel drives backward transitions.
- * Native scroll momentum is fully preserved — no preventDefault needed.
- */
-const SCROLL_SENTINEL_HEIGHT = 400;
-
-function outgoingOpacity(p: number) {
-  return p <= 0 ? 1 : p >= 0.35 ? 0 : 1 - p / 0.35;
-}
-
-function incomingOpacity(p: number) {
-  return p <= 0.65 ? 0 : p >= 1 ? 1 : (p - 0.65) / 0.35;
-}
-
 type ClaimEditorReplacementState = Record<string, string | null>;
-
-/* ── Helpers ── */
 
 function handleVideoReplaceSelection(event: ChangeEvent<HTMLInputElement>) {
   if (event.currentTarget.files?.length) {
@@ -75,7 +51,37 @@ function handleVideoReplaceSelection(event: ChangeEvent<HTMLInputElement>) {
   }
 }
 
-/* ── Component ── */
+function getSectionScrollOffset() {
+  return window.innerWidth < 640 ? 24 : 104;
+}
+
+function scrollSectionIntoView(sectionId: SectionKey, behavior: ScrollBehavior = "smooth") {
+  const section = document.getElementById(sectionId);
+
+  if (!section) {
+    return;
+  }
+
+  const targetTop =
+    section.getBoundingClientRect().top + window.scrollY - getSectionScrollOffset();
+
+  window.scrollTo({
+    top: Math.max(0, targetTop),
+    behavior,
+  });
+}
+
+function focusElementWithoutScrolling(element: HTMLInputElement | null) {
+  if (!element) {
+    return;
+  }
+
+  try {
+    element.focus({ preventScroll: true });
+  } catch {
+    element.focus();
+  }
+}
 
 export function DashboardTabs({
   activeInvites,
@@ -116,9 +122,7 @@ export function DashboardTabs({
   sicknessReviewItems: SicknessReviewItem[];
   timelineEntries: TimelineEntry[];
 }) {
-  /* ── Tab definitions ── */
-
-  const baseTabs = useMemo<ReadonlyArray<{ key: TabKey; label: string }>>(
+  const baseSections = useMemo<ReadonlyArray<{ key: SectionKey; label: string }>>(
     () => [
       { key: "overview", label: labels.tabs.overview },
       { key: "uploads", label: labels.tabs.uploads },
@@ -139,81 +143,90 @@ export function DashboardTabs({
     ],
   );
 
-  const tabs = useMemo(() => {
-    const nextTabs = [...baseTabs];
+  const sections = useMemo(() => {
+    const nextSections = [...baseSections];
 
     if (!overview.isLightParticipant) {
-      nextTabs.splice(4, 0, { key: "review", label: labels.tabs.review });
+      nextSections.splice(4, 0, { key: "review", label: labels.tabs.review });
     }
 
-    return nextTabs as readonly { key: TabKey; label: string }[];
-  }, [baseTabs, labels.tabs.review, overview.isLightParticipant]);
-
-  /* ── State ── */
+    return nextSections as readonly { key: SectionKey; label: string }[];
+  }, [baseSections, labels.tabs.review, overview.isLightParticipant]);
 
   const hasStudentPricing = overview.hasStudentDiscount && !overview.isLightParticipant;
-  const rules = overview.isLightParticipant ? labels.rules.lightRules : hasStudentPricing ? labels.rules.studentRules : labels.rules.fullRules;
+  const rules = overview.isLightParticipant
+    ? labels.rules.lightRules
+    : hasStudentPricing
+      ? labels.rules.studentRules
+      : labels.rules.fullRules;
 
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [selectedUploadVideos, setSelectedUploadVideos] = useState<Record<string, SelectedUploadVideo[]>>({});
-  const [uploadActivities, setUploadActivities] = useState<Record<string, UploadActivity | null>>({});
+  const [activeSection, setActiveSection] = useState<SectionKey>("overview");
+  const [selectedUploadVideos, setSelectedUploadVideos] = useState<
+    Record<string, SelectedUploadVideo[]>
+  >({});
+  const [uploadActivities, setUploadActivities] = useState<Record<string, UploadActivity | null>>(
+    {},
+  );
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
   const [claimEditorReplacementTargets, setClaimEditorReplacementTargets] =
     useState<ClaimEditorReplacementState>({});
   const [expandedClaimEditors, setExpandedClaimEditors] = useState<Record<string, boolean>>({});
   const [focusedClaimEditor, setFocusedClaimEditor] =
     useState<FocusedClaimEditorState>(null);
-  const [transitionTarget, setTransitionTarget] = useState<TabKey | null>(null);
-  const [fadeProgress, setFadeProgress] = useState(0);
 
   const uploadSectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const uploadPrimaryInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const activeTabRef = useRef(activeTab);
-  const fadeProgressRef = useRef(0);
-  const fadeDirectionRef = useRef<PanelTransitionDirection | null>(null);
-  const transitionTargetRef = useRef<TabKey | null>(null);
-  const scrollCommitGuardRef = useRef(false);
   const claimEditorFocusTokenRef = useRef(0);
 
-  /* ── Tab switching ── */
-
   useEffect(() => {
-    activeTabRef.current = activeTab;
-  }, [activeTab]);
+    function updateActiveSection() {
+      const threshold = window.scrollY + getSectionScrollOffset() + 24;
 
-  function cancelFade() {
-    setTransitionTarget(null);
-    setFadeProgress(0);
-    transitionTargetRef.current = null;
-    fadeDirectionRef.current = null;
-    fadeProgressRef.current = 0;
-  }
+      let nextActiveSection = sections[0]?.key ?? "overview";
 
-  function switchToTab(nextTab: TabKey, options?: { preserveScroll?: boolean }) {
-    if (nextTab === activeTab) return;
-    if (fadeDirectionRef.current) cancelFade();
+      for (const section of sections) {
+        const element = document.getElementById(section.key);
 
-    scrollCommitGuardRef.current = true;
-    activeTabRef.current = nextTab;
-    setActiveTab(nextTab);
+        if (!element) {
+          continue;
+        }
 
-    if (!options?.preserveScroll) {
-      /* Scroll to just past the top sentinel so content starts at its
-         natural position and the backward sentinel is scrollable. */
-      const nextIdx = tabs.findIndex((t) => t.key === nextTab);
-      const hasPrev = nextIdx > 0;
-      window.scrollTo({ top: hasPrev ? SCROLL_SENTINEL_HEIGHT : 0, behavior: "auto" });
+        if (element.offsetTop <= threshold) {
+          nextActiveSection = section.key;
+        } else {
+          break;
+        }
+      }
+
+      setActiveSection((current) =>
+        current === nextActiveSection ? current : nextActiveSection,
+      );
     }
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        scrollCommitGuardRef.current = false;
-      });
-    });
-  }
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
 
-  /* ── Upload claim editor focus ── */
+    return () => {
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
+  }, [sections]);
+
+  useEffect(() => {
+    if (!focusedClaimEditor) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setFocusedClaimEditor((current) =>
+        current?.token === focusedClaimEditor.token ? null : current,
+      );
+    }, 2200);
+
+    return () => window.clearTimeout(timeout);
+  }, [focusedClaimEditor]);
 
   function focusClaimEditor(
     challengeDate: string,
@@ -226,7 +239,6 @@ export function DashboardTabs({
     const shouldOpenFilePicker = Boolean(options.openFilePicker || replaceVideoId);
 
     flushSync(() => {
-      switchToTab("uploads", { preserveScroll: true });
       setExpandedClaimEditors((current) => ({
         ...current,
         [challengeDate]: true,
@@ -247,13 +259,11 @@ export function DashboardTabs({
         ...current,
         [challengeDate]: null,
       }));
+      setActiveSection("uploads");
     });
 
-    document
-      .getElementById("uploads")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollSectionIntoView("uploads");
 
-    const stickyOffset = 112;
     window.setTimeout(() => {
       const target = uploadSectionRefs.current[challengeDate];
 
@@ -261,21 +271,25 @@ export function DashboardTabs({
         return;
       }
 
-      if (shouldOpenFilePicker) {
-        const fileInput = uploadFileInputRefs.current[challengeDate];
-        fileInput?.focus();
-        fileInput?.click();
-      } else {
-        uploadPrimaryInputRefs.current[challengeDate]?.focus();
-      }
-
-      const targetTop = target.getBoundingClientRect().top + window.scrollY - stickyOffset;
+      const targetTop =
+        target.getBoundingClientRect().top + window.scrollY - getSectionScrollOffset();
 
       window.scrollTo({
         top: Math.max(0, targetTop),
         behavior: "smooth",
       });
-    }, 40);
+
+      window.setTimeout(() => {
+        if (shouldOpenFilePicker) {
+          const fileInput = uploadFileInputRefs.current[challengeDate];
+          focusElementWithoutScrolling(fileInput);
+          fileInput?.click();
+          return;
+        }
+
+        focusElementWithoutScrolling(uploadPrimaryInputRefs.current[challengeDate]);
+      }, 180);
+    }, 60);
   }
 
   function clearClaimEditorReplacementTarget(challengeDate: string) {
@@ -293,10 +307,7 @@ export function DashboardTabs({
     window.open(`/api/videos/${videoId}`, "_blank", "noopener,noreferrer");
   }
 
-  function submitDashboardPostAction(
-    action: string,
-    fields: Record<string, string>,
-  ) {
+  function submitDashboardPostAction(action: string, fields: Record<string, string>) {
     const form = document.createElement("form");
     form.method = "post";
     form.action = action;
@@ -317,339 +328,82 @@ export function DashboardTabs({
     }, 0);
   }
 
-  /* ── Effects ── */
-
-  useEffect(() => {
-    if (!focusedClaimEditor) {
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setFocusedClaimEditor((current) =>
-        current?.token === focusedClaimEditor.token ? null : current,
-      );
-    }, 2200);
-
-    return () => window.clearTimeout(timeout);
-  }, [focusedClaimEditor]);
-
-  useEffect(() => {
-    function commitTransition() {
-      const target = transitionTargetRef.current;
-      if (!target) return;
-
-      scrollCommitGuardRef.current = true;
-      activeTabRef.current = target;
-
-      const dir = fadeDirectionRef.current;
-      fadeDirectionRef.current = null;
-      transitionTargetRef.current = null;
-      fadeProgressRef.current = 0;
-      setActiveTab(target);
-      setTransitionTarget(null);
-      setFadeProgress(0);
-
-      /* Position scroll so the new panel's content starts at its natural
-         top — just past the top sentinel (if present).  Two rAF frames
-         ensure the DOM has been updated with the new sentinel layout. */
-      requestAnimationFrame(() => {
-        const targetIdx = tabs.findIndex((t) => t.key === target);
-        const newHasPrev = targetIdx > 0;
-        if (dir === "forward") {
-          window.scrollTo({ top: newHasPrev ? SCROLL_SENTINEL_HEIGHT : 0, behavior: "auto" });
-        } else {
-          /* Backward commit: land at the bottom of content, just above the
-             bottom sentinel, so the page doesn't jump to the top. */
-          const docHeight = document.documentElement.scrollHeight;
-          const viewHeight = window.innerHeight;
-          const maxScroll = docHeight - viewHeight;
-          const bottomSentinelStart = maxScroll - SCROLL_SENTINEL_HEIGHT;
-          window.scrollTo({ top: Math.max(0, bottomSentinelStart), behavior: "auto" });
-        }
-        requestAnimationFrame(() => {
-          scrollCommitGuardRef.current = false;
-        });
-      });
-    }
-
-    function cancelTransition() {
-      fadeDirectionRef.current = null;
-      transitionTargetRef.current = null;
-      fadeProgressRef.current = 0;
-      setTransitionTarget(null);
-      setFadeProgress(0);
-    }
-
-    function getNeighborTab(direction: PanelTransitionDirection): TabKey | null {
-      const idx = tabs.findIndex((t) => t.key === activeTabRef.current);
-      const next = direction === "forward" ? idx + 1 : idx - 1;
-      return tabs[next]?.key ?? null;
-    }
-
-    let scrollRafPending = false;
-
-    function handleScroll() {
-      if (scrollCommitGuardRef.current) return;
-
-      const scrollY = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight;
-      const viewHeight = window.innerHeight;
-      const maxScroll = docHeight - viewHeight;
-
-      const activeIdx = tabs.findIndex((t) => t.key === activeTabRef.current);
-      const hasPrev = activeIdx > 0;
-      const hasNext = activeIdx >= 0 && activeIdx < tabs.length - 1;
-
-      /* ── Top sentinel: backward transition ── */
-      if (hasPrev && scrollY < SCROLL_SENTINEL_HEIGHT) {
-        /* Progress 1 = fully scrolled to top (scrollY=0), 0 = at sentinel edge */
-        const backwardProgress = Math.min(1, 1 - scrollY / SCROLL_SENTINEL_HEIGHT);
-
-        if (fadeDirectionRef.current === "forward") cancelTransition();
-
-        if (!fadeDirectionRef.current && backwardProgress > 0) {
-          const prev = getNeighborTab("backward");
-          if (prev) {
-            fadeDirectionRef.current = "backward";
-            transitionTargetRef.current = prev;
-            setTransitionTarget(prev);
-          }
-        }
-
-        if (fadeDirectionRef.current === "backward") {
-          fadeProgressRef.current = backwardProgress;
-          if (!scrollRafPending) {
-            scrollRafPending = true;
-            requestAnimationFrame(() => {
-              scrollRafPending = false;
-              if (fadeProgressRef.current >= 1) {
-                commitTransition();
-              } else {
-                setFadeProgress(fadeProgressRef.current);
-              }
-            });
-          }
-          return;
-        }
-      } else if (fadeDirectionRef.current === "backward") {
-        /* Scrolled back out of the top sentinel — cancel backward fade. */
-        cancelTransition();
-      }
-
-      /* ── Bottom sentinel: forward transition ── */
-      if (!hasNext) {
-        if (fadeDirectionRef.current === "forward") cancelTransition();
-        return;
-      }
-
-      const bottomSentinelStart = maxScroll - SCROLL_SENTINEL_HEIGHT;
-
-      if (scrollY <= bottomSentinelStart) {
-        if (fadeDirectionRef.current === "forward") cancelTransition();
-        return;
-      }
-
-      const forwardProgress = Math.min(1, (scrollY - bottomSentinelStart) / SCROLL_SENTINEL_HEIGHT);
-
-      if (fadeDirectionRef.current === "backward") cancelTransition();
-
-      if (!fadeDirectionRef.current && forwardProgress > 0) {
-        const next = getNeighborTab("forward");
-        if (!next) return;
-        fadeDirectionRef.current = "forward";
-        transitionTargetRef.current = next;
-        setTransitionTarget(next);
-      }
-
-      if (fadeDirectionRef.current !== "forward") return;
-      fadeProgressRef.current = forwardProgress;
-
-      if (!scrollRafPending) {
-        scrollRafPending = true;
-        requestAnimationFrame(() => {
-          scrollRafPending = false;
-          if (fadeProgressRef.current >= 1) {
-            commitTransition();
-          } else {
-            setFadeProgress(fadeProgressRef.current);
-          }
-        });
-      }
-    }
-
-    function shouldIgnoreGesture(target: EventTarget | null) {
-      if (!(target instanceof Element)) return false;
-      return Boolean(
-        target.closest(
-          [
-            "input",
-            "textarea",
-            "select",
-            "button",
-            "a",
-            "video",
-            "summary",
-            "[contenteditable='true']",
-            ".fc-scroll-x",
-            ".fc-scroll-y",
-            "[data-fitcal-no-panel-swipe]",
-          ].join(","),
-        ),
-      );
-    }
-
-    /* Wheel handler only prevents default during an active fade so the
-       desktop scroll doesn't fight the transition. On mobile, native
-       scroll + the scroll handler handles everything. */
-    function handleWheel(event: WheelEvent) {
-      if (shouldIgnoreGesture(event.target) || Math.abs(event.deltaY) < 5) return;
-      if (fadeDirectionRef.current) {
-        event.preventDefault();
-      }
-    }
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("wheel", handleWheel);
-    };
-  }, [tabs]);
-
-  /* ── Panel rendering ── */
-
-  function renderPanel(tabKey: TabKey, content: ReactNode) {
-    const isActive = activeTab === tabKey;
-    const isTarget = transitionTarget === tabKey;
-
-    let panelOpacity: number;
-    if (isActive && transitionTarget !== null) {
-      panelOpacity = outgoingOpacity(fadeProgress);
-    } else if (isTarget) {
-      panelOpacity = incomingOpacity(fadeProgress);
-    } else if (isActive) {
-      panelOpacity = 1;
-    } else {
-      panelOpacity = 0;
-    }
-
-    const tabIndex = tabs.findIndex((t) => t.key === tabKey);
-    const hasPrev = tabIndex > 0;
-    const hasNext = tabIndex >= 0 && tabIndex < tabs.length - 1;
-
-    return (
-      <div
-        aria-hidden={!isActive}
-        className={`fc-panel-view${isActive ? " is-active" : ""}${isTarget ? " is-transition-target" : ""}`}
-        data-panel-key={tabKey}
-        style={{ opacity: panelOpacity }}
-      >
-        {isActive && hasPrev && (
-          <div aria-hidden className="fc-scroll-sentinel" style={{ height: SCROLL_SENTINEL_HEIGHT }} />
-        )}
-        {content}
-        {isActive && hasNext && (
-          <div aria-hidden className="fc-scroll-sentinel" style={{ height: SCROLL_SENTINEL_HEIGHT }} />
-        )}
-      </div>
-    );
-  }
-
-  /* ── Render ── */
-
   return (
     <div className="grid gap-6 fc-has-bottom-nav">
-      <nav className="fc-tab-bar">
-        {tabs.map((tab) => (
+      <nav aria-label="Dashboard sections" className="fc-tab-bar">
+        {sections.map((section) => (
           <button
-            className={`fc-tab ${activeTab === tab.key ? "is-active" : ""}`}
-            key={tab.key}
-            onClick={() => switchToTab(tab.key)}
+            aria-current={activeSection === section.key ? "page" : undefined}
+            className={`fc-tab ${activeSection === section.key ? "is-active" : ""}`}
+            key={section.key}
+            onClick={() => {
+              setActiveSection(section.key);
+              scrollSectionIntoView(section.key);
+            }}
             type="button"
           >
-            {tab.label}
+            {section.label}
           </button>
         ))}
       </nav>
 
-      <div className="fc-panel-stage">
-        {renderPanel("overview", (
-          <DashboardOverviewSection
-            canReview={canReview}
-            labels={labels}
-            overview={overview}
-            pendingApprovals={pendingApprovals}
-          />
-        ))}
+      <div className="fc-dashboard-flow">
+        <DashboardOverviewSection
+          canReview={canReview}
+          labels={labels}
+          overview={overview}
+          pendingApprovals={pendingApprovals}
+        />
 
-        {renderPanel("uploads", (
-          <DashboardUploadSection
-            claimEditorReplacementTargets={claimEditorReplacementTargets}
-            commonLabels={commonLabels}
-            expandedClaimEditors={expandedClaimEditors}
-            focusedClaimEditor={focusedClaimEditor}
-            labels={labels}
-            locale={locale}
-            onClearReplacementTarget={clearClaimEditorReplacementTarget}
-            onFocusClaimEditor={focusClaimEditor}
-            onSubmitPostAction={submitDashboardPostAction}
-            onVideoOpen={openVideo}
-            openDays={openDays}
-            overview={overview}
-            selectedUploadVideos={selectedUploadVideos}
-            setSelectedUploadVideos={setSelectedUploadVideos}
-            setUploadActivities={setUploadActivities}
-            setUploadErrors={setUploadErrors}
-            uploadActivities={uploadActivities}
-            uploadErrors={uploadErrors}
-            uploadFileInputRefs={uploadFileInputRefs}
-            uploadPrimaryInputRefs={uploadPrimaryInputRefs}
-            uploadSectionRefs={uploadSectionRefs}
-          />
-        ))}
+        <DashboardUploadSection
+          claimEditorReplacementTargets={claimEditorReplacementTargets}
+          commonLabels={commonLabels}
+          expandedClaimEditors={expandedClaimEditors}
+          focusedClaimEditor={focusedClaimEditor}
+          labels={labels}
+          locale={locale}
+          onClearReplacementTarget={clearClaimEditorReplacementTarget}
+          onFocusClaimEditor={focusClaimEditor}
+          onSubmitPostAction={submitDashboardPostAction}
+          onVideoOpen={openVideo}
+          openDays={openDays}
+          overview={overview}
+          selectedUploadVideos={selectedUploadVideos}
+          setSelectedUploadVideos={setSelectedUploadVideos}
+          setUploadActivities={setUploadActivities}
+          setUploadErrors={setUploadErrors}
+          uploadActivities={uploadActivities}
+          uploadErrors={uploadErrors}
+          uploadFileInputRefs={uploadFileInputRefs}
+          uploadPrimaryInputRefs={uploadPrimaryInputRefs}
+          uploadSectionRefs={uploadSectionRefs}
+        />
 
-        {renderPanel("timeline", (
-          <DashboardHistorySection
-            commonLabels={commonLabels}
-            labels={labels}
-            onClaimEdit={(challengeDate) => focusClaimEditor(challengeDate)}
-            onClaimAddVideos={(challengeDate) =>
-              focusClaimEditor(challengeDate, { openFilePicker: true })
-            }
-            onEditableVideoReplace={(challengeDate, videoId) =>
-              focusClaimEditor(challengeDate, {
-                openFilePicker: true,
-                replaceVideoId: videoId,
-              })
-            }
-            onVideoReplaceSelection={handleVideoReplaceSelection}
-            timelineEntries={timelineEntries}
-          />
-        ))}
+        <DashboardHistorySection
+          commonLabels={commonLabels}
+          labels={labels}
+          onClaimEdit={(challengeDate) => focusClaimEditor(challengeDate)}
+          onClaimAddVideos={(challengeDate) =>
+            focusClaimEditor(challengeDate, { openFilePicker: true })
+          }
+          onEditableVideoReplace={(challengeDate, videoId) =>
+            focusClaimEditor(challengeDate, {
+              openFilePicker: true,
+              replaceVideoId: videoId,
+            })
+          }
+          onVideoReplaceSelection={handleVideoReplaceSelection}
+          timelineEntries={timelineEntries}
+        />
 
-        {renderPanel("metastats", (
-          <DashboardMetastatsSection
-            labels={labels}
-            measurementPoints={measurementPoints}
-            performancePoints={performancePoints}
-            profile={profile}
-          />
-        ))}
+        <DashboardMetastatsSection
+          labels={labels}
+          measurementPoints={measurementPoints}
+          performancePoints={performancePoints}
+          profile={profile}
+        />
 
-        {renderPanel("profile", (
-          <DashboardProfileSection
-            activeInvites={activeInvites}
-            canReview={canReview}
-            commonLabels={commonLabels}
-            featureRequestsEnabled={featureRequestsEnabled}
-            labels={labels}
-            locale={locale}
-            profile={profile}
-          />
-        ))}
-
-        {!overview.isLightParticipant ? renderPanel("review", (
+        {!overview.isLightParticipant ? (
           <DashboardReviewSection
             commonLabels={commonLabels}
             escalationReviewItems={escalationReviewItems}
@@ -659,25 +413,27 @@ export function DashboardTabs({
             primaryReviewItems={primaryReviewItems}
             sicknessReviewItems={sicknessReviewItems}
           />
-        )) : null}
+        ) : null}
 
-        {renderPanel("regeln", (
-          <DashboardRulesSection
-            labels={labels}
-            overview={overview}
-            rules={rules}
-          />
-        ))}
+        <DashboardProfileSection
+          activeInvites={activeInvites}
+          canReview={canReview}
+          commonLabels={commonLabels}
+          featureRequestsEnabled={featureRequestsEnabled}
+          labels={labels}
+          locale={locale}
+          profile={profile}
+        />
 
-        {renderPanel("rechner", (
-          <DashboardCalculatorSection
-            commonLabels={commonLabels}
-            labels={labels}
-            locale={locale}
-            overview={overview}
-            profile={profile}
-          />
-        ))}
+        <DashboardRulesSection labels={labels} overview={overview} rules={rules} />
+
+        <DashboardCalculatorSection
+          commonLabels={commonLabels}
+          labels={labels}
+          locale={locale}
+          overview={overview}
+          profile={profile}
+        />
       </div>
     </div>
   );

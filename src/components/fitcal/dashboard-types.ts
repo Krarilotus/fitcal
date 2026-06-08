@@ -39,7 +39,9 @@ export type TimelineEntry = {
   challengeDate: string;
   dateLabel: string;
   repsTarget: number;
+  status: DayCompletionState;
   statusLabel: string;
+  canUseJoker: boolean;
   debtLabel: string | null;
   pushupTotal: number | null;
   situpTotal: number | null;

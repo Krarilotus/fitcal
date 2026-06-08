@@ -4,8 +4,6 @@ import {
   MAX_SETS_PER_EXERCISE,
   MAX_VIDEO_FILES_PER_DAY,
   MAX_VIDEO_SIZE_BYTES,
-  canSubmitForDate,
-  getRequiredReps,
 } from "@/lib/challenge";
 
 export const dailySubmissionSchema = z.object({
@@ -47,39 +45,27 @@ export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput 
   };
 }
 
-export function assertSubmissionMatchesRules(input: ParsedSubmissionInput) {
-  if (
-    input.pushupSets.length > MAX_SETS_PER_EXERCISE ||
-    input.situpSets.length > MAX_SETS_PER_EXERCISE
-  ) {
-    throw new Error("Es sind maximal zwei Sets pro Übung erlaubt.");
-  }
-
-  const target = getRequiredReps(input.challengeDate);
-  const pushupTotal = input.pushupSets.reduce((sum, current) => sum + current, 0);
-  const situpTotal = input.situpSets.reduce((sum, current) => sum + current, 0);
-
-  if (pushupTotal < target) {
-    throw new Error("Die Liegestütz-Sets decken das Tagesziel noch nicht ab.");
-  }
-
-  if (situpTotal < target) {
-    throw new Error("Die Sit-up-Sets decken das Tagesziel noch nicht ab.");
-  }
-}
-
-export function getVideoFiles(formData: FormData) {
+export function getVideoFiles(
+  formData: FormData,
+  messages: {
+    videoCount: string;
+    videoTooLarge: string;
+  } = {
+    videoCount: "Bitte lade zwischen 1 und 4 Videos hoch.",
+    videoTooLarge: "Jede Videodatei darf höchstens 100 MB groß sein.",
+  },
+) {
   const files = formData
     .getAll("videos")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
   if (files.length < 1 || files.length > MAX_VIDEO_FILES_PER_DAY) {
-    throw new Error("Bitte lade zwischen 1 und 4 Videos hoch.");
+    throw new Error(messages.videoCount);
   }
 
   for (const file of files) {
     if (file.size > MAX_VIDEO_SIZE_BYTES) {
-      throw new Error("Jede Videodatei darf höchstens 100 MB groß sein.");
+      throw new Error(messages.videoTooLarge);
     }
   }
 
@@ -163,5 +149,5 @@ export function canEditSubmissionBeforeReview(input: {
   challengeDate: string;
   reviewCount: number;
 }) {
-  return canSubmitForDate(input.challengeDate) && input.reviewCount === 0;
+  return input.reviewCount === 0;
 }

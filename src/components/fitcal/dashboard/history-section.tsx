@@ -56,6 +56,8 @@ export function DashboardHistorySection({
   );
 
   const recentTimelineEntries = timelineEntries.slice(0, 3);
+  const quickTimelineEntries = timelineEntries.slice(0, 12);
+  const olderTimelineEntries = timelineEntries.slice(12);
   const compactSetSummary =
     selectedTimelineEntry != null
       ? `${selectedTimelineEntry.pushupSet1 ?? 0};${selectedTimelineEntry.pushupSet2 ?? 0}/${selectedTimelineEntry.situpSet1 ?? 0};${selectedTimelineEntry.situpSet2 ?? 0}`
@@ -122,7 +124,7 @@ export function DashboardHistorySection({
               </CardHeader>
               <CardContent>
                 <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1">
-                  {timelineEntries.map((day) => (
+                  {quickTimelineEntries.map((day) => (
                     <button
                       className={`shrink-0 rounded-[var(--fc-radius-sm)] border px-3 py-2 text-left text-sm transition-colors ${
                         selectedTimelineEntry.challengeDate === day.challengeDate
@@ -138,6 +140,33 @@ export function DashboardHistorySection({
                     </button>
                   ))}
                 </div>
+                {olderTimelineEntries.length ? (
+                  <label className="mt-3 block fc-input-group">
+                    <span className="fc-input-label">{labels.timeline.olderSelectLabel}</span>
+                    <select
+                      className="fc-input"
+                      onChange={(event) => {
+                        if (event.target.value) {
+                          setSelectedTimelineDate(event.target.value);
+                        }
+                      }}
+                      value={
+                        olderTimelineEntries.some(
+                          (day) => day.challengeDate === selectedTimelineEntry.challengeDate,
+                        )
+                          ? selectedTimelineEntry.challengeDate
+                          : ""
+                      }
+                    >
+                      <option value="">{labels.timeline.olderSelectPlaceholder}</option>
+                      {olderTimelineEntries.map((day) => (
+                        <option key={day.challengeDate} value={day.challengeDate}>
+                          {day.dateLabel} - {day.statusLabel}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
               </CardContent>
             </Card>
           </div>
@@ -165,6 +194,54 @@ export function DashboardHistorySection({
                   <p className="text-sm font-medium text-[var(--fc-warm)]">{selectedTimelineEntry.debtLabel}</p>
                 ) : null}
               </div>
+              {selectedTimelineEntry.status === "slack" ? (
+                <div className="mt-3 grid gap-3">
+                  <form action="/api/challenge/joker" method="post">
+                    <input
+                      name="challengeDate"
+                      type="hidden"
+                      value={selectedTimelineEntry.challengeDate}
+                    />
+                    <DashboardActionButton
+                      disabled={!selectedTimelineEntry.canUseJoker}
+                      type="submit"
+                    >
+                      {labels.uploads.useJoker}
+                    </DashboardActionButton>
+                  </form>
+                  <details className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
+                    <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>
+                    <form action="/api/challenge/sickness" className="mt-4 space-y-4" method="post">
+                      <input
+                        name="challengeDate"
+                        type="hidden"
+                        value={selectedTimelineEntry.challengeDate}
+                      />
+                      <input
+                        name="startDate"
+                        type="hidden"
+                        value={selectedTimelineEntry.challengeDate}
+                      />
+                      <input
+                        name="endDate"
+                        type="hidden"
+                        value={selectedTimelineEntry.challengeDate}
+                      />
+                      <label className="flex items-start gap-3 fc-text-muted">
+                        <input className="mt-1" name="consent" type="checkbox" />
+                        <span>{labels.uploads.sicknessConsent}</span>
+                      </label>
+                      <label className="fc-input-group">
+                        <span className="fc-input-label">{labels.uploads.comment}</span>
+                        <textarea className="fc-input min-h-20" name="notes" placeholder={labels.uploads.notes} />
+                      </label>
+                      <DashboardActionButton type="submit">
+                        {labels.uploads.submitSickness}
+                      </DashboardActionButton>
+                    </form>
+                  </details>
+                </div>
+              ) : null}
             </CardHeader>
 
             <CardContent className="space-y-4">

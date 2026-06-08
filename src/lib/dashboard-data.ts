@@ -35,7 +35,6 @@ import {
   CHALLENGE_FREE_DAYS,
   CHALLENGE_START_DATE,
   MAX_VIDEO_FILES_PER_DAY,
-  canSubmitForDate,
   formatCurrencyFromCents,
   getChallengeDayIndex,
   getChallengeOverview,
@@ -206,7 +205,7 @@ function buildOpenDays(
           reviewCount: submission.workoutReviews.length,
         });
 
-      return day.canUpload || (isEditableClaim && canSubmitForDate(day.challengeDate));
+      return day.canUpload || isEditableClaim;
     })
     .map((day) => {
       const submission = user.dailySubmissions.find(
@@ -217,6 +216,12 @@ function buildOpenDays(
         : [];
       const pushupSets = submission ? deserializeSets(submission.pushupSets) : [];
       const situpSets = submission ? deserializeSets(submission.situpSets) : [];
+      const isEditableClaim = submission
+        ? canEditSubmissionBeforeReview({
+            challengeDate: submission.challengeDate,
+            reviewCount: submission.workoutReviews.length,
+          })
+        : false;
 
       return {
         challengeDate: day.challengeDate,
@@ -227,15 +232,10 @@ function buildOpenDays(
         isQualificationDay: isFreeChallengeDay(day.challengeDate),
         canUseJoker: day.canUseJoker,
         hasExistingClaim: Boolean(submission),
-        isEditableClaim: submission
-          ? canEditSubmissionBeforeReview({
-              challengeDate: submission.challengeDate,
-              reviewCount: submission.workoutReviews.length,
-            })
-          : false,
+        isEditableClaim,
         canAddVideos:
           Boolean(submission) &&
-          canSubmitForDate(day.challengeDate) &&
+          isEditableClaim &&
           (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
         pushupSet1: pushupSets[0] ?? 0,
         pushupSet2: pushupSets[1] ?? 0,
@@ -265,7 +265,7 @@ function buildTimelineEntries(
   labels: DashboardLabels,
   overview: ReturnType<typeof getChallengeOverview>,
 ): TimelineEntry[] {
-  return overview.days.slice(-12).reverse().map((day) => {
+  return overview.days.slice().reverse().map((day) => {
     const submission = user.dailySubmissions.find(
       (entry) => entry.challengeDate === day.challengeDate,
     );
@@ -280,7 +280,9 @@ function buildTimelineEntries(
       challengeDate: day.challengeDate,
       dateLabel: formatChallengeDate(locale, day.challengeDate),
       repsTarget: day.repsTarget,
+      status: day.status,
       statusLabel: getDayStatusLabel(day.status, labels.statusLabels),
+      canUseJoker: day.canUseJoker,
       debtLabel: day.debtCents > 0 ? formatCurrencyFromCents(day.debtCents) : null,
       pushupTotal: totals?.pushupTotal ?? null,
       situpTotal: totals?.situpTotal ?? null,
@@ -313,7 +315,12 @@ function buildTimelineEntries(
         : false,
       canAddVideos:
         Boolean(submission) &&
-        canSubmitForDate(day.challengeDate) &&
+        (submission
+          ? canEditSubmissionBeforeReview({
+              challengeDate: submission.challengeDate,
+              reviewCount: submission.workoutReviews.length,
+            })
+          : false) &&
         (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
       videos:
         submission?.videos.map((video) => ({

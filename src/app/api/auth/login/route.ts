@@ -5,9 +5,11 @@ import { createUserSession } from "@/lib/auth/session";
 import { verifyPassword } from "@/lib/auth/password";
 import { getAppUrl } from "@/lib/auth/url";
 import { loginSchema } from "@/lib/auth/validation";
+import { getApiMessages, localizedUrl } from "@/lib/i18n-api";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const messages = (await getApiMessages()).auth;
 
   try {
     const parsed = loginSchema.parse({
@@ -22,31 +24,31 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      throw new Error("Login fehlgeschlagen.");
+      throw new Error(messages.loginFailed);
     }
 
     const passwordMatches = await verifyPassword(parsed.password, user.passwordHash);
 
     if (!passwordMatches) {
-      throw new Error("Login fehlgeschlagen.");
+      throw new Error(messages.loginFailed);
     }
 
     if (user.registrationStatus === RegistrationStatus.PENDING) {
-      throw new Error("Dein Account wartet noch auf Freigabe.");
+      throw new Error(messages.pendingApproval);
     }
 
     if (user.registrationStatus === RegistrationStatus.REJECTED) {
-      throw new Error("Dein Account wurde nicht freigegeben.");
+      throw new Error(messages.rejected);
     }
 
     await createUserSession(user.id);
 
     return NextResponse.redirect(getAppUrl("/dashboard", request));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Login fehlgeschlagen.";
+    const message = error instanceof Error ? error.message : messages.loginFailed;
 
     return NextResponse.redirect(
-      getAppUrl(`/login?error=${encodeURIComponent(message)}`, request),
+      localizedUrl(request, "/login", "error", message),
     );
   }
 }

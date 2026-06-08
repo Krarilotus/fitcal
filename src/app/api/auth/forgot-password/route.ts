@@ -4,10 +4,12 @@ import { prisma } from "@/lib/db";
 import { sendPasswordResetMail } from "@/lib/auth/email";
 import { createRandomToken, hashToken } from "@/lib/auth/token";
 import { forgotPasswordSchema } from "@/lib/auth/validation";
-import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
+import { getAppBaseUrl } from "@/lib/auth/url";
+import { getApiMessages, localizedUrl } from "@/lib/i18n-api";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const messages = (await getApiMessages()).auth;
 
   try {
     const parsed = forgotPasswordSchema.parse({
@@ -62,14 +64,14 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.redirect(
-      getAppUrl("/forgot-password?success=Wenn%20die%20Adresse%20existiert,%20wurde%20ein%20Link%20versendet.", request),
+      localizedUrl(request, "/forgot-password", "success", messages.passwordResetSent),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Reset-Link konnte nicht erstellt werden.";
+      error instanceof Error ? error.message : messages.passwordResetCreateFailed;
 
     return NextResponse.redirect(
-      getAppUrl(`/forgot-password?error=${encodeURIComponent(message)}`, request),
+      localizedUrl(request, "/forgot-password", "error", message),
     );
   }
 }

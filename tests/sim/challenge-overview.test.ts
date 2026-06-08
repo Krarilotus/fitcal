@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getChallengeOverview, getSlackDebtCents } from "@/lib/challenge";
+import {
+  canApplyJokerToDay,
+  getChallengeOverview,
+  getSlackDebtCents,
+} from "@/lib/challenge";
 
 test("student discount halves slack pricing", () => {
   assert.equal(getSlackDebtCents(0, false), 1000);
@@ -83,4 +87,63 @@ test("student discount also affects accumulated overview debt", () => {
 
   assert.equal(overview.totalDebtCents, 1100);
   assert.equal(overview.outstandingDebtCents, 1100);
+});
+
+test("retroactive slack days can still accept jokers", () => {
+  const overview = getChallengeOverview({
+    joinedChallengeDate: "2026-04-01",
+    records: [],
+    now: new Date("2026-04-20T12:00:00Z"),
+  });
+
+  const slackDay = overview.days.find((day) => day.challengeDate === "2026-04-18");
+
+  assert.ok(slackDay);
+  assert.equal(slackDay.status, "slack");
+  assert.equal(slackDay.canUseJoker, true);
+});
+
+test("joker application helper allows only eligible days", () => {
+  assert.equal(
+    canApplyJokerToDay({
+      challengeDate: "2026-04-18",
+      jokerBalance: 1,
+      status: "slack",
+    }),
+    true,
+  );
+  assert.equal(
+    canApplyJokerToDay({
+      challengeDate: "2026-04-20",
+      jokerBalance: 1,
+      now: new Date("2026-04-20T12:00:00Z"),
+      status: "open",
+    }),
+    true,
+  );
+  assert.equal(
+    canApplyJokerToDay({
+      challengeDate: "2026-04-18",
+      jokerBalance: 0,
+      status: "slack",
+    }),
+    false,
+  );
+  assert.equal(
+    canApplyJokerToDay({
+      challengeDate: "2026-04-18",
+      isLightParticipant: true,
+      jokerBalance: 1,
+      status: "slack",
+    }),
+    false,
+  );
+  assert.equal(
+    canApplyJokerToDay({
+      challengeDate: "2026-04-18",
+      jokerBalance: 1,
+      status: "completed",
+    }),
+    false,
+  );
 });

@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { prisma } from "@/lib/db";
 import { canEditSubmissionBeforeReview } from "@/lib/submission";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,7 @@ function redirectTo(url: string | URL) {
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).submissions;
 
   if (!user) {
     return redirectTo(getAppUrl("/login", request));
@@ -24,7 +26,7 @@ export async function POST(request: Request) {
     const challengeDate = formData.get("challengeDate");
 
     if (typeof challengeDate !== "string" || !challengeDate) {
-      throw new Error("Der Claim konnte nicht gefunden werden.");
+      throw new Error(messages.claimMissing);
     }
 
     const submission = await prisma.dailySubmission.findUnique({
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
     });
 
     if (!submission) {
-      throw new Error("Dieser Claim gehört nicht zu deinem Account.");
+      throw new Error(messages.claimNotYours);
     }
 
     if (
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
         reviewCount: submission.workoutReviews.length,
       })
     ) {
-      throw new Error("Dieser Claim kann nicht mehr bearbeitet oder gelöscht werden.");
+      throw new Error(messages.claimDeleteLocked);
     }
 
     for (const video of submission.videos) {
@@ -78,11 +80,11 @@ export async function POST(request: Request) {
       },
     });
 
-    return redirectTo(getAppUrl("/dashboard?success=Workout-Claim%20gel%C3%B6scht", request));
+    return redirectTo(dashboardMessageUrl(request, "success", messages.claimDeleted));
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Claim konnte nicht gelöscht werden.";
+      error instanceof Error ? error.message : messages.claimDeleteFailed;
 
-    return redirectTo(getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request));
+    return redirectTo(dashboardMessageUrl(request, "error", message));
   }
 }

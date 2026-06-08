@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth/password";
-import { getAppUrl } from "@/lib/auth/url";
 import { hashToken } from "@/lib/auth/token";
 import { resetPasswordSchema } from "@/lib/auth/validation";
+import { getApiMessages, localizedUrl } from "@/lib/i18n-api";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
+  const messages = (await getApiMessages()).auth;
 
   try {
     const parsed = resetPasswordSchema.parse({
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     });
 
     if (!resetToken || resetToken.usedAt || resetToken.expiresAt <= new Date()) {
-      throw new Error("Der Reset-Link ist ungültig oder abgelaufen.");
+      throw new Error(messages.resetLinkInvalid);
     }
 
     const newPasswordHash = await hashPassword(parsed.password);
@@ -54,14 +55,14 @@ export async function POST(request: Request) {
     ]);
 
     return NextResponse.redirect(
-      getAppUrl("/login?success=Passwort%20erfolgreich%20geaendert", request),
+      localizedUrl(request, "/login", "success", messages.passwordChanged),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Passwort konnte nicht gesetzt werden.";
+      error instanceof Error ? error.message : messages.passwordChangeFailed;
 
     return NextResponse.redirect(
-      getAppUrl(`/reset-password?error=${encodeURIComponent(message)}`, request),
+      localizedUrl(request, "/reset-password", "error", message),
     );
   }
 }

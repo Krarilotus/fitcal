@@ -6,11 +6,13 @@ import {
 import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { prisma } from "@/lib/db";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
 const REVIEW_REWARD_CENTS = 5;
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
+  const messages = (await getApiMessages()).challenge;
 
   if (
     !user ||
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
           : null;
 
     if (!verificationId || !decision) {
-      throw new Error("Die Krankmeldungs-Entscheidung ist ungültig.");
+      throw new Error(messages.sicknessReviewInvalid);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -47,19 +49,19 @@ export async function POST(request: Request) {
       });
 
       if (!verification) {
-        throw new Error("Die Krankmeldung wurde nicht gefunden.");
+        throw new Error(messages.sicknessReviewMissing);
       }
 
       if (verification.reviewerUserId !== user.id) {
-        throw new Error("Diese Krankmeldung gehört nicht zu dir.");
+        throw new Error(messages.sicknessReviewNotYours);
       }
 
       if (verification.decision !== RegistrationApprovalDecision.PENDING) {
-        throw new Error("Diese Krankmeldung wurde bereits bewertet.");
+        throw new Error(messages.sicknessReviewAlreadyDone);
       }
 
       if (verification.dailySubmission.status !== "SICK_PENDING") {
-        throw new Error("Diese Krankmeldung ist bereits abgeschlossen.");
+        throw new Error(messages.sicknessReviewClosed);
       }
 
       await tx.sicknessVerification.update({
@@ -117,14 +119,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.redirect(
-      getAppUrl("/dashboard?success=Krankmeldung%20bewertet", request),
+      dashboardMessageUrl(request, "success", messages.sicknessReviewSaved),
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Krankmeldung konnte nicht bewertet werden.";
+      error instanceof Error ? error.message : messages.sicknessReviewSaveFailed;
 
-    return NextResponse.redirect(
-      getAppUrl(`/dashboard?error=${encodeURIComponent(message)}`, request),
-    );
+    return NextResponse.redirect(dashboardMessageUrl(request, "error", message));
   }
 }

@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getAppUrl } from "@/lib/auth/url";
 import { prisma } from "@/lib/db";
+import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 
-function successRedirectUrl(user: { isLightParticipant: boolean }, request: Request) {
-  return getAppUrl(
-    user.isLightParticipant
-      ? "/dashboard?success=Eintrag%20gespeichert"
-      : "/dashboard?success=Trainingstag%20gespeichert",
+async function successRedirectUrl(user: { isLightParticipant: boolean }, request: Request) {
+  const messages = (await getApiMessages()).submissions;
+
+  return dashboardMessageUrl(
     request,
+    "success",
+    user.isLightParticipant ? messages.entrySaved : messages.workoutSaved,
   );
 }
 
@@ -61,6 +63,6 @@ export async function GET(request: Request) {
     ok: true,
     recentlySaved,
     submittedAt: submission?.submittedAt?.toISOString() ?? null,
-    redirectUrl: recentlySaved ? successRedirectUrl(user, request) : null,
+    redirectUrl: recentlySaved ? await successRedirectUrl(user, request) : null,
   });
 }
