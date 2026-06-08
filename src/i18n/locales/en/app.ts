@@ -298,8 +298,10 @@
         "Even after compression, the video stays above 15 MB. Please trim it more aggressively.",
       uploadUnexpected: "The upload could not be completed. Please try again.",
       sicknessToggle: "Man flu?",
+      sicknessStartDate: "From",
+      sicknessEndDate: "Until",
       sicknessConsent:
-        "I consent to having it reviewed that I was sick today and therefore could not do a workout. I request that today should not count as a slack day.",
+        "I consent to having it reviewed that I was sick during the selected period and therefore could not do a workout. I request that these days should not count as slack days.",
       comment: "Comment",
       submitSickness: "Submit sickness claim",
       useJoker: "Use joker",

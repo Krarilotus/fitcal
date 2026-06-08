@@ -884,6 +884,16 @@ export function DashboardUploadSection({
                           <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>
                           <form action="/api/challenge/sickness" className="mt-4 space-y-4" method="post">
                             <input name="challengeDate" type="hidden" value={day.challengeDate} />
+                            <div className="fc-grid-2">
+                              <label className="fc-input-group">
+                                <span className="fc-input-label">{labels.uploads.sicknessStartDate}</span>
+                                <input className="fc-input" defaultValue={day.challengeDate} min={day.challengeDate} name="startDate" type="date" />
+                              </label>
+                              <label className="fc-input-group">
+                                <span className="fc-input-label">{labels.uploads.sicknessEndDate}</span>
+                                <input className="fc-input" defaultValue={day.challengeDate} min={day.challengeDate} name="endDate" type="date" />
+                              </label>
+                            </div>
                             <label className="flex items-start gap-3 fc-text-muted"><input className="mt-1" name="consent" type="checkbox" /><span>{labels.uploads.sicknessConsent}</span></label>
                             <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.comment}</span><textarea className="fc-input min-h-20" name="notes" placeholder={labels.uploads.notes} /></label>
                             <Button type="submit" variant="secondary">{labels.uploads.submitSickness}</Button>

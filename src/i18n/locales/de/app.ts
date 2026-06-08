@@ -296,8 +296,10 @@
         "Selbst nach der Kompression bleibt das Video über 15 MB. Bitte kürze den Clip stärker.",
       uploadUnexpected: "Der Upload konnte nicht abgeschlossen werden. Bitte versuche es erneut.",
       sicknessToggle: "M\u00e4nnergrippe?",
+      sicknessStartDate: "Von",
+      sicknessEndDate: "Bis",
       sicknessConsent:
-        "Ich willige ein und lasse reviewen, dass ich heute leider krank war und deshalb kein Workout machen konnte. Ich beantrage daher, dass heute kein Slack Day war.",
+        "Ich willige ein und lasse reviewen, dass ich im gewählten Zeitraum krank war und deshalb kein Workout machen konnte. Ich beantrage daher, dass diese Tage keine Slack Days waren.",
       comment: "Kommentar",
       submitSickness: "Krankmeldung einreichen",
       useJoker: "Joker setzen",
