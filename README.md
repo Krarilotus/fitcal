@@ -311,7 +311,14 @@ sudo -u fitcal cp .env.production.example .env.production
 
 ## Updates auf dem Server
 
-Wenn das Repo auf dem Server bereits unter `/home/fitcal/app` liegt, reicht kuenftig:
+Einfacher PuTTY-Update-Befehl fuer diesen Server:
+
+```bash
+cd /home/fitcal/app
+./update.sh
+```
+
+Falls `./update.sh` einmal nicht ausfuehrbar ist:
 
 ```bash
 cd /home/fitcal/app
