@@ -18,7 +18,7 @@ const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function buildDateRange(startDate: string, endDate: string) {
   if (!DATE_KEY_PATTERN.test(startDate) || !DATE_KEY_PATTERN.test(endDate)) {
-    throw new Error("Bitte waehle einen gueltigen Zeitraum.");
+    throw new Error("Bitte wähle einen gültigen Zeitraum.");
   }
 
   if (!isWithinChallenge(startDate) || !isWithinChallenge(endDate)) {
@@ -61,11 +61,11 @@ export async function POST(request: Request) {
     const dateKeys = buildDateRange(startDate, endDate);
 
     if (dateKeys.some((dateKey) => dateKey < CHALLENGE_START_DATE)) {
-      throw new Error("Die Krankmeldung ist nur innerhalb der Challenge moeglich.");
+      throw new Error("Die Krankmeldung ist nur innerhalb der Challenge möglich.");
     }
 
     if (consent !== "on") {
-      throw new Error("Bitte bestaetige die Maennergrippe-Erklaerung.");
+      throw new Error("Bitte bestätige die Männergrippe-Erklärung.");
     }
 
     const reviewers = await prisma.user.findMany({
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     });
 
     if (reviewers.length === 0) {
-      throw new Error("Es gibt aktuell keine anderen Vollteilnehmer fuer die Bestaetigung.");
+      throw new Error("Es gibt aktuell keine anderen Vollteilnehmer für die Bestätigung.");
     }
 
     const existingSubmissions = await prisma.dailySubmission.findMany({
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     );
 
     if (blockedSubmission) {
-      throw new Error(`Fuer den ${blockedSubmission.challengeDate} gibt es bereits einen Workout- oder Joker-Eintrag.`);
+      throw new Error(`Für den ${blockedSubmission.challengeDate} gibt es bereits einen Workout- oder Joker-Eintrag.`);
     }
 
     await prisma.$transaction(async (tx) => {
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
             reviewedAt: null,
             pushupSets: "[0,0]",
             situpSets: "[0,0]",
-            notes: notes || "Maenner-Grippe gemeldet",
+            notes: notes || "Männer-Grippe gemeldet",
             submittedAt: new Date(),
           },
           create: {
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
             reviewStatus: "NOT_REQUIRED",
             pushupSets: "[0,0]",
             situpSets: "[0,0]",
-            notes: notes || "Maenner-Grippe gemeldet",
+            notes: notes || "Männer-Grippe gemeldet",
             submittedAt: new Date(),
           },
           select: {
@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     return NextResponse.redirect(
       getAppUrl(`/dashboard?success=${encodeURIComponent(
         dateKeys.length === 1
-          ? "Maenner-Grippe zur Abstimmung eingereicht"
+          ? "Männer-Grippe zur Abstimmung eingereicht"
           : `${dateKeys.length} Krankheitstage zur Abstimmung eingereicht`,
       )}`, request),
     );
