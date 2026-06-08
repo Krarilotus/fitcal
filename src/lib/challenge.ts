@@ -285,6 +285,17 @@ export function getChallengeOverview({
   const lastEvaluatedDate = isWithinChallenge(currentDate)
     ? currentDate
     : getChallengeEndDateKey();
+  const qualificationUploads = records.filter((record) => {
+    if (record.status !== "COMPLETED") {
+      return false;
+    }
+
+    const dayIndex = getChallengeDayIndex(record.challengeDate);
+    return dayIndex >= 0 && dayIndex < CHALLENGE_FREE_DAYS;
+  }).length;
+  const isQualifiedForParticipation =
+    qualificationUploads >= MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION;
+  const canAccrueDebt = !isLightParticipant && isQualifiedForParticipation;
   let slackCount = 0;
   let totalDebtCents = 0;
   let totalDebtReductionCents = 0;
@@ -317,18 +328,21 @@ export function getChallengeOverview({
     if (record?.status === "COMPLETED") {
       const completionRatio = getCompletionRatio(record);
 
-      if (!isLightParticipant && completionRatio < 1) {
-        const fullDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
-        dayDebtCents = Math.round(fullDebtCents * (1 - completionRatio));
-        slackCount += 1;
-        totalDebtCents += dayDebtCents;
-        outstandingDebtCents += dayDebtCents;
+      if (completionRatio < 1) {
         status = completionRatio > 0 ? "partial" : "slack";
+
+        if (canAccrueDebt) {
+          const fullDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
+          dayDebtCents = Math.round(fullDebtCents * (1 - completionRatio));
+          slackCount += 1;
+          totalDebtCents += dayDebtCents;
+          outstandingDebtCents += dayDebtCents;
+        }
       } else {
         status = "completed";
       }
 
-      if (!isLightParticipant) {
+      if (canAccrueDebt) {
         debtReductionCents = Math.min(rawDebtReductionCents, outstandingDebtCents);
         outstandingDebtCents -= debtReductionCents;
         totalDebtReductionCents += debtReductionCents;
@@ -338,7 +352,7 @@ export function getChallengeOverview({
     } else if (record?.status === "SLACK") {
       status = "slack";
 
-      if (!isLightParticipant) {
+      if (canAccrueDebt) {
         dayDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
         slackCount += 1;
         totalDebtCents += dayDebtCents;
@@ -354,10 +368,12 @@ export function getChallengeOverview({
       status = "open";
     } else if (isPastClosedDay) {
       status = "slack";
-      dayDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
-      slackCount += 1;
-      totalDebtCents += dayDebtCents;
-      outstandingDebtCents += dayDebtCents;
+      if (canAccrueDebt) {
+        dayDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
+        slackCount += 1;
+        totalDebtCents += dayDebtCents;
+        outstandingDebtCents += dayDebtCents;
+      }
     } else {
       status = "upcoming";
     }
@@ -388,14 +404,6 @@ export function getChallengeOverview({
 
   const currentMonthJokersUsed = countJokersForMonth(records, getMonthKey(currentDate));
   const documentedDays = records.filter((record) => record.status === "COMPLETED").length;
-  const qualificationUploads = records.filter((record) => {
-    if (record.status !== "COMPLETED") {
-      return false;
-    }
-
-    const dayIndex = getChallengeDayIndex(record.challengeDate);
-    return dayIndex >= 0 && dayIndex < CHALLENGE_FREE_DAYS;
-  }).length;
 
   return {
     currentDate,

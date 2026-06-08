@@ -6,6 +6,15 @@ import {
   getSlackDebtCents,
 } from "@/lib/challenge";
 
+function qualificationRecords(count = 10) {
+  return Array.from({ length: count }, (_, index) => ({
+    challengeDate: `2026-04-${String(index + 1).padStart(2, "0")}`,
+    status: "COMPLETED" as const,
+    pushupTotal: 20,
+    situpTotal: 20,
+  }));
+}
+
 test("student discount halves slack pricing", () => {
   assert.equal(getSlackDebtCents(0, false), 1000);
   assert.equal(getSlackDebtCents(1, false), 1200);
@@ -17,6 +26,7 @@ test("light participants never build debt or joker allowance", () => {
   const overview = getChallengeOverview({
     joinedChallengeDate: "2026-04-01",
     records: [
+      ...qualificationRecords(),
       {
         challengeDate: "2026-04-15",
         status: "SLACK",
@@ -44,6 +54,7 @@ test("full participants accumulate debt after the free qualification period", ()
   const overview = getChallengeOverview({
     joinedChallengeDate: "2026-04-01",
     records: [
+      ...qualificationRecords(),
       {
         challengeDate: "2026-04-15",
         status: "SLACK",
@@ -68,6 +79,7 @@ test("student discount also affects accumulated overview debt", () => {
   const overview = getChallengeOverview({
     joinedChallengeDate: "2026-04-01",
     records: [
+      ...qualificationRecords(),
       {
         challengeDate: "2026-04-15",
         status: "SLACK",
@@ -87,6 +99,36 @@ test("student discount also affects accumulated overview debt", () => {
 
   assert.equal(overview.totalDebtCents, 1100);
   assert.equal(overview.outstandingDebtCents, 1100);
+});
+
+test("unqualified full participants do not accumulate debt", () => {
+  const overview = getChallengeOverview({
+    joinedChallengeDate: "2026-04-01",
+    records: [
+      ...qualificationRecords(9),
+      {
+        challengeDate: "2026-04-15",
+        status: "SLACK",
+        pushupTotal: 0,
+        situpTotal: 0,
+      },
+      {
+        challengeDate: "2026-04-16",
+        status: "SLACK",
+        pushupTotal: 0,
+        situpTotal: 0,
+      },
+    ],
+    now: new Date("2026-04-17T12:00:00Z"),
+  });
+
+  const slackDay = overview.days.find((day) => day.challengeDate === "2026-04-15");
+
+  assert.equal(overview.qualificationUploads, 9);
+  assert.equal(overview.totalDebtCents, 0);
+  assert.equal(overview.outstandingDebtCents, 0);
+  assert.equal(slackDay?.status, "slack");
+  assert.equal(slackDay?.debtCents, 0);
 });
 
 test("retroactive slack days can still accept jokers", () => {

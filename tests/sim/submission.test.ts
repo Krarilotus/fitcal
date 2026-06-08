@@ -3,6 +3,15 @@ import assert from "node:assert/strict";
 import { getChallengeOverview, getSlackDebtCents } from "@/lib/challenge";
 import { parseSubmissionInput } from "@/lib/submission";
 
+function qualificationRecords() {
+  return Array.from({ length: 10 }, (_, index) => ({
+    challengeDate: `2026-04-${String(index + 1).padStart(2, "0")}`,
+    status: "COMPLETED" as const,
+    pushupTotal: 20,
+    situpTotal: 20,
+  }));
+}
+
 test("partial submissions below the daily target are parsed without rejection", () => {
   const formData = new FormData();
   formData.set("challengeDate", "2026-04-20");
@@ -26,6 +35,7 @@ test("partial completed days only charge proportional debt", () => {
   const overview = getChallengeOverview({
     joinedChallengeDate: "2026-04-01",
     records: [
+      ...qualificationRecords(),
       {
         challengeDate: "2026-04-15",
         status: "COMPLETED",
