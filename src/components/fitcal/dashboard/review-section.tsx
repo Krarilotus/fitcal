@@ -155,10 +155,11 @@ export function DashboardReviewSection({
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-7">
                   <DashboardStatBox label={labels.review.stats.totalPushups} value={reviewSelfRow.totalPushups} />
                   <DashboardStatBox label={labels.review.stats.totalSitups} value={reviewSelfRow.totalSitups} />
                   <DashboardStatBox label={labels.review.stats.days} value={reviewSelfRow.documentedDays} />
+                  <DashboardStatBox label={labels.review.stats.sickDays} value={reviewSelfRow.sickDays} />
                   <DashboardStatBox label={labels.review.stats.qualification} value={reviewSelfRow.qualificationLabel} />
                   <DashboardStatBox label={labels.review.stats.debt} value={reviewSelfRow.debtLabel ?? labels.participantReview.off} />
                   <DashboardStatBox label={labels.review.stats.commonReviewer} value={reviewSelfRow.commonReviewerLabel} />
@@ -216,6 +217,7 @@ export function DashboardReviewSection({
                     <DashboardStatBox label={labels.review.stats.totalPushups} value={row.totalPushups} />
                     <DashboardStatBox label={labels.review.stats.totalSitups} value={row.totalSitups} />
                     <DashboardStatBox label={labels.review.stats.days} value={row.documentedDays} />
+                    <DashboardStatBox label={labels.review.stats.sickDays} value={row.sickDays} />
                     <DashboardStatBox label={labels.review.stats.qualification} value={row.qualificationLabel} />
                     <DashboardStatBox label={labels.review.stats.debt} value={row.debtLabel ?? labels.participantReview.off} />
                     <DashboardStatBox label={labels.review.stats.reviews} value={row.reviewLabel} />
@@ -228,7 +230,7 @@ export function DashboardReviewSection({
 
           <Card className="hidden overflow-x-auto md:block">
             <CardContent className="p-5">
-              <table className="w-full min-w-[980px] text-left text-sm">
+              <table className="w-full min-w-[1060px] text-left text-sm">
                 <thead className="border-b border-[var(--fc-border)] text-[var(--fc-muted)]">
                   <tr>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.name}</th>
@@ -239,6 +241,7 @@ export function DashboardReviewSection({
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.totalSitups}</th>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.qualification}</th>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.days}</th>
+                    <th className="pb-3 pr-4 font-medium">{labels.review.table.sickDays}</th>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.debt}</th>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.reviews}</th>
                     <th className="pb-3 font-medium">{labels.review.table.commonReviewer}</th>
@@ -260,6 +263,7 @@ export function DashboardReviewSection({
                       <td className="py-3 pr-4">{row.totalSitups}</td>
                       <td className="py-3 pr-4">{row.qualificationLabel}</td>
                       <td className="py-3 pr-4">{row.documentedDays}</td>
+                      <td className="py-3 pr-4">{row.sickDays}</td>
                       <td className="py-3 pr-4">{row.debtLabel ?? labels.participantReview.off}</td>
                       <td className="py-3 pr-4">{row.reviewLabel}</td>
                       <td className="py-3">{row.commonReviewerLabel}</td>

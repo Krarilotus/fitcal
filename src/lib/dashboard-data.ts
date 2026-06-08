@@ -475,6 +475,7 @@ async function buildParticipantRows(
       qualificationRequiredUploads: participantOverview.qualificationRequiredUploads,
       qualificationLabel: `${participantOverview.qualificationUploads}/${participantOverview.qualificationRequiredUploads}`,
       documentedDays: participantOverview.documentedDays,
+      sickDays: participantOverview.sickDays,
       pendingReviewCount,
       debtLabel: participant.isLightParticipant
         ? null

@@ -229,6 +229,7 @@ export interface ChallengeOverview {
   previousDate: string | null;
   previousTarget: number | null;
   documentedDays: number;
+  sickDays: number;
   qualificationUploads: number;
   qualificationRequiredUploads: number;
   qualificationWindowDays: number;
@@ -404,6 +405,9 @@ export function getChallengeOverview({
 
   const currentMonthJokersUsed = countJokersForMonth(records, getMonthKey(currentDate));
   const documentedDays = records.filter((record) => record.status === "COMPLETED").length;
+  const sickDays = records.filter((record) =>
+    record.status === "SICK_PENDING" || record.status === "SICK_VERIFIED",
+  ).length;
 
   return {
     currentDate,
@@ -411,6 +415,7 @@ export function getChallengeOverview({
     previousDate,
     previousTarget: previousDate ? getRequiredReps(previousDate) : null,
     documentedDays,
+    sickDays,
     qualificationUploads,
     qualificationRequiredUploads: MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION,
     qualificationWindowDays: CHALLENGE_FREE_DAYS,

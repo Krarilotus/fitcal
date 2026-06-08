@@ -131,6 +131,7 @@ export type ParticipantRow = {
   qualificationRequiredUploads: number;
   qualificationLabel: string;
   documentedDays: number;
+  sickDays: number;
   pendingReviewCount: number;
   debtLabel: string | null;
   reviewLabel: string;
