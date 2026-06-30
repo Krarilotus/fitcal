@@ -16,29 +16,29 @@ export async function GET(
     return new Response("Nicht angemeldet.", { status: 401 });
   }
 
+  if (user.isLightParticipant) {
+    return new Response("Video nicht gefunden.", { status: 404 });
+  }
+
   const { videoId } = await context.params;
 
   const video = await prisma.dailyVideo.findFirst({
     where: {
       id: videoId,
-      dailySubmission: user.isLightParticipant
-        ? {
+      dailySubmission: {
+        OR: [
+          {
             userId: user.id,
-          }
-        : {
-            OR: [
-              {
-                userId: user.id,
-              },
-              {
-                status: "COMPLETED",
-                user: {
-                  registrationStatus: "APPROVED",
-                  isLightParticipant: false,
-                },
-              },
-            ],
           },
+          {
+            status: "COMPLETED",
+            user: {
+              registrationStatus: "APPROVED",
+              isLightParticipant: false,
+            },
+          },
+        ],
+      },
     },
     select: {
       originalName: true,

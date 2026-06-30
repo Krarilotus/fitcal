@@ -1,5 +1,8 @@
 import type { AppDictionary } from "@/i18n";
-import type { OverviewSummary } from "@/components/fitcal/dashboard-types";
+import type {
+  OverviewSummary,
+  ParticipantRow,
+} from "@/components/fitcal/dashboard-types";
 import type { PendingApprovalSummary } from "@/lib/dashboard-data";
 import {
   DashboardActionButton,
@@ -14,13 +17,19 @@ export function DashboardOverviewSection({
   canReview,
   labels,
   overview,
+  participantRows,
   pendingApprovals,
 }: {
   canReview: boolean;
   labels: DashboardLabels;
   overview: OverviewSummary;
+  participantRows: ParticipantRow[];
   pendingApprovals: PendingApprovalSummary[];
 }) {
+  const lightProgressRows = overview.isLightParticipant
+    ? participantRows.slice(0, 8)
+    : [];
+
   return (
     <section className="fc-section fc-rise" id="overview">
       <div className="fc-card-lg">
@@ -44,6 +53,61 @@ export function DashboardOverviewSection({
           <StatBox label={labels.overview.days} value={overview.documentedDays} />
         </div>
         {overview.dailyMessage ? <p className="fc-daily-message">{overview.dailyMessage}</p> : null}
+        {lightProgressRows.length ? (
+          <div className="mt-5 border-t border-[var(--fc-border)] pt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="fc-heading text-base">{labels.reviewSubtabs.progress}</h3>
+              <DashboardStatusBadge>
+                {participantRows.length} {labels.review.summary.participants}
+              </DashboardStatusBadge>
+            </div>
+            <div className="mt-4 grid gap-3 md:hidden">
+              {lightProgressRows.map((row) => (
+                <div className="fc-info-box" key={row.id}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="fc-text-emphasis">
+                      {row.name}
+                      {row.isSelf ? ` - ${labels.review.you}` : ""}
+                    </p>
+                    <DashboardStatusBadge>{row.modeLabel}</DashboardStatusBadge>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <StatBox label={labels.review.stats.totalPushups} value={row.totalPushups} />
+                    <StatBox label={labels.review.stats.totalSitups} value={row.totalSitups} />
+                    <StatBox label={labels.review.stats.days} value={row.documentedDays} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 hidden overflow-x-auto rounded-md border border-[var(--fc-border)] md:block">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead className="border-b border-[var(--fc-border)] text-[var(--fc-muted)]">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">{labels.review.table.name}</th>
+                    <th className="px-4 py-3 font-medium">{labels.review.table.mode}</th>
+                    <th className="px-4 py-3 font-medium">{labels.review.table.totalPushups}</th>
+                    <th className="px-4 py-3 font-medium">{labels.review.table.totalSitups}</th>
+                    <th className="px-4 py-3 font-medium">{labels.review.table.days}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lightProgressRows.map((row) => (
+                    <tr className="border-b border-[var(--fc-border)]/70 last:border-b-0" key={row.id}>
+                      <td className="px-4 py-3 font-medium">
+                        {row.name}
+                        {row.isSelf ? ` - ${labels.review.you}` : ""}
+                      </td>
+                      <td className="px-4 py-3">{row.modeLabel}</td>
+                      <td className="px-4 py-3">{row.totalPushups}</td>
+                      <td className="px-4 py-3">{row.totalSitups}</td>
+                      <td className="px-4 py-3">{row.documentedDays}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
         {canReview ? (
           <div className="mt-5 border-t border-[var(--fc-border)] pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3">

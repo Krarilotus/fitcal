@@ -12,6 +12,7 @@ import { createEmailVerificationToken } from "@/lib/auth/email-verification";
 import { registerSchema } from "@/lib/auth/validation";
 import { normalizeMeasurementDate } from "@/lib/measurements";
 import { getApiMessages, localizedUrl } from "@/lib/i18n-api";
+import { getRequiredRegistrationApprovalCount } from "@/lib/registration-approval";
 
 function hashInviteToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -95,7 +96,14 @@ export async function POST(request: Request) {
       const remainingReviewerIds = approvers
         .map((reviewer) => reviewer.id)
         .filter((reviewerId) => !preApprovedReviewerIds.includes(reviewerId));
-      const autoApprove = approvers.length === 0 || remainingReviewerIds.length === 0;
+      const requiredApprovalCount = getRequiredRegistrationApprovalCount({
+        isLightParticipant,
+      });
+      const autoApprove =
+        approvers.length === 0 ||
+        (requiredApprovalCount == null
+          ? remainingReviewerIds.length === 0
+          : preApprovedReviewerIds.length >= requiredApprovalCount);
       const createdUser = await tx.user.create({
         data: {
           email: parsed.email,

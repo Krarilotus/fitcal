@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
-import { Prisma } from "@prisma/client";
+import { Prisma, RegistrationStatus } from "@prisma/client";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
+import { reconcileRegistrationStatus } from "@/lib/registration-approval";
 
 const SESSION_COOKIE_NAME = "fitcal_session";
 const SESSION_DURATION_DAYS = 30;
@@ -123,6 +124,24 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     }
 
     return null;
+  }
+
+  if (session.user.registrationStatus === RegistrationStatus.PENDING) {
+    const registrationStatus = await reconcileRegistrationStatus(
+      prisma,
+      session.user.id,
+    );
+
+    if (registrationStatus !== session.user.registrationStatus) {
+      const refreshedUser = await prisma.user.findUnique({
+        where: {
+          id: session.user.id,
+        },
+        include: currentUserInclude,
+      });
+
+      return refreshedUser;
+    }
   }
 
   return session.user;

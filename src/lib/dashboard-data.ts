@@ -234,6 +234,7 @@ function buildOpenDays(
         hasExistingClaim: Boolean(submission),
         isEditableClaim,
         canAddVideos:
+          !user.isLightParticipant &&
           Boolean(submission) &&
           isEditableClaim &&
           (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
@@ -249,12 +250,13 @@ function buildOpenDays(
           ? buildReviewerSummaryLabel([...submission.workoutReviews])
           : null,
         reviewNotes,
-        videos:
-          submission?.videos.map((video) => ({
-            id: video.id,
-            originalName: video.originalName,
-            sizeLabel: formatFileSize(locale, video.sizeBytes),
-          })) ?? [],
+        videos: user.isLightParticipant
+          ? []
+          : submission?.videos.map((video) => ({
+              id: video.id,
+              originalName: video.originalName,
+              sizeLabel: formatFileSize(locale, video.sizeBytes),
+            })) ?? [],
       };
     });
 }
@@ -314,6 +316,7 @@ function buildTimelineEntries(
           })
         : false,
       canAddVideos:
+        !user.isLightParticipant &&
         Boolean(submission) &&
         (submission
           ? canEditSubmissionBeforeReview({
@@ -322,12 +325,13 @@ function buildTimelineEntries(
             })
           : false) &&
         (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
-      videos:
-        submission?.videos.map((video) => ({
-          id: video.id,
-          originalName: video.originalName,
-          sizeLabel: formatFileSize(locale, video.sizeBytes),
-        })) ?? [],
+      videos: user.isLightParticipant
+        ? []
+        : submission?.videos.map((video) => ({
+            id: video.id,
+            originalName: video.originalName,
+            sizeLabel: formatFileSize(locale, video.sizeBytes),
+          })) ?? [],
     };
   });
 }
@@ -405,7 +409,7 @@ async function buildParticipantRows(
     orderBy: [{ isLightParticipant: "asc" }, { createdAt: "asc" }],
   });
 
-  return participants.map((participant) => {
+  return participants.map((participant, index) => {
     const participantRecords = participant.dailySubmissions.map((submission) => {
       const totals = getSubmissionTotals(submission);
 
@@ -448,14 +452,18 @@ async function buildParticipantRows(
     const totalSitups = participant.dailySubmissions
       .filter((submission) => submission.status === "COMPLETED")
       .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectiveSitupTotal, 0);
+    const isSelf = participant.id === currentUser.id;
+    const participantLabel = currentUser.isLightParticipant && !isSelf
+      ? `Anonym ${index + 1}`
+      : participant.name || participant.email;
     const allWorkoutReviews = participant.dailySubmissions.flatMap(
       (submission) => submission.workoutReviews,
     );
 
     return {
       id: participant.id,
-      name: participant.name || participant.email,
-      isSelf: participant.id === currentUser.id,
+      name: participantLabel,
+      isSelf,
       modeLabel: participant.isLightParticipant
         ? labels.participantModeLabels.light
         : labels.participantModeLabels.full,
@@ -492,6 +500,15 @@ async function buildParticipantRows(
   }).sort((left, right) => {
     if (left.isSelf !== right.isSelf) {
       return left.isSelf ? -1 : 1;
+    }
+
+    if (currentUser.isLightParticipant) {
+      const leftTotal = left.totalPushups + left.totalSitups;
+      const rightTotal = right.totalPushups + right.totalSitups;
+
+      if (leftTotal !== rightTotal) {
+        return rightTotal - leftTotal;
+      }
     }
 
     return left.name.localeCompare(right.name, locale === "en" ? "en" : "de");
@@ -940,9 +957,7 @@ export async function getDashboardPageData(params: {
             take: 6,
           })
         : Promise.resolve([]),
-      canReview
-        ? buildParticipantRows(user, locale, labels, challengeOverview)
-        : Promise.resolve([]),
+      buildParticipantRows(user, locale, labels, challengeOverview),
       canReview ? buildPrimaryReviewItems(user, locale, labels) : Promise.resolve([]),
       canReview ? buildEscalationReviewItems(user, locale, labels) : Promise.resolve([]),
       canReview ? buildReviewFeedbackItems(user, locale, labels) : Promise.resolve([]),

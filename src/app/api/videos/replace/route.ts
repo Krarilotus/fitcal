@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   const messages = (await getApiMessages()).videos;
 
-  if (!user) {
+  if (!user || user.isLightParticipant) {
     return redirectTo(getAppUrl("/login", request));
   }
 

@@ -11,6 +11,7 @@ import {
   sendRegistrationRejectedMail,
 } from "@/lib/auth/email";
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
+import { reconcileRegistrationStatus } from "@/lib/registration-approval";
 
 const REVIEW_REWARD_CENTS = 5;
 
@@ -90,61 +91,16 @@ export async function POST(request: Request) {
         },
       });
 
-      const allDecisions = await tx.registrationApproval.findMany({
-        where: {
-          applicantUserId: approval.applicantUserId,
-        },
-        select: {
-          decision: true,
-        },
-      });
-
-      let finalStatus: RegistrationStatus | null = null;
-
-      if (
-        allDecisions.some(
-          (entry) => entry.decision === RegistrationApprovalDecision.REJECTED,
-        )
-      ) {
-        finalStatus = RegistrationStatus.REJECTED;
-      } else if (
-        allDecisions.length > 0 &&
-        allDecisions.every(
-          (entry) => entry.decision === RegistrationApprovalDecision.APPROVED,
-        )
-      ) {
-        finalStatus = RegistrationStatus.APPROVED;
-      }
-
-      let applicant = approval.applicant;
-
-      if (finalStatus === RegistrationStatus.APPROVED) {
-        applicant = await tx.user.update({
-          where: {
-            id: approval.applicantUserId,
-          },
-          data: {
-            registrationStatus: RegistrationStatus.APPROVED,
-            registrationApprovedAt: new Date(),
-            registrationRejectedAt: null,
-          },
-        });
-      } else if (finalStatus === RegistrationStatus.REJECTED) {
-        applicant = await tx.user.update({
-          where: {
-            id: approval.applicantUserId,
-          },
-          data: {
-            registrationStatus: RegistrationStatus.REJECTED,
-            registrationRejectedAt: new Date(),
-          },
-        });
-      }
+      const finalStatus = await reconcileRegistrationStatus(
+        tx,
+        approval.applicantUserId,
+      );
 
       return {
-        finalStatus,
-        applicantEmail: applicant.email,
-        applicantName: applicant.name,
+        finalStatus:
+          finalStatus === approval.applicant.registrationStatus ? null : finalStatus,
+        applicantEmail: approval.applicant.email,
+        applicantName: approval.applicant.name,
       };
     });
 

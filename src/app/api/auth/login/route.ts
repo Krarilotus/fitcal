@@ -6,6 +6,7 @@ import { verifyPassword } from "@/lib/auth/password";
 import { getAppUrl } from "@/lib/auth/url";
 import { loginSchema } from "@/lib/auth/validation";
 import { getApiMessages, localizedUrl } from "@/lib/i18n-api";
+import { reconcileRegistrationStatus } from "@/lib/registration-approval";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -33,11 +34,16 @@ export async function POST(request: Request) {
       throw new Error(messages.loginFailed);
     }
 
-    if (user.registrationStatus === RegistrationStatus.PENDING) {
+    const registrationStatus =
+      user.registrationStatus === RegistrationStatus.PENDING
+        ? await reconcileRegistrationStatus(prisma, user.id)
+        : user.registrationStatus;
+
+    if (registrationStatus === RegistrationStatus.PENDING) {
       throw new Error(messages.pendingApproval);
     }
 
-    if (user.registrationStatus === RegistrationStatus.REJECTED) {
+    if (registrationStatus === RegistrationStatus.REJECTED) {
       throw new Error(messages.rejected);
     }
 

@@ -352,6 +352,7 @@ export function DashboardTabs({
           canReview={canReview}
           labels={labels}
           overview={overview}
+          participantRows={participantRows}
           pendingApprovals={pendingApprovals}
         />
 
