@@ -359,7 +359,7 @@ Dieses Repo ist fuer automatisches Production-Deployment vorbereitet. Der GitHub
 Bei jedem Push auf `main` verbindet sich dieser Worker per SSH mit dem Server und fuehrt dort das normale Update aus:
 
 ```bash
-cd /home/fitcal/app && sudo /home/fitcal/app/update.sh
+sudo /home/fitcal/app/update.sh
 ```
 
 Der App-Code liegt dabei unter `/home/fitcal/app`. Betriebsdaten bleiben unter `/opt/fitcal`, z. B. SQLite in `/opt/fitcal/data` und Uploads in `/opt/fitcal/uploads`.
@@ -383,7 +383,7 @@ Dann `visudo` oeffnen:
 sudo visudo
 ```
 
-Diese Zeile eintragen, damit GitHub Actions nur das Update-Skript ohne Passwort ausfuehren darf:
+Diese Zeile eintragen, damit GitHub Actions nur das Update-Skript ohne Passwort ausfuehren darf. Der Workflow ruft genau diesen absoluten Pfad auf, damit der Deploy-User keinen eigenen Zugriff auf `/home/fitcal/app` braucht:
 
 ```text
 deployfitcal ALL=(root) NOPASSWD: /home/fitcal/app/update.sh
