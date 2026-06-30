@@ -355,25 +355,71 @@ SYNC_NGINX=0 ./update.sh
 
 ## Automatisches Deployment bei Push auf `main`
 
-Dieses Repo enthaelt einen GitHub-Actions-Workflow unter `.github/workflows/deploy.yml`.
-Bei jedem Push auf `main` verbindet sich GitHub per SSH mit dem Server und fuehrt dort das normale Update aus:
+Dieses Repo ist fuer automatisches Production-Deployment vorbereitet. Der GitHub-Actions-Worker heisst `Deploy FitCal` und liegt unter [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+Bei jedem Push auf `main` verbindet sich dieser Worker per SSH mit dem Server und fuehrt dort das normale Update aus:
 
 ```bash
 cd /home/fitcal/app && sudo /home/fitcal/app/update.sh
 ```
 
-Dafuer brauchst du in GitHub unter `Settings` -> `Secrets and variables` -> `Actions` diese Repository-Secrets:
+Der App-Code liegt dabei unter `/home/fitcal/app`. Betriebsdaten bleiben unter `/opt/fitcal`, z. B. SQLite in `/opt/fitcal/data` und Uploads in `/opt/fitcal/uploads`.
 
-- `FITCAL_DEPLOY_HOST`: Hostname oder IP des Servers
-- `FITCAL_DEPLOY_USER`: SSH-User auf dem Server
-- `FITCAL_DEPLOY_KEY`: privater SSH-Key fuer diesen User
-- `FITCAL_DEPLOY_PORT`: optional, nur wenn nicht Port `22`
+### Server-User fuer GitHub Actions
 
-Der SSH-User muss den Update-Befehl ohne interaktive Passwortabfrage ausfuehren koennen. Am einfachsten ist ein dedizierter Deploy-User mit SSH-Key und passwortlosem sudo nur fuer dieses Skript, z. B. via `visudo`:
+Einmalig auf dem Server:
+
+```bash
+sudo adduser --disabled-password --gecos "" deployfitcal
+sudo -u deployfitcal ssh-keygen -t ed25519 -f /home/deployfitcal/.ssh/fitcal_github_actions -N ""
+sudo -u deployfitcal cp /home/deployfitcal/.ssh/fitcal_github_actions.pub /home/deployfitcal/.ssh/authorized_keys
+sudo chmod 700 /home/deployfitcal/.ssh
+sudo chmod 600 /home/deployfitcal/.ssh/authorized_keys
+sudo chown -R deployfitcal:deployfitcal /home/deployfitcal/.ssh
+```
+
+Dann `visudo` oeffnen:
+
+```bash
+sudo visudo
+```
+
+Diese Zeile eintragen, damit GitHub Actions nur das Update-Skript ohne Passwort ausfuehren darf:
 
 ```text
 deployfitcal ALL=(root) NOPASSWD: /home/fitcal/app/update.sh
 ```
+
+Private Key fuer GitHub anzeigen:
+
+```bash
+sudo cat /home/deployfitcal/.ssh/fitcal_github_actions
+```
+
+Den kompletten Inhalt inklusive `-----BEGIN OPENSSH PRIVATE KEY-----` und `-----END OPENSSH PRIVATE KEY-----` kopieren.
+
+### GitHub-Secrets setzen
+
+In GitHub mit einem Account anmelden, der Admin-Rechte auf `Krarilotus/fitcal` hat. Dann:
+
+`Krarilotus/fitcal` -> `Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`
+
+Diese Repository-Secrets anlegen:
+
+- `FITCAL_DEPLOY_HOST`: Hostname oder IP des Servers
+- `FITCAL_DEPLOY_USER`: `deployfitcal`
+- `FITCAL_DEPLOY_KEY`: privater SSH-Key aus `/home/deployfitcal/.ssh/fitcal_github_actions`
+- `FITCAL_DEPLOY_PORT`: `22`, oder optional weglassen, wenn SSH auf Port `22` laeuft
+
+Beispiel:
+
+```text
+FITCAL_DEPLOY_HOST = 94.16.31.179
+FITCAL_DEPLOY_USER = deployfitcal
+FITCAL_DEPLOY_KEY  = -----BEGIN OPENSSH PRIVATE KEY----- ...
+FITCAL_DEPLOY_PORT = 22
+```
+
+Nach dem naechsten Push auf `main` laeuft der Worker unter `Actions` -> `Deploy FitCal`. Dort sieht man auch Logs, falls SSH, sudo oder Docker fehlschlagen.
 
 ## Docker starten
 
