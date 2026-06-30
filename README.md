@@ -289,24 +289,24 @@ sudo ./deploy/bootstrap-fitcal.sh
 Das Skript:
 - legt den `fitcal`-Systemuser an
 - erzeugt das Deploy-Key-Paar
-- klont oder updated `/opt/fitcal/app`
+- klont oder updated `/home/fitcal/app`
 - legt bei Bedarf `.env.production` aus der Example-Datei an
 
 Manuell geht auch:
 
 ```bash
-sudo -u fitcal git clone git@github.com:Krarilotus/fitcal.git /opt/fitcal/app
+sudo -u fitcal git clone git@github.com:Krarilotus/fitcal.git /home/fitcal/app
 ```
 
 Dann entweder:
 
 Option A:
-- deine lokale [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) per SCP/WinSCP nach `/opt/fitcal/app/.env.production` kopieren
+- deine lokale [`.env.server`](/c:/Users/Johannes/Documents/DanielMotz/fitcal/.env.server) per SCP/WinSCP nach `/home/fitcal/app/.env.production` kopieren
 
 Option B:
 
 ```bash
-cd /opt/fitcal/app
+cd /home/fitcal/app
 sudo -u fitcal cp .env.production.example .env.production
 sudo -u fitcal nano .env.production
 ```
@@ -316,14 +316,14 @@ sudo -u fitcal nano .env.production
 Einfacher PuTTY-Update mit genau zwei Befehlen:
 
 ```bash
-cd /opt/fitcal/app
+cd /home/fitcal/app
 ./update.sh
 ```
 
 Falls `./update.sh` einmal nicht ausfuehrbar ist:
 
 ```bash
-cd /opt/fitcal/app
+cd /home/fitcal/app
 chmod +x update.sh
 ./update.sh
 ```
@@ -357,7 +357,7 @@ Dieses Repo enthaelt einen GitHub-Actions-Workflow unter `.github/workflows/depl
 Bei jedem Push auf `main` verbindet sich GitHub per SSH mit dem Server und fuehrt dort das normale Update aus:
 
 ```bash
-cd /opt/fitcal/app && sudo /opt/fitcal/app/update.sh
+cd /home/fitcal/app && sudo /home/fitcal/app/update.sh
 ```
 
 Dafuer brauchst du in GitHub unter `Settings` -> `Secrets and variables` -> `Actions` diese Repository-Secrets:
@@ -370,7 +370,7 @@ Dafuer brauchst du in GitHub unter `Settings` -> `Secrets and variables` -> `Act
 Der SSH-User muss den Update-Befehl ohne interaktive Passwortabfrage ausfuehren koennen. Am einfachsten ist ein dedizierter Deploy-User mit SSH-Key und passwortlosem sudo nur fuer dieses Skript, z. B. via `visudo`:
 
 ```text
-deployfitcal ALL=(root) NOPASSWD: /opt/fitcal/app/update.sh
+deployfitcal ALL=(root) NOPASSWD: /home/fitcal/app/update.sh
 ```
 
 ## Docker starten
@@ -389,7 +389,7 @@ Das Skript:
 Manuell:
 
 ```bash
-cd /opt/fitcal/app
+cd /home/fitcal/app
 sudo -u fitcal docker compose --env-file .env.production up -d --build
 ```
 
@@ -409,7 +409,7 @@ Auf dem Server:
 
 ```bash
 sudo mkdir -p /var/www/certbot
-sudo cp /opt/fitcal/app/deploy/nginx-fitcal.conf /etc/nginx/sites-available/fitcal.hisqu.de.conf
+sudo cp /home/fitcal/app/deploy/nginx-fitcal.conf /etc/nginx/sites-available/fitcal.hisqu.de.conf
 sudo ln -s /etc/nginx/sites-available/fitcal.hisqu.de.conf /etc/nginx/sites-enabled/fitcal.hisqu.de.conf
 sudo nginx -t
 sudo systemctl reload nginx
@@ -507,7 +507,7 @@ cat /opt/fitcal/.ssh/id_ed25519.pub
 
 ```bash
 ./deploy/bootstrap-fitcal.sh
-nano /opt/fitcal/app/.env.production
+nano /home/fitcal/app/.env.production
 ./deploy/install-fitcal-service.sh
 certbot --nginx -d fitcal.hisqu.de
 ```

@@ -40,4 +40,4 @@ jobs:
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "${FITCAL_DEPLOY_USER}@${FITCAL_DEPLOY_HOST}" \
-            "cd /opt/fitcal/app && sudo /opt/fitcal/app/update.sh"
+            "cd /home/fitcal/app && sudo /home/fitcal/app/update.sh"
