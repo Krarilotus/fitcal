@@ -308,20 +308,22 @@ Option B:
 ```bash
 cd /opt/fitcal/app
 sudo -u fitcal cp .env.production.example .env.production
+sudo -u fitcal nano .env.production
+```
 
 ## Updates auf dem Server
 
-Einfacher PuTTY-Update-Befehl fuer diesen Server:
+Einfacher PuTTY-Update mit genau zwei Befehlen:
 
 ```bash
-cd /home/fitcal/app
+cd /opt/fitcal/app
 ./update.sh
 ```
 
 Falls `./update.sh` einmal nicht ausfuehrbar ist:
 
 ```bash
-cd /home/fitcal/app
+cd /opt/fitcal/app
 chmod +x update.sh
 ./update.sh
 ```
@@ -348,7 +350,27 @@ Optional kannst du auch das Nginx-Sync deaktivieren:
 ```bash
 SYNC_NGINX=0 ./update.sh
 ```
-sudo -u fitcal nano .env.production
+
+## Automatisches Deployment bei Push auf `main`
+
+Dieses Repo enthaelt einen GitHub-Actions-Workflow unter `.github/workflows/deploy.yml`.
+Bei jedem Push auf `main` verbindet sich GitHub per SSH mit dem Server und fuehrt dort das normale Update aus:
+
+```bash
+cd /opt/fitcal/app && sudo /opt/fitcal/app/update.sh
+```
+
+Dafuer brauchst du in GitHub unter `Settings` -> `Secrets and variables` -> `Actions` diese Repository-Secrets:
+
+- `FITCAL_DEPLOY_HOST`: Hostname oder IP des Servers
+- `FITCAL_DEPLOY_USER`: SSH-User auf dem Server
+- `FITCAL_DEPLOY_KEY`: privater SSH-Key fuer diesen User
+- `FITCAL_DEPLOY_PORT`: optional, nur wenn nicht Port `22`
+
+Der SSH-User muss den Update-Befehl ohne interaktive Passwortabfrage ausfuehren koennen. Am einfachsten ist ein dedizierter Deploy-User mit SSH-Key und passwortlosem sudo nur fuer dieses Skript, z. B. via `visudo`:
+
+```text
+deployfitcal ALL=(root) NOPASSWD: /opt/fitcal/app/update.sh
 ```
 
 ## Docker starten

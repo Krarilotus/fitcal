@@ -1,0 +1,43 @@
+name: Deploy FitCal
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: fitcal-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Update production server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        env:
+          FITCAL_DEPLOY_HOST: ${{ secrets.FITCAL_DEPLOY_HOST }}
+          FITCAL_DEPLOY_KEY: ${{ secrets.FITCAL_DEPLOY_KEY }}
+          FITCAL_DEPLOY_PORT: ${{ secrets.FITCAL_DEPLOY_PORT || '22' }}
+          FITCAL_DEPLOY_USER: ${{ secrets.FITCAL_DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${FITCAL_DEPLOY_HOST}" ] || [ -z "${FITCAL_DEPLOY_USER}" ] || [ -z "${FITCAL_DEPLOY_KEY}" ]; then
+            echo "Missing one of FITCAL_DEPLOY_HOST, FITCAL_DEPLOY_USER, FITCAL_DEPLOY_KEY." >&2
+            exit 1
+          fi
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${FITCAL_DEPLOY_KEY}" > ~/.ssh/fitcal_deploy_key
+          chmod 600 ~/.ssh/fitcal_deploy_key
+          ssh-keyscan -p "${FITCAL_DEPLOY_PORT}" -H "${FITCAL_DEPLOY_HOST}" >> ~/.ssh/known_hosts
+
+          ssh \
+            -i ~/.ssh/fitcal_deploy_key \
+            -p "${FITCAL_DEPLOY_PORT}" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "${FITCAL_DEPLOY_USER}@${FITCAL_DEPLOY_HOST}" \
+            "cd /opt/fitcal/app && sudo /opt/fitcal/app/update.sh"
