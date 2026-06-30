@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_USER="fitcal"
 APP_GROUP="fitcal"
-APP_DIR="/opt/fitcal/app"
+APP_DIR="/home/fitcal/app"
 NGINX_SOURCE="${APP_DIR}/deploy/nginx-fitcal.conf"
 NGINX_TARGET="/etc/nginx/sites-available/fitcal.hisqu.de.conf"
 NGINX_LINK="/etc/nginx/sites-enabled/fitcal.hisqu.de.conf"

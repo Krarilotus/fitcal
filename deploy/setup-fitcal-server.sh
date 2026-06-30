@@ -3,11 +3,12 @@ set -euo pipefail
 
 APP_USER="fitcal"
 APP_GROUP="fitcal"
-APP_HOME="/opt/fitcal"
+APP_HOME="/home/fitcal"
 APP_DIR="${APP_HOME}/app"
-DATA_DIR="${APP_HOME}/data"
-UPLOAD_DIR="${APP_HOME}/uploads"
-SSH_DIR="${APP_HOME}/.ssh"
+OPERATIONAL_DIR="/opt/fitcal"
+DATA_DIR="${OPERATIONAL_DIR}/data"
+UPLOAD_DIR="${OPERATIONAL_DIR}/uploads"
+SSH_DIR="${OPERATIONAL_DIR}/.ssh"
 REPO_SSH="git@github.com:Krarilotus/fitcal.git"
 
 if [ "${EUID}" -ne 0 ]; then
@@ -32,6 +33,8 @@ if getent group docker >/dev/null 2>&1; then
 fi
 
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${APP_HOME}"
+install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${APP_DIR}"
+install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${OPERATIONAL_DIR}"
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${DATA_DIR}"
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 750 "${UPLOAD_DIR}"
 install -d -o "${APP_USER}" -g "${APP_GROUP}" -m 700 "${SSH_DIR}"

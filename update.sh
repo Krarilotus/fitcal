@@ -6,15 +6,23 @@ APP_DIR="${APP_DIR:-$SCRIPT_DIR}"
 APP_USER="${APP_USER:-fitcal}"
 APP_BRANCH="${APP_BRANCH:-main}"
 ENV_FILE="${ENV_FILE:-.env.production}"
+OPERATIONAL_DIR="${OPERATIONAL_DIR:-/opt/fitcal}"
+GIT_SSH_KEY="${GIT_SSH_KEY:-$OPERATIONAL_DIR/.ssh/id_ed25519}"
 NGINX_SOURCE_FILE="${NGINX_SOURCE_FILE:-$APP_DIR/deploy/nginx-fitcal.conf}"
 NGINX_TARGET_FILE="${NGINX_TARGET_FILE:-/etc/nginx/sites-available/fitcal.hisqu.de.conf}"
 SYNC_NGINX="${SYNC_NGINX:-1}"
 
 run_git_as_app_user() {
+  local git_env=()
+
+  if [ -f "${GIT_SSH_KEY}" ]; then
+    git_env=(env GIT_SSH_COMMAND="ssh -i ${GIT_SSH_KEY} -o IdentitiesOnly=yes")
+  fi
+
   if [ "$(id -u)" -eq 0 ] && id -u "${APP_USER}" >/dev/null 2>&1; then
-    sudo -u "${APP_USER}" "$@"
+    sudo -u "${APP_USER}" "${git_env[@]}" "$@"
   else
-    "$@"
+    "${git_env[@]}" "$@"
   fi
 }
 

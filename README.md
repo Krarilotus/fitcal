@@ -195,6 +195,8 @@ Das Setup sorgt fuer:
 - eigene Verzeichnisse unter `/opt/fitcal`
 - eigenes SSH-Keypair nur fuer Repo-Zugriff
 - Docker-Zugriff nur fuer diesen Dienst
+- App-/Git-Checkout: `/home/fitcal/app`
+- Betriebsdaten, Uploads und Server-Deploy-Key: `/opt/fitcal`
 
 Damit FitCal deine anderen Apps nicht stoert:
 - eigener Host-Port
