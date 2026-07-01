@@ -406,6 +406,10 @@
       videoNames: "Video names",
       videoNameLabel: "Video name {index}",
       videoSizeCompressed: "{original} → {compressed}",
+      extraCategories: "Extra categories",
+      extraCategoriesHint: "Optional: add another exercise or activity with +.",
+      extraCategoryName: "Category",
+      removeExtraCategory: "Remove",
       notes: "Note",
       saveEntry: "Save entry",
       saveWorkout: "Save workout",
@@ -520,6 +524,8 @@
         debt: "Debt",
         reviews: "Reviews",
         commonReviewer: "Most common reviewer",
+        extraColumns: "Extra categories",
+        hideExtraColumns: "Hide extras",
       },
       summary: {
         participants: "Participants",
@@ -636,6 +642,11 @@
       performanceDescription:
         "The latest documented workout days with totals, individual sets, and the daily target.",
       performanceEmpty: "No workout entries yet.",
+      rangeLabel: "Range",
+      rangeAll: "All",
+      rangeLast7: "7",
+      rangeLast14: "14",
+      rangeLast30: "30",
       measurementTitle: "Measurement history",
       measurementDescription:
         "Weight, waist, and resting pulse across your most recent saved entries.",

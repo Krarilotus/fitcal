@@ -7,6 +7,7 @@ type ChartSeries = {
   key: string;
   label: string;
   color: string;
+  defaultHidden?: boolean;
   dashed?: boolean;
   formatter?: (value: number) => string;
 };
@@ -57,7 +58,9 @@ export function MetaStatChart({
   noValueLabel,
 }: MetaStatChartProps) {
   const [activeIndex, setActiveIndex] = useState(points.length - 1);
-  const [hiddenSeries, setHiddenSeries] = useState<string[]>([]);
+  const [hiddenSeries, setHiddenSeries] = useState<string[]>(
+    series.filter((item) => item.defaultHidden).map((item) => item.key),
+  );
 
   if (points.length === 0) {
     return <div className="fc-card fc-text-muted">{emptyText}</div>;

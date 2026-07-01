@@ -17,6 +17,7 @@ import {
   getDayStatusLabel,
 } from "@/components/fitcal/dashboard-labels";
 import type {
+  ExtraWorkoutEntry,
   EscalationReviewItem,
   MeasurementPoint,
   OpenDay,
@@ -53,6 +54,38 @@ import {
 import { formatMeasurementDate } from "./measurements";
 
 type DashboardLabels = AppDictionary["dashboard"];
+
+function buildExtraEntries(
+  entries: Array<{ categoryName: string; value: number }> | undefined,
+): ExtraWorkoutEntry[] {
+  return (entries ?? [])
+    .filter((entry) => entry.value > 0 && entry.categoryName.trim())
+    .map((entry) => ({
+      categoryName: entry.categoryName,
+      value: entry.value,
+    }));
+}
+
+function buildExtraTotals(
+  submissions: Array<{
+    status: string;
+    extraEntries?: Array<{ categoryName: string; value: number }>;
+  }>,
+) {
+  const totals: Record<string, number> = {};
+
+  for (const submission of submissions) {
+    if (submission.status !== "COMPLETED") {
+      continue;
+    }
+
+    for (const entry of submission.extraEntries ?? []) {
+      totals[entry.categoryName] = (totals[entry.categoryName] ?? 0) + entry.value;
+    }
+  }
+
+  return totals;
+}
 
 export type PendingApprovalSummary = {
   id: string;
@@ -250,6 +283,7 @@ function buildOpenDays(
           ? buildReviewerSummaryLabel([...submission.workoutReviews])
           : null,
         reviewNotes,
+        extraEntries: buildExtraEntries(submission?.extraEntries),
         videos: user.isLightParticipant
           ? []
           : submission?.videos.map((video) => ({
@@ -306,6 +340,7 @@ function buildTimelineEntries(
         ? buildReviewerSummaryLabel([...submission.workoutReviews])
         : null,
       reviewNotes,
+      extraEntries: buildExtraEntries(submission?.extraEntries),
       deletingLastVideoRemovesClaim: submission
         ? !preservesSubmissionWithoutVideos(submission.reviewStatus)
         : false,
@@ -352,10 +387,10 @@ function buildPerformancePoints(user: CurrentUser): PerformancePoint[] {
         pushupSet2: pushupSets[1] ?? 0,
         situpSet1: situpSets[0] ?? 0,
         situpSet2: situpSets[1] ?? 0,
+        extras: buildExtraTotals([submission]),
         target: getRequiredReps(submission.challengeDate),
       };
-    })
-    .slice(-24);
+    });
 }
 
 async function buildParticipantRows(
@@ -389,6 +424,12 @@ async function buildParticipantRows(
           situpSets: true,
           verifiedPushupTotal: true,
           verifiedSitupTotal: true,
+          extraEntries: {
+            select: {
+              categoryName: true,
+              value: true,
+            },
+          },
           workoutReviews: {
             select: {
               reviewerUserId: true,
@@ -452,6 +493,7 @@ async function buildParticipantRows(
     const totalSitups = participant.dailySubmissions
       .filter((submission) => submission.status === "COMPLETED")
       .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectiveSitupTotal, 0);
+    const extraTotals = buildExtraTotals(participant.dailySubmissions);
     const isSelf = participant.id === currentUser.id;
     const participantLabel = currentUser.isLightParticipant && !isSelf
       ? `Anonym ${index + 1}`
@@ -479,6 +521,7 @@ async function buildParticipantRows(
       ),
       totalPushups,
       totalSitups,
+      extraTotals,
       qualificationUploads: participantOverview.qualificationUploads,
       qualificationRequiredUploads: participantOverview.qualificationRequiredUploads,
       qualificationLabel: `${participantOverview.qualificationUploads}/${participantOverview.qualificationRequiredUploads}`,

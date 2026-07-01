@@ -79,8 +79,16 @@ export function DashboardReviewSection({
   sicknessReviewItems: SicknessReviewItem[];
 }) {
   const [reviewSubtab, setReviewSubtab] = useState<ReviewSubtabKey>("progress");
+  const [showExtraColumns, setShowExtraColumns] = useState(false);
 
   const reviewParticipants = participantRows;
+  const extraCategories = useMemo(
+    () =>
+      [...new Set(reviewParticipants.flatMap((row) => Object.keys(row.extraTotals)))].sort(
+        (left, right) => left.localeCompare(right),
+      ),
+    [reviewParticipants],
+  );
   const reviewSelfRow = useMemo(
     () => reviewParticipants.find((row) => row.isSelf) ?? null,
     [reviewParticipants],
@@ -230,6 +238,20 @@ export function DashboardReviewSection({
 
           <Card className="hidden overflow-x-auto md:block">
             <CardContent className="p-5">
+              {extraCategories.length ? (
+                <div className="mb-4 flex justify-end">
+                  <Button
+                    onClick={() => setShowExtraColumns((current) => !current)}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                  >
+                    {showExtraColumns
+                      ? labels.review.table.hideExtraColumns
+                      : labels.review.table.extraColumns}
+                  </Button>
+                </div>
+              ) : null}
               <table className="w-full min-w-[1060px] text-left text-sm">
                 <thead className="border-b border-[var(--fc-border)] text-[var(--fc-muted)]">
                   <tr>
@@ -245,6 +267,13 @@ export function DashboardReviewSection({
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.debt}</th>
                     <th className="pb-3 pr-4 font-medium">{labels.review.table.reviews}</th>
                     <th className="pb-3 font-medium">{labels.review.table.commonReviewer}</th>
+                    {showExtraColumns
+                      ? extraCategories.map((categoryName) => (
+                          <th className="pb-3 pl-4 font-medium" key={categoryName}>
+                            {categoryName}
+                          </th>
+                        ))
+                      : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -267,6 +296,13 @@ export function DashboardReviewSection({
                       <td className="py-3 pr-4">{row.debtLabel ?? labels.participantReview.off}</td>
                       <td className="py-3 pr-4">{row.reviewLabel}</td>
                       <td className="py-3">{row.commonReviewerLabel}</td>
+                      {showExtraColumns
+                        ? extraCategories.map((categoryName) => (
+                            <td className="py-3 pl-4" key={categoryName}>
+                              {row.extraTotals[categoryName] ?? 0}
+                            </td>
+                          ))
+                        : null}
                     </tr>
                   ))}
                 </tbody>

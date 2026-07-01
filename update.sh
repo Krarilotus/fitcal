@@ -47,6 +47,9 @@ run_git_as_app_user git rev-parse --short HEAD
 echo "==> Rebuilding container"
 docker compose --env-file "${ENV_FILE}" up -d --build
 
+echo "==> Applying database schema"
+docker compose --env-file "${ENV_FILE}" exec -T fitcal npx prisma db push
+
 if [ "${SYNC_NGINX}" = "1" ] && [ -f "${NGINX_SOURCE_FILE}" ]; then
   if [ "$(id -u)" -eq 0 ]; then
     echo "==> Syncing nginx config"

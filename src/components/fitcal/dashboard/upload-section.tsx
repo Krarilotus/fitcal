@@ -51,6 +51,11 @@ type SubmissionResponsePayload = {
 };
 
 type UploadSetDraft = {
+  extraEntries: Array<{
+    id: string;
+    categoryName: string;
+    value: number;
+  }>;
   pushupSet1: number;
   pushupSet2: number;
   situpSet1: number;
@@ -81,6 +86,11 @@ function normalizeSetValue(value: string) {
 
 function buildUploadSetDraft(day: OpenDay): UploadSetDraft {
   return {
+    extraEntries: day.extraEntries.map((entry, index) => ({
+      id: `${day.challengeDate}-${entry.categoryName}-${index}`,
+      categoryName: entry.categoryName,
+      value: entry.value,
+    })),
     pushupSet1: day.pushupSet1,
     pushupSet2: day.pushupSet2,
     situpSet1: day.situpSet1,
@@ -576,12 +586,82 @@ export function DashboardUploadSection({
       ...current,
       [challengeDate]: {
         ...(current[challengeDate] ?? {
+          extraEntries: [],
           pushupSet1: 0,
           pushupSet2: 0,
           situpSet1: 0,
           situpSet2: 0,
         }),
         [field]: normalizeSetValue(value),
+      },
+    }));
+  }
+
+  function addExtraEntryDraft(challengeDate: string) {
+    setUploadSetDrafts((current) => ({
+      ...current,
+      [challengeDate]: {
+        ...(current[challengeDate] ?? {
+          extraEntries: [],
+          pushupSet1: 0,
+          pushupSet2: 0,
+          situpSet1: 0,
+          situpSet2: 0,
+        }),
+        extraEntries: [
+          ...(current[challengeDate]?.extraEntries ?? []),
+          {
+            id: `${challengeDate}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            categoryName: "",
+            value: 0,
+          },
+        ],
+      },
+    }));
+  }
+
+  function updateExtraEntryDraft(
+    challengeDate: string,
+    entryId: string,
+    field: "categoryName" | "value",
+    value: string,
+  ) {
+    setUploadSetDrafts((current) => ({
+      ...current,
+      [challengeDate]: {
+        ...(current[challengeDate] ?? {
+          extraEntries: [],
+          pushupSet1: 0,
+          pushupSet2: 0,
+          situpSet1: 0,
+          situpSet2: 0,
+        }),
+        extraEntries: (current[challengeDate]?.extraEntries ?? []).map((entry) =>
+          entry.id === entryId
+            ? {
+                ...entry,
+                [field]: field === "value" ? normalizeSetValue(value) : value,
+              }
+            : entry,
+        ),
+      },
+    }));
+  }
+
+  function removeExtraEntryDraft(challengeDate: string, entryId: string) {
+    setUploadSetDrafts((current) => ({
+      ...current,
+      [challengeDate]: {
+        ...(current[challengeDate] ?? {
+          extraEntries: [],
+          pushupSet1: 0,
+          pushupSet2: 0,
+          situpSet1: 0,
+          situpSet2: 0,
+        }),
+        extraEntries: (current[challengeDate]?.extraEntries ?? []).filter(
+          (entry) => entry.id !== entryId,
+        ),
       },
     }));
   }
@@ -709,6 +789,69 @@ export function DashboardUploadSection({
                         <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" defaultValue={day.pushupSet2} disabled={isUploading} min="0" name="pushupSet2" onChange={(event) => handleSetDraftChange(day.challengeDate, "pushupSet2", event.target.value)} placeholder="0" type="number" /></label>
                         <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" defaultValue={day.situpSet1} disabled={isUploading} min="0" name="situpSet1" onChange={(event) => handleSetDraftChange(day.challengeDate, "situpSet1", event.target.value)} placeholder="0" type="number" /></label>
                         <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" defaultValue={day.situpSet2} disabled={isUploading} min="0" name="situpSet2" onChange={(event) => handleSetDraftChange(day.challengeDate, "situpSet2", event.target.value)} placeholder="0" type="number" /></label>
+                      </div>
+                      <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="fc-meta-label">{labels.uploads.extraCategories}</p>
+                          <DashboardActionButton
+                            disabled={isUploading}
+                            onClick={() => addExtraEntryDraft(day.challengeDate)}
+                            type="button"
+                          >
+                            +
+                          </DashboardActionButton>
+                        </div>
+                        {draftSets.extraEntries.length ? (
+                          <div className="mt-3 grid gap-2">
+                            {draftSets.extraEntries.map((entry) => (
+                              <div className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]" key={entry.id}>
+                                <input
+                                  className="fc-input"
+                                  disabled={isUploading}
+                                  maxLength={60}
+                                  name="extraCategoryName"
+                                  onChange={(event) =>
+                                    updateExtraEntryDraft(
+                                      day.challengeDate,
+                                      entry.id,
+                                      "categoryName",
+                                      event.target.value,
+                                    )
+                                  }
+                                  placeholder={labels.uploads.extraCategoryName}
+                                  value={entry.categoryName}
+                                />
+                                <input
+                                  className="fc-input"
+                                  disabled={isUploading}
+                                  min="0"
+                                  name="extraCategoryValue"
+                                  onChange={(event) =>
+                                    updateExtraEntryDraft(
+                                      day.challengeDate,
+                                      entry.id,
+                                      "value",
+                                      event.target.value,
+                                    )
+                                  }
+                                  placeholder="0"
+                                  type="number"
+                                  value={entry.value || ""}
+                                />
+                                <DashboardActionButton
+                                  disabled={isUploading}
+                                  onClick={() => removeExtraEntryDraft(day.challengeDate, entry.id)}
+                                  type="button"
+                                  variant="danger"
+                                >
+                                  {labels.uploads.removeExtraCategory}
+                                </DashboardActionButton>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 fc-text-muted">{labels.uploads.extraCategoriesHint}</p>
+                        )}
                       </div>
                       <p className="fc-text-muted">{overview.isLightParticipant ? labels.uploads.lightHint : labels.uploads.fullHint}</p>
                       {showsPartialClaimHint ? (

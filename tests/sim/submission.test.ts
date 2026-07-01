@@ -25,10 +25,40 @@ test("partial submissions below the daily target are parsed without rejection", 
 
   assert.deepEqual(parsed, {
     challengeDate: "2026-04-20",
+    extraEntries: [],
     pushupSets: [3, 0],
     situpSets: [2, 0],
     notes: "good faith",
   });
+});
+
+test("optional submission categories are parsed and merged by name", () => {
+  const formData = new FormData();
+  formData.set("challengeDate", "2026-04-20");
+  formData.set("pushupSet1", "0");
+  formData.set("pushupSet2", "0");
+  formData.set("situpSet1", "0");
+  formData.set("situpSet2", "0");
+  formData.set("notes", "");
+  formData.append("extraCategoryName", " Plank ");
+  formData.append("extraCategoryValue", "60");
+  formData.append("extraCategoryName", "plank");
+  formData.append("extraCategoryValue", "30");
+  formData.append("extraCategoryName", "Running");
+  formData.append("extraCategoryValue", "5");
+
+  const parsed = parseSubmissionInput(formData);
+
+  assert.deepEqual(parsed.extraEntries, [
+    {
+      categoryName: "Plank",
+      value: 90,
+    },
+    {
+      categoryName: "Running",
+      value: 5,
+    },
+  ]);
 });
 
 test("partial completed days only charge proportional debt", () => {

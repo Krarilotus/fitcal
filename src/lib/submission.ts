@@ -22,9 +22,51 @@ function getSetValue(formData: FormData, key: string) {
 
 export interface ParsedSubmissionInput {
   challengeDate: string;
+  extraEntries: ParsedSubmissionExtra[];
   pushupSets: [number, number];
   situpSets: [number, number];
   notes: string;
+}
+
+export interface ParsedSubmissionExtra {
+  categoryName: string;
+  value: number;
+}
+
+function normalizeExtraCategoryName(value: string) {
+  return value.replace(/\s+/g, " ").trim().slice(0, 60);
+}
+
+export function parseSubmissionExtraEntries(formData: FormData): ParsedSubmissionExtra[] {
+  const names = formData.getAll("extraCategoryName");
+  const values = formData.getAll("extraCategoryValue");
+  const byName = new Map<string, ParsedSubmissionExtra>();
+
+  names.forEach((rawName, index) => {
+    if (typeof rawName !== "string") {
+      return;
+    }
+
+    const categoryName = normalizeExtraCategoryName(rawName);
+    const rawValue = values[index];
+    const parsedValue =
+      typeof rawValue === "string" ? Number.parseInt(rawValue, 10) : 0;
+    const value = Number.isFinite(parsedValue)
+      ? Math.max(0, Math.min(1000000, parsedValue))
+      : 0;
+
+    if (!categoryName || value <= 0) {
+      return;
+    }
+
+    const existing = byName.get(categoryName.toLocaleLowerCase());
+    byName.set(categoryName.toLocaleLowerCase(), {
+      categoryName: existing?.categoryName ?? categoryName,
+      value: (existing?.value ?? 0) + value,
+    });
+  });
+
+  return [...byName.values()].slice(0, 12);
 }
 
 export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput {
@@ -39,6 +81,7 @@ export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput 
 
   return {
     challengeDate: parsed.challengeDate,
+    extraEntries: parseSubmissionExtraEntries(formData),
     pushupSets: [parsed.pushupSet1, parsed.pushupSet2],
     situpSets: [parsed.situpSet1, parsed.situpSet2],
     notes: parsed.notes || "",

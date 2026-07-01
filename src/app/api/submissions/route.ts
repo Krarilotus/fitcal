@@ -252,6 +252,15 @@ export async function POST(request: Request) {
                     },
                   }
                 : undefined,
+            extraEntries: {
+              deleteMany: {},
+              createMany:
+                parsed.extraEntries.length > 0
+                  ? {
+                      data: parsed.extraEntries,
+                    }
+                  : undefined,
+            },
           },
         });
 
@@ -295,10 +304,22 @@ export async function POST(request: Request) {
           submittedAt: new Date(),
           verifiedPushupTotal: null,
           verifiedSitupTotal: null,
-          videos: {
-            createMany: {
-              data: appendedVideos,
-            },
+          videos:
+            appendedVideos.length > 0
+              ? {
+                  createMany: {
+                    data: appendedVideos,
+                  },
+                }
+              : undefined,
+          extraEntries: {
+            deleteMany: {},
+            createMany:
+              parsed.extraEntries.length > 0
+                ? {
+                    data: parsed.extraEntries,
+                  }
+                : undefined,
           },
         },
         create: {
@@ -310,11 +331,22 @@ export async function POST(request: Request) {
           status: "COMPLETED",
           submittedAt: new Date(),
           userId: user.id,
-          videos: {
-            createMany: {
-              data: appendedVideos,
-            },
-          },
+          videos:
+            appendedVideos.length > 0
+              ? {
+                  createMany: {
+                    data: appendedVideos,
+                  },
+                }
+              : undefined,
+          extraEntries:
+            parsed.extraEntries.length > 0
+              ? {
+                  createMany: {
+                    data: parsed.extraEntries,
+                  },
+                }
+              : undefined,
         },
       });
     }

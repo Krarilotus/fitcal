@@ -13,6 +13,11 @@ export type TimelineVideo = {
   sizeLabel: string;
 };
 
+export type ExtraWorkoutEntry = {
+  categoryName: string;
+  value: number;
+};
+
 export type OpenDay = {
   challengeDate: string;
   dateLabel: string;
@@ -32,6 +37,7 @@ export type OpenDay = {
   reviewStatusLabel: string | null;
   reviewerSummaryLabel: string | null;
   reviewNotes: ReviewFeedbackNote[];
+  extraEntries: ExtraWorkoutEntry[];
   videos: TimelineVideo[];
 };
 
@@ -57,6 +63,7 @@ export type TimelineEntry = {
   notes: string | null;
   reviewerSummaryLabel: string | null;
   reviewNotes: ReviewFeedbackNote[];
+  extraEntries: ExtraWorkoutEntry[];
   deletingLastVideoRemovesClaim: boolean;
   isEditableClaim: boolean;
   canAddVideos: boolean;
@@ -71,6 +78,7 @@ export type PerformancePoint = {
   pushupSet2: number;
   situpSet1: number;
   situpSet2: number;
+  extras: Record<string, number>;
   target: number;
 };
 
@@ -127,6 +135,7 @@ export type ParticipantRow = {
   yesterdayLabel: string;
   totalPushups: number;
   totalSitups: number;
+  extraTotals: Record<string, number>;
   qualificationUploads: number;
   qualificationRequiredUploads: number;
   qualificationLabel: string;

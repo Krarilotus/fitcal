@@ -29,6 +29,9 @@ export function DashboardOverviewSection({
   const lightProgressRows = overview.isLightParticipant
     ? participantRows.slice(0, 8)
     : [];
+  const lightExtraCategories = [
+    ...new Set(lightProgressRows.flatMap((row) => Object.keys(row.extraTotals))),
+  ].sort((left, right) => left.localeCompare(right));
 
   return (
     <section className="fc-section fc-rise" id="overview">
@@ -106,6 +109,42 @@ export function DashboardOverviewSection({
                 </tbody>
               </table>
             </div>
+            {lightExtraCategories.length ? (
+              <details className="mt-4 rounded-md border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
+                <summary className="cursor-pointer fc-text-emphasis">
+                  {labels.review.table.extraColumns}
+                </summary>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-left text-sm">
+                    <thead className="border-b border-[var(--fc-border)] text-[var(--fc-muted)]">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">{labels.review.table.name}</th>
+                        {lightExtraCategories.map((categoryName) => (
+                          <th className="px-4 py-3 font-medium" key={categoryName}>
+                            {categoryName}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lightProgressRows.map((row) => (
+                        <tr className="border-b border-[var(--fc-border)]/70 last:border-b-0" key={row.id}>
+                          <td className="px-4 py-3 font-medium">
+                            {row.name}
+                            {row.isSelf ? ` - ${labels.review.you}` : ""}
+                          </td>
+                          {lightExtraCategories.map((categoryName) => (
+                            <td className="px-4 py-3" key={categoryName}>
+                              {row.extraTotals[categoryName] ?? 0}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            ) : null}
           </div>
         ) : null}
         {canReview ? (

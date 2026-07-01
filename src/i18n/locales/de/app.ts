@@ -407,6 +407,10 @@
       videoNames: "Videonamen",
       videoNameLabel: "Videoname {index}",
       videoSizeCompressed: "{original} → {compressed}",
+      extraCategories: "Weitere Kategorien",
+      extraCategoriesHint: "Optional: weitere Übung oder Aktivität mit + ergänzen.",
+      extraCategoryName: "Kategorie",
+      removeExtraCategory: "Entfernen",
       notes: "Notiz",
       saveEntry: "Eintrag speichern",
       saveWorkout: "Workout speichern",
@@ -519,6 +523,8 @@
         debt: "Schulden",
         reviews: "Reviews",
         commonReviewer: "Häufigste Reviewer",
+        extraColumns: "Weitere Kategorien",
+        hideExtraColumns: "Weitere ausblenden",
       },
       summary: {
         participants: "Teilnehmende",
@@ -635,6 +641,11 @@
       performanceDescription:
         "Die letzten dokumentierten Workout-Tage mit Gesamtwerten, Sets und Tagesziel.",
       performanceEmpty: "Noch keine Workout-Eintr\u00e4ge vorhanden.",
+      rangeLabel: "Zeitraum",
+      rangeAll: "Alle",
+      rangeLast7: "7",
+      rangeLast14: "14",
+      rangeLast30: "30",
       measurementTitle: "Messdaten-Verlauf",
       measurementDescription:
         "Gewicht, Bauchumfang und Ruhepuls \u00fcber die zuletzt gespeicherten Eintr\u00e4ge.",
