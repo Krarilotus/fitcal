@@ -5,6 +5,10 @@ import {
   MAX_VIDEO_FILES_PER_DAY,
   MAX_VIDEO_SIZE_BYTES,
 } from "@/lib/challenge";
+import {
+  parseWorkoutExtraEntries,
+  type WorkoutExtraInput,
+} from "@/lib/workout-extras";
 
 export const dailySubmissionSchema = z.object({
   challengeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -28,46 +32,7 @@ export interface ParsedSubmissionInput {
   notes: string;
 }
 
-export interface ParsedSubmissionExtra {
-  categoryName: string;
-  value: number;
-}
-
-function normalizeExtraCategoryName(value: string) {
-  return value.replace(/\s+/g, " ").trim().slice(0, 60);
-}
-
-export function parseSubmissionExtraEntries(formData: FormData): ParsedSubmissionExtra[] {
-  const names = formData.getAll("extraCategoryName");
-  const values = formData.getAll("extraCategoryValue");
-  const byName = new Map<string, ParsedSubmissionExtra>();
-
-  names.forEach((rawName, index) => {
-    if (typeof rawName !== "string") {
-      return;
-    }
-
-    const categoryName = normalizeExtraCategoryName(rawName);
-    const rawValue = values[index];
-    const parsedValue =
-      typeof rawValue === "string" ? Number.parseInt(rawValue, 10) : 0;
-    const value = Number.isFinite(parsedValue)
-      ? Math.max(0, Math.min(1000000, parsedValue))
-      : 0;
-
-    if (!categoryName || value <= 0) {
-      return;
-    }
-
-    const existing = byName.get(categoryName.toLocaleLowerCase());
-    byName.set(categoryName.toLocaleLowerCase(), {
-      categoryName: existing?.categoryName ?? categoryName,
-      value: (existing?.value ?? 0) + value,
-    });
-  });
-
-  return [...byName.values()].slice(0, 12);
-}
+export type ParsedSubmissionExtra = WorkoutExtraInput;
 
 export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput {
   const parsed = dailySubmissionSchema.parse({
@@ -81,7 +46,7 @@ export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput 
 
   return {
     challengeDate: parsed.challengeDate,
-    extraEntries: parseSubmissionExtraEntries(formData),
+    extraEntries: parseWorkoutExtraEntries(formData),
     pushupSets: [parsed.pushupSet1, parsed.pushupSet2],
     situpSets: [parsed.situpSet1, parsed.situpSet2],
     notes: parsed.notes || "",

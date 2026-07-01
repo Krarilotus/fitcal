@@ -62,6 +62,14 @@ type UploadSetDraft = {
   situpSet2: number;
 };
 
+const EMPTY_UPLOAD_SET_DRAFT: UploadSetDraft = {
+  extraEntries: [],
+  pushupSet1: 0,
+  pushupSet2: 0,
+  situpSet1: 0,
+  situpSet2: 0,
+};
+
 /* ── Formatting helpers ── */
 
 function formatLocalizedNumber(locale: Locale, value: number, digits = 1) {
@@ -102,6 +110,32 @@ function buildInitialUploadSetDrafts(openDays: OpenDay[]) {
   return Object.fromEntries(
     openDays.map((day) => [day.challengeDate, buildUploadSetDraft(day)]),
   ) as Record<string, UploadSetDraft>;
+}
+
+function getUploadSetDraft(
+  drafts: Record<string, UploadSetDraft>,
+  challengeDate: string,
+) {
+  return drafts[challengeDate] ?? EMPTY_UPLOAD_SET_DRAFT;
+}
+
+function createExtraEntryDraft(challengeDate: string) {
+  return {
+    id: `${challengeDate}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    categoryName: "",
+    value: 0,
+  };
+}
+
+function updateUploadSetDraft(
+  current: Record<string, UploadSetDraft>,
+  challengeDate: string,
+  updater: (draft: UploadSetDraft) => UploadSetDraft,
+) {
+  return {
+    ...current,
+    [challengeDate]: updater(getUploadSetDraft(current, challengeDate)),
+  };
 }
 
 /* ── Upload label helpers ── */
@@ -582,42 +616,21 @@ export function DashboardUploadSection({
     field: keyof UploadSetDraft,
     value: string,
   ) {
-    setUploadSetDrafts((current) => ({
-      ...current,
-      [challengeDate]: {
-        ...(current[challengeDate] ?? {
-          extraEntries: [],
-          pushupSet1: 0,
-          pushupSet2: 0,
-          situpSet1: 0,
-          situpSet2: 0,
-        }),
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
         [field]: normalizeSetValue(value),
-      },
-    }));
+      })),
+    );
   }
 
   function addExtraEntryDraft(challengeDate: string) {
-    setUploadSetDrafts((current) => ({
-      ...current,
-      [challengeDate]: {
-        ...(current[challengeDate] ?? {
-          extraEntries: [],
-          pushupSet1: 0,
-          pushupSet2: 0,
-          situpSet1: 0,
-          situpSet2: 0,
-        }),
-        extraEntries: [
-          ...(current[challengeDate]?.extraEntries ?? []),
-          {
-            id: `${challengeDate}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            categoryName: "",
-            value: 0,
-          },
-        ],
-      },
-    }));
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
+        extraEntries: [...draft.extraEntries, createExtraEntryDraft(challengeDate)],
+      })),
+    );
   }
 
   function updateExtraEntryDraft(
@@ -626,17 +639,10 @@ export function DashboardUploadSection({
     field: "categoryName" | "value",
     value: string,
   ) {
-    setUploadSetDrafts((current) => ({
-      ...current,
-      [challengeDate]: {
-        ...(current[challengeDate] ?? {
-          extraEntries: [],
-          pushupSet1: 0,
-          pushupSet2: 0,
-          situpSet1: 0,
-          situpSet2: 0,
-        }),
-        extraEntries: (current[challengeDate]?.extraEntries ?? []).map((entry) =>
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
+        extraEntries: draft.extraEntries.map((entry) =>
           entry.id === entryId
             ? {
                 ...entry,
@@ -644,26 +650,17 @@ export function DashboardUploadSection({
               }
             : entry,
         ),
-      },
-    }));
+      })),
+    );
   }
 
   function removeExtraEntryDraft(challengeDate: string, entryId: string) {
-    setUploadSetDrafts((current) => ({
-      ...current,
-      [challengeDate]: {
-        ...(current[challengeDate] ?? {
-          extraEntries: [],
-          pushupSet1: 0,
-          pushupSet2: 0,
-          situpSet1: 0,
-          situpSet2: 0,
-        }),
-        extraEntries: (current[challengeDate]?.extraEntries ?? []).filter(
-          (entry) => entry.id !== entryId,
-        ),
-      },
-    }));
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
+        extraEntries: draft.extraEntries.filter((entry) => entry.id !== entryId),
+      })),
+    );
   }
 
   return (

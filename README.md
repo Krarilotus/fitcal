@@ -56,6 +56,18 @@ Semantische Leitlinie:
 - taegliche Workout-Aktionen bleiben bei `Uploads`
 - Plattform-/Moderationsthemen liegen sichtbar in `Uebersicht` und `Review`
 
+## Workout-Tracking
+
+Jeder Workout-Eintrag speichert die Challenge-Kernwerte `Liegestuetze` und `Sit-ups` sowie optionale Zusatzkategorien:
+- Die Pflichtwerte bleiben als zwei Sets pro Kernuebung erhalten.
+- Ueber das kleine `+` im Upload-Formular koennen Nutzer weitere Kategorien wie `Plank`, `Burpees` oder `Laufen` eintragen.
+- Zusatzkategorien werden normalisiert, gleichnamige Kategorien pro Eintrag werden zusammengefuehrt und in `DailySubmissionExtra` gespeichert.
+- Light-Teilnehmer koennen dieselben Tracking-Daten speichern, aber ohne Video-Upload, Review, Joker oder Schuldenlogik.
+
+Im Leistungsdiagramm sind standardmaessig nur die Gesamtwerte fuer Liegestuetze und Sit-ups sichtbar. Einzelne Sets und Zusatzkategorien sind vorhanden, aber ausgeblendet, damit der Graph ruhig bleibt. Der Zeitraum kann zwischen `7`, `14`, `30` und `Alle` gewechselt werden.
+
+In der Teilnehmeruebersicht bleiben Zusatzkategorien ebenfalls eingeklappt. Wer vergleichen moechte, kann die optionalen Spalten fuer alle vorhandenen Zusatzkategorien aufklappen.
+
 ## Lokale Checks vor Deployment
 
 ```bash

@@ -18,6 +18,7 @@ import {
 } from "@/components/fitcal/dashboard/dashboard-primitives";
 import { ReviewVideoPlayer } from "@/components/fitcal/dashboard/review-video-player";
 import { Button } from "@/components/ui/button";
+import { listWorkoutExtraCategories } from "@/lib/workout-extras";
 import {
   Card,
   CardContent,
@@ -83,10 +84,7 @@ export function DashboardReviewSection({
 
   const reviewParticipants = participantRows;
   const extraCategories = useMemo(
-    () =>
-      [...new Set(reviewParticipants.flatMap((row) => Object.keys(row.extraTotals)))].sort(
-        (left, right) => left.localeCompare(right),
-      ),
+    () => listWorkoutExtraCategories(reviewParticipants),
     [reviewParticipants],
   );
   const reviewSelfRow = useMemo(

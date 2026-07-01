@@ -51,6 +51,7 @@ import {
   getSubmissionTotals,
   preservesSubmissionWithoutVideos,
 } from "@/lib/submission";
+import { buildWorkoutExtraTotals } from "@/lib/workout-extras";
 import { formatMeasurementDate } from "./measurements";
 
 type DashboardLabels = AppDictionary["dashboard"];
@@ -64,27 +65,6 @@ function buildExtraEntries(
       categoryName: entry.categoryName,
       value: entry.value,
     }));
-}
-
-function buildExtraTotals(
-  submissions: Array<{
-    status: string;
-    extraEntries?: Array<{ categoryName: string; value: number }>;
-  }>,
-) {
-  const totals: Record<string, number> = {};
-
-  for (const submission of submissions) {
-    if (submission.status !== "COMPLETED") {
-      continue;
-    }
-
-    for (const entry of submission.extraEntries ?? []) {
-      totals[entry.categoryName] = (totals[entry.categoryName] ?? 0) + entry.value;
-    }
-  }
-
-  return totals;
 }
 
 export type PendingApprovalSummary = {
@@ -387,7 +367,7 @@ function buildPerformancePoints(user: CurrentUser): PerformancePoint[] {
         pushupSet2: pushupSets[1] ?? 0,
         situpSet1: situpSets[0] ?? 0,
         situpSet2: situpSets[1] ?? 0,
-        extras: buildExtraTotals([submission]),
+        extras: buildWorkoutExtraTotals([submission]),
         target: getRequiredReps(submission.challengeDate),
       };
     });
@@ -493,7 +473,7 @@ async function buildParticipantRows(
     const totalSitups = participant.dailySubmissions
       .filter((submission) => submission.status === "COMPLETED")
       .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectiveSitupTotal, 0);
-    const extraTotals = buildExtraTotals(participant.dailySubmissions);
+    const extraTotals = buildWorkoutExtraTotals(participant.dailySubmissions);
     const isSelf = participant.id === currentUser.id;
     const participantLabel = currentUser.isLightParticipant && !isSelf
       ? `Anonym ${index + 1}`

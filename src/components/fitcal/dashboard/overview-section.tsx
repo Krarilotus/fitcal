@@ -4,6 +4,7 @@ import type {
   ParticipantRow,
 } from "@/components/fitcal/dashboard-types";
 import type { PendingApprovalSummary } from "@/lib/dashboard-data";
+import { listWorkoutExtraCategories } from "@/lib/workout-extras";
 import {
   DashboardActionButton,
   DashboardStatusBadge,
@@ -29,9 +30,7 @@ export function DashboardOverviewSection({
   const lightProgressRows = overview.isLightParticipant
     ? participantRows.slice(0, 8)
     : [];
-  const lightExtraCategories = [
-    ...new Set(lightProgressRows.flatMap((row) => Object.keys(row.extraTotals))),
-  ].sort((left, right) => left.localeCompare(right));
+  const lightExtraCategories = listWorkoutExtraCategories(lightProgressRows);
 
   return (
     <section className="fc-section fc-rise" id="overview">
