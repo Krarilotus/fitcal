@@ -16,3 +16,7 @@ export async function loginAsReviewer(page: Page, password = "Passwort123") {
 export async function loginAsParticipant(page: Page, password = "Passwort123") {
   await loginAs(page, "participant@fitcal.test", password);
 }
+
+export async function loginAsLightParticipant(page: Page, password = "Passwort123") {
+  await loginAs(page, "light@fitcal.test", password);
+}

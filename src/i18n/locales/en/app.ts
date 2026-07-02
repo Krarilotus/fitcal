@@ -314,6 +314,15 @@
       detailsPlaceholder:
         "Describe briefly what you need, why it helps, and how it should ideally behave.",
       submit: "Create issue",
+      issueCopy: {
+        anonymousRequester: "FitCal user",
+        issueHeading: "Feature request",
+        localeLabel: "Locale",
+        requestedViaHeading: "Requested via FitCal",
+        requesterLabel: "User",
+        titleFallback: "Feature request",
+        titlePrefix: "Feature request",
+      },
     },
     statusLabels: {
       completed: "Done",

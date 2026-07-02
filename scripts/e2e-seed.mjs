@@ -136,6 +136,26 @@ export async function seedE2EData() {
       },
     });
 
+    const lightParticipant = await prisma.user.create({
+      data: {
+        email: "light@fitcal.test",
+        passwordHash,
+        name: "Lena Light",
+        registrationStatus: RegistrationStatus.APPROVED,
+        registrationApprovedAt: new Date(),
+        isLightParticipant: true,
+        motivation: "Lightmode Tracking",
+      },
+    });
+
+    await prisma.challengeEnrollment.create({
+      data: {
+        userId: lightParticipant.id,
+        optedInAt: new Date(),
+        joinedChallengeDate: "2026-04-01",
+      },
+    });
+
     const reviewSubmission = await prisma.dailySubmission.create({
       data: {
         userId: participant.id,

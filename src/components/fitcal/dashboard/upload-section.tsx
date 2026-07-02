@@ -143,10 +143,10 @@ function updateUploadSetDraft(
 function getUploadButtonLabel(
   labels: DashboardLabels["uploads"],
   activity: UploadActivity | null,
-  isLightParticipant: boolean,
+  supportsVideoUploads: boolean,
 ) {
   if (!activity) {
-    return isLightParticipant ? labels.saveEntry : labels.saveWorkout;
+    return supportsVideoUploads ? labels.saveWorkout : labels.saveEntry;
   }
 
   if (activity.stage === "loadingEncoder") {
@@ -158,7 +158,7 @@ function getUploadButtonLabel(
   }
 
   if (activity.stage === "uploading") {
-    return isLightParticipant ? labels.uploadingEntry : labels.uploadingWorkout;
+    return supportsVideoUploads ? labels.uploadingWorkout : labels.uploadingEntry;
   }
 
   return labels.confirmingUpload;
@@ -240,7 +240,7 @@ async function submitTrackedUpload(
   setUploadErrors: Dispatch<SetStateAction<Record<string, string | null>>>,
   setSelectedUploadVideos: Dispatch<SetStateAction<Record<string, SelectedUploadVideo[]>>>,
   labels: DashboardLabels["uploads"],
-  isLightParticipant: boolean,
+  supportsVideoUploads: boolean,
 ) {
   const formData = new FormData(form);
   const requestStartedAt = Date.now();
@@ -256,7 +256,7 @@ async function submitTrackedUpload(
     .getAll("videos")
     .filter((value): value is File => value instanceof File && value.size > 0);
 
-  if (!isLightParticipant) {
+  if (supportsVideoUploads) {
     if (replaceVideoId && files.length !== 1) {
       setUploadErrors((current) => ({
         ...current,
@@ -280,11 +280,11 @@ async function submitTrackedUpload(
   setUploadActivities((current) => ({
     ...current,
     [challengeDate]:
-      isLightParticipant
-        ? { stage: "uploading" }
-        : files.some((file) => shouldCompressVideoBeforeUpload(file.size))
+      supportsVideoUploads
+        ? files.some((file) => shouldCompressVideoBeforeUpload(file.size))
           ? { stage: "loadingEncoder" }
-          : { stage: "uploading" },
+          : { stage: "uploading" }
+        : { stage: "uploading" },
   }));
   setUploadErrors((current) => ({
     ...current,
@@ -292,7 +292,7 @@ async function submitTrackedUpload(
   }));
 
   try {
-    const preparedVideos = !isLightParticipant
+    const preparedVideos = supportsVideoUploads
       ? await prepareUploadVideosForSubmission({
           files,
           onEncoderLoadStart: () => {
@@ -344,7 +344,7 @@ async function submitTrackedUpload(
         })
       : [];
 
-    if (!isLightParticipant) {
+    if (supportsVideoUploads) {
       setSelectedUploadVideos((current) => ({
         ...current,
         [challengeDate]: (current[challengeDate] ?? []).map((video, index) => ({
@@ -356,9 +356,9 @@ async function submitTrackedUpload(
       }));
     }
 
-    const requestFormData = isLightParticipant
-      ? formData
-      : buildSubmissionUploadFormData(formData, preparedVideos);
+    const requestFormData = supportsVideoUploads
+      ? buildSubmissionUploadFormData(formData, preparedVideos)
+      : formData;
 
     setUploadActivities((current) => ({
       ...current,
@@ -680,6 +680,7 @@ export function DashboardUploadSection({
               {(() => {
                 const uploadActivity = uploadActivities[day.challengeDate] ?? null;
                 const isUploading = uploadActivity != null;
+                const supportsVideoUploads = !overview.isLightParticipant;
                 const uploadError = uploadErrors[day.challengeDate];
                 const uploadActivityMessage = getUploadActivityMessage(labels.uploads, uploadActivity);
                 const draftSets = uploadSetDrafts[day.challengeDate] ?? buildUploadSetDraft(day);
@@ -688,7 +689,7 @@ export function DashboardUploadSection({
                 const hasStartedClaim =
                   day.hasExistingClaim || pushupTotal > 0 || situpTotal > 0;
                 const showsPartialClaimHint =
-                  !overview.isLightParticipant &&
+                  supportsVideoUploads &&
                   hasStartedClaim &&
                   (pushupTotal < day.targetReps || situpTotal < day.targetReps);
                 const replaceVideoId = claimEditorReplacementTargets[day.challengeDate] ?? null;
@@ -753,8 +754,10 @@ export function DashboardUploadSection({
                       </div>
                     ) : null}
                     <form
+                      action="/api/submissions"
                       className="mt-5 space-y-4"
                       encType="multipart/form-data"
+                      method="post"
                       onSubmit={(event) => {
                         event.preventDefault();
                         void submitTrackedUpload(
@@ -764,7 +767,7 @@ export function DashboardUploadSection({
                           setUploadErrors,
                           setSelectedUploadVideos,
                           labels.uploads,
-                          overview.isLightParticipant,
+                          supportsVideoUploads,
                         );
                       }}
                     >
@@ -850,7 +853,7 @@ export function DashboardUploadSection({
                           <p className="mt-2 fc-text-muted">{labels.uploads.extraCategoriesHint}</p>
                         )}
                       </div>
-                      <p className="fc-text-muted">{overview.isLightParticipant ? labels.uploads.lightHint : labels.uploads.fullHint}</p>
+                      <p className="fc-text-muted">{supportsVideoUploads ? labels.uploads.fullHint : labels.uploads.lightHint}</p>
                       {showsPartialClaimHint ? (
                         <div className="fc-info-box">
                           <p className="fc-text-secondary">
@@ -860,8 +863,8 @@ export function DashboardUploadSection({
                           </p>
                         </div>
                       ) : null}
-                      <div className={`grid gap-3 ${overview.isLightParticipant ? "sm:grid-cols-1" : "sm:grid-cols-[1.1fr_0.9fr]"}`}>
-                        {!overview.isLightParticipant ? (
+                      <div className={`grid gap-3 ${supportsVideoUploads ? "sm:grid-cols-[1.1fr_0.9fr]" : "sm:grid-cols-1"}`}>
+                        {supportsVideoUploads ? (
                           <div className="space-y-3">
                             {replacementVideo ? (
                               <div className="fc-info-box">
@@ -985,22 +988,9 @@ export function DashboardUploadSection({
                       <div className="flex flex-wrap gap-3">
                         <Button
                           disabled={isUploading}
-                          onClick={(event) => {
-                            const form = event.currentTarget.form;
-                            if (!form) return;
-                            void submitTrackedUpload(
-                              form,
-                              locale,
-                              setUploadActivities,
-                              setUploadErrors,
-                              setSelectedUploadVideos,
-                              labels.uploads,
-                              overview.isLightParticipant,
-                            );
-                          }}
-                          type="button"
+                          type="submit"
                         >
-                          {getUploadButtonLabel(labels.uploads, uploadActivity, overview.isLightParticipant)}
+                          {getUploadButtonLabel(labels.uploads, uploadActivity, supportsVideoUploads)}
                         </Button>
                         {day.isEditableClaim && day.hasExistingClaim ? (
                           <Button
@@ -1018,7 +1008,7 @@ export function DashboardUploadSection({
                         ) : null}
                       </div>
                     </form>
-                    {!overview.isLightParticipant ? (
+                    {supportsVideoUploads ? (
                       <>
                         <details className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
                           <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>

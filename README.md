@@ -63,6 +63,7 @@ Jeder Workout-Eintrag speichert die Challenge-Kernwerte `Liegestuetze` und `Sit-
 - Ueber das kleine `+` im Upload-Formular koennen Nutzer weitere Kategorien wie `Plank`, `Burpees` oder `Laufen` eintragen.
 - Zusatzkategorien werden normalisiert, gleichnamige Kategorien pro Eintrag werden zusammengefuehrt und in `DailySubmissionExtra` gespeichert.
 - Light-Teilnehmer koennen dieselben Tracking-Daten speichern, aber ohne Video-Upload, Review, Joker oder Schuldenlogik.
+- Im Light Mode bleiben die Eingabefelder fuer Push-ups, Sit-ups, Zusatzkategorien und Notizen sichtbar. Video-Upload, Krankmeldung, Joker, Einladungen und Review-Ansichten werden ausgeblendet bzw. serverseitig blockiert.
 
 Im Leistungsdiagramm sind standardmaessig nur die Gesamtwerte fuer Liegestuetze und Sit-ups sichtbar. Einzelne Sets und Zusatzkategorien sind vorhanden, aber ausgeblendet, damit der Graph ruhig bleibt. Der Zeitraum kann zwischen `7`, `14`, `30` und `Alle` gewechselt werden.
 
@@ -537,6 +538,10 @@ Fuer einen schnellen lokalen UX-Check nach Aenderungen am Dashboard:
 - `Metastats`: Charts und Messdaten
 - `Profil`: Profil, E-Mail-Verifizierungsstatus, Einladen, Feature-Request
 - `Review`: Review-Ansicht und Pending-Tab
+4. als Light-Account anmelden und pruefen:
+- `Uploads`: Tracking-Felder sichtbar, Speichern ohne Video moeglich
+- kein `Review`-Tab, keine Video-, Joker- oder Krankmeldungsaktionen
+- `Profil`: Feature-Request sichtbar, Einladungen ausgeblendet
 
 Automatisierte Dashboard-Checks:
 

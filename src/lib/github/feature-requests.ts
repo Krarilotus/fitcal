@@ -16,27 +16,38 @@ const issueResponseSchema = z.object({
 
 export type FeatureRequestIssueInput = {
   details: string;
+  issueCopy: FeatureRequestIssueCopy;
   locale: string;
-  requesterEmail: string;
-  requesterId: string;
   requesterName: string | null;
   title?: string | null;
+};
+
+export type FeatureRequestIssueCopy = {
+  anonymousRequester: string;
+  issueHeading: string;
+  localeLabel: string;
+  requestedViaHeading: string;
+  requesterLabel: string;
+  titleFallback: string;
+  titlePrefix: string;
 };
 
 function normalizeText(value: string) {
   return value.replace(/\r\n/g, "\n").trim();
 }
 
-export function buildFeatureRequestIssueTitle(input: Pick<FeatureRequestIssueInput, "details" | "title">) {
+export function buildFeatureRequestIssueTitle(
+  input: Pick<FeatureRequestIssueInput, "details" | "issueCopy" | "title">,
+) {
   const requestedTitle = normalizeText(input.title ?? "");
 
   if (requestedTitle) {
     return requestedTitle.slice(0, 120);
   }
 
-  const firstLine = normalizeText(input.details).split("\n")[0] ?? "Feature request";
+  const firstLine = normalizeText(input.details).split("\n")[0] ?? input.issueCopy.titleFallback;
   const compactLine = firstLine.replace(/\s+/g, " ");
-  return `Feature request: ${compactLine}`.slice(0, 120);
+  return `${input.issueCopy.titlePrefix}: ${compactLine}`.slice(0, 120);
 }
 
 export function buildFeatureRequestIssuePayload(
@@ -45,18 +56,16 @@ export function buildFeatureRequestIssuePayload(
 ) {
   const details = normalizeText(input.details);
   const issueTitle = buildFeatureRequestIssueTitle(input);
-  const requesterLabel = input.requesterName?.trim() || input.requesterEmail;
+  const requesterLabel = input.requesterName?.trim() || input.issueCopy.anonymousRequester;
   const body = [
-    "## Feature request",
+    `## ${input.issueCopy.issueHeading}`,
     "",
     details,
     "",
-    "## Requested via FitCal",
+    `## ${input.issueCopy.requestedViaHeading}`,
     "",
-    `- User: ${requesterLabel}`,
-    `- Email: ${input.requesterEmail}`,
-    `- Internal user id: ${input.requesterId}`,
-    `- Locale: ${input.locale}`,
+    `- ${input.issueCopy.requesterLabel}: ${requesterLabel}`,
+    `- ${input.issueCopy.localeLabel}: ${input.locale}`,
   ].join("\n");
 
   return {

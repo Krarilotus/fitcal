@@ -6,12 +6,17 @@ import {
   createGitHubFeatureRequestIssue,
   hasGitHubFeatureRequestConfig,
 } from "@/lib/github/feature-requests";
+import { getDictionary } from "@/i18n";
 import type { GitHubAppFactory } from "@/lib/github/github-app";
+
+const enIssueCopy = getDictionary("en").dashboard.featureRequest.issueCopy;
+const deIssueCopy = getDictionary("de").dashboard.featureRequest.issueCopy;
 
 test("feature request title prefers explicit title and trims it", () => {
   const title = buildFeatureRequestIssueTitle({
     title: "   Better timeline filter controls for mobile   ",
     details: "ignored",
+    issueCopy: enIssueCopy,
   });
 
   assert.equal(title, "Better timeline filter controls for mobile");
@@ -21,19 +26,19 @@ test("feature request title falls back to first details line", () => {
   const title = buildFeatureRequestIssueTitle({
     title: "",
     details: "Need a clearer review inbox for open days\nwith grouped sections",
+    issueCopy: enIssueCopy,
   });
 
   assert.equal(title, "Feature request: Need a clearer review inbox for open days");
 });
 
-test("feature request payload includes requester metadata and labels", () => {
+test("feature request payload includes non-sensitive requester metadata and labels", () => {
   const payload = buildFeatureRequestIssuePayload(
     {
       title: "New review queue",
       details: "Please add a clearer queue for pending workout reviews.",
+      issueCopy: deIssueCopy,
       locale: "de",
-      requesterEmail: "reviewer@fitcal.test",
-      requesterId: "user_123",
       requesterName: "Rita Reviewer",
     },
     { issueLabels: ["feature-request", "fitcal"] },
@@ -42,9 +47,25 @@ test("feature request payload includes requester metadata and labels", () => {
   assert.equal(payload.title, "New review queue");
   assert.deepEqual(payload.labels, ["feature-request", "fitcal"]);
   assert.match(payload.body, /Rita Reviewer/);
-  assert.match(payload.body, /reviewer@fitcal\.test/);
-  assert.match(payload.body, /user_123/);
+  assert.doesNotMatch(payload.body, /reviewer@fitcal\.test/);
+  assert.doesNotMatch(payload.body, /user_123/);
+  assert.doesNotMatch(payload.body, /Email:/);
+  assert.doesNotMatch(payload.body, /Internal user id:/);
   assert.match(payload.body, /Please add a clearer queue/);
+});
+
+test("feature request payload does not expose identity when no display name exists", () => {
+  const payload = buildFeatureRequestIssuePayload({
+    title: "Private request",
+    details: "Please keep requester metadata minimal.",
+    issueCopy: enIssueCopy,
+    locale: "de",
+    requesterName: null,
+  });
+
+  assert.match(payload.body, /FitCal user/);
+  assert.doesNotMatch(payload.body, /Email:/);
+  assert.doesNotMatch(payload.body, /Internal user id:/);
 });
 
 test("feature request config presence depends on required env vars", () => {
@@ -126,9 +147,8 @@ test("feature request issue creation authenticates through the GitHub App instal
     {
       title: "Review inbox",
       details: "A compact review inbox would help a lot.",
+      issueCopy: enIssueCopy,
       locale: "en",
-      requesterEmail: "reviewer@fitcal.test",
-      requesterId: "user_123",
       requesterName: "Rita Reviewer",
     },
     { createApp },

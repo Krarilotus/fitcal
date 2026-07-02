@@ -15,11 +15,15 @@ const featureRequestSchema = z.object({
 });
 
 function getFeatureRequestMessages(locale: string) {
+  return getDictionary(normalizeFeatureRequestLocale(locale)).api.dashboardActions;
+}
+
+function normalizeFeatureRequestLocale(locale: string): Locale {
   const normalizedLocale = supportedLocales.includes(locale as Locale)
     ? (locale as Locale)
     : defaultLocale;
 
-  return getDictionary(normalizedLocale).api.dashboardActions;
+  return normalizedLocale;
 }
 
 function redirectToDashboardMessage(
@@ -51,13 +55,13 @@ export async function POST(request: Request) {
       details: formData.get("details"),
       locale: requestedLocale,
     });
-    const messages = getFeatureRequestMessages(parsed.locale);
+    const locale = normalizeFeatureRequestLocale(parsed.locale);
+    const messages = getDictionary(locale).api.dashboardActions;
 
     const issue = await createGitHubFeatureRequestIssue({
       details: parsed.details,
-      locale: parsed.locale,
-      requesterEmail: user.email,
-      requesterId: user.id,
+      issueCopy: getDictionary(locale).dashboard.featureRequest.issueCopy,
+      locale,
       requesterName: user.name,
       title: parsed.title,
     });

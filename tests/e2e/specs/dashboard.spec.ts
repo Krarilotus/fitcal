@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAsParticipant, loginAsReviewer } from "../helpers/auth";
+import { loginAsLightParticipant, loginAsParticipant, loginAsReviewer } from "../helpers/auth";
 import { disconnectTestDb, prisma } from "../helpers/db";
 import { resetE2EState } from "../helpers/reset";
 
@@ -94,6 +94,66 @@ test("upload draft state persists while switching dashboard panels", async ({ pa
       ),
     )
     .toBe("draft-proof.mp4");
+});
+
+test("light mode can save entries but does not expose video, review, joker or sickness flows", async ({
+  page,
+}) => {
+  await loginAsLightParticipant(page);
+
+  await expect(page.getByRole("button", { name: "Review" })).toHaveCount(0);
+  await expect(page.getByText("Light")).toBeVisible();
+
+  await page.getByRole("button", { name: "Uploads" }).click();
+  const uploadSection = page.locator("#uploads");
+  const uploadForm = uploadSection.locator('form[enctype="multipart/form-data"]').first();
+  const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
+
+  await expect(uploadForm.locator('input[name="pushupSet1"]')).toBeVisible();
+  await expect(uploadForm.locator('input[name="pushupSet2"]')).toBeVisible();
+  await expect(uploadForm.locator('input[name="situpSet1"]')).toBeVisible();
+  await expect(uploadForm.locator('input[name="situpSet2"]')).toBeVisible();
+  await expect(uploadForm.locator('textarea[name="notes"]')).toBeVisible();
+  await expect(uploadForm.locator('input[name="videos"]')).toHaveCount(0);
+  await expect(uploadSection.getByText(/Video/i)).toHaveCount(0);
+  await expect(uploadSection.getByText(/Krank/i)).toHaveCount(0);
+  await expect(uploadSection.getByRole("button", { name: /Joker/i })).toHaveCount(0);
+
+  await uploadForm.locator('input[name="pushupSet1"]').fill("4");
+  await uploadForm.locator('input[name="pushupSet2"]').fill("5");
+  await uploadForm.locator('input[name="situpSet1"]').fill("6");
+  await uploadForm.locator('input[name="situpSet2"]').fill("7");
+  await uploadForm.locator('textarea[name="notes"]').fill("Lightmode E2E Eintrag");
+
+  await Promise.all([
+    page.waitForURL(/\/dashboard\?(success|error)=/),
+    uploadForm.getByRole("button", { name: "Eintrag speichern" }).click(),
+  ]);
+  expect(page.url()).not.toContain("error=");
+
+  const lightSubmission = await prisma.dailySubmission.findUnique({
+    where: {
+      userId_challengeDate: {
+        userId: (
+          await prisma.user.findUniqueOrThrow({
+            where: { email: "light@fitcal.test" },
+          })
+        ).id,
+        challengeDate: uploadDate,
+      },
+    },
+    include: { videos: true },
+  });
+  expect(lightSubmission?.status).toBe("COMPLETED");
+  expect(lightSubmission?.reviewStatus).toBe("NOT_REQUIRED");
+  expect(lightSubmission?.pushupSets).toBe("[4,5]");
+  expect(lightSubmission?.situpSets).toBe("[6,7]");
+  expect(lightSubmission?.notes).toBe("Lightmode E2E Eintrag");
+  expect(lightSubmission?.videos).toHaveLength(0);
+
+  await page.getByRole("button", { name: "Profil" }).click();
+  await expect(page.locator("#profile").getByRole("button", { name: "Feature anfragen" })).toBeVisible();
+  await expect(page.locator("#profile").getByLabel("E-Mail der Person")).toHaveCount(0);
 });
 
 test("review area shows participant progress and can approve a workout", async ({ page }) => {

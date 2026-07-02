@@ -315,6 +315,15 @@
       detailsPlaceholder:
         "Beschreibe kurz, was du brauchst, warum es hilfreich wäre und wie es sich ideal verhalten soll.",
       submit: "Issue erstellen",
+      issueCopy: {
+        anonymousRequester: "FitCal-Nutzer",
+        issueHeading: "Feature-Request",
+        localeLabel: "Sprache",
+        requestedViaHeading: "Über FitCal angefragt",
+        requesterLabel: "Nutzer",
+        titleFallback: "Feature-Request",
+        titlePrefix: "Feature-Request",
+      },
     },
     statusLabels: {
       completed: "Erledigt",
