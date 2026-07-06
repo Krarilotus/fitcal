@@ -24,6 +24,9 @@ import {
   isWithinChallenge,
 } from "@/lib/challenge";
 import { replaceTemplate } from "@/lib/template";
+import {
+  canAccrueChallengeDebt,
+} from "@/lib/participation-policy";
 
 type DashboardLabels = AppDictionary["dashboard"];
 
@@ -51,7 +54,8 @@ export function DashboardCalculatorSection({
   overview: OverviewSummary;
   profile: ProfileSummary;
 }) {
-  const hasStudentPricing = overview.hasStudentDiscount && !overview.isLightParticipant;
+  const canUseDebtCalculator = canAccrueChallengeDebt(overview);
+  const hasStudentPricing = overview.hasStudentDiscount && canUseDebtCalculator;
   const slackBaseCents = hasStudentPricing ? 500 : 1000;
   const slackIncrementCents = hasStudentPricing ? 100 : 200;
 
@@ -84,7 +88,7 @@ export function DashboardCalculatorSection({
   return (
     <section className="fc-section fc-rise" id="rechner">
       <SectionHeader title={labels.calculator.title} />
-      <div className={`grid gap-4 md:grid-cols-2 ${overview.isLightParticipant ? "xl:grid-cols-2" : "xl:grid-cols-4"}`}>
+      <div className={`grid gap-4 md:grid-cols-2 ${canUseDebtCalculator ? "xl:grid-cols-4" : "xl:grid-cols-2"}`}>
         <section className="fc-card">
           <DashboardCardTitle title={labels.calculator.targetTitle} />
           <label className="fc-input-group mt-4"><span className="fc-input-label">{labels.calculator.date}</span><DateTextInput className="fc-input" onValueChange={setTargetDateInput} placeholder={commonLabels.datePlaceholder} value={targetDateInput} /></label>
@@ -94,7 +98,7 @@ export function DashboardCalculatorSection({
           </div>
           {!selectedDateInChallenge ? <p className="mt-3 fc-text-muted">{replaceTemplate(labels.calculator.chooseDate, { startDate: formatDateKeyForInput(CHALLENGE_START_DATE), endDate: formatDateKeyForInput(CHALLENGE_END_DATE) })}</p> : null}
         </section>
-        {!overview.isLightParticipant ? (
+        {canUseDebtCalculator ? (
           <>
             <section className="fc-card">
               <DashboardCardTitle title={labels.calculator.slackTitle} />

@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { canAccessWorkoutVideos } from "@/lib/participation-policy";
 
 export const runtime = "nodejs";
 
@@ -16,7 +17,7 @@ export async function GET(
     return new Response("Nicht angemeldet.", { status: 401 });
   }
 
-  if (user.isLightParticipant) {
+  if (!canAccessWorkoutVideos(user)) {
     return new Response("Video nicht gefunden.", { status: 404 });
   }
 

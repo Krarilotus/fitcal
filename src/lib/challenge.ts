@@ -251,7 +251,12 @@ export function canApplyJokerToDay(input: {
   now?: Date;
   status: DayCompletionState;
 }) {
-  if (input.isLightParticipant || input.jokerBalance < 1) {
+  if (
+    !canUseChallengeJokers({
+      isLightParticipant: Boolean(input.isLightParticipant),
+    }) ||
+    input.jokerBalance < 1
+  ) {
     return false;
   }
 
@@ -296,7 +301,8 @@ export function getChallengeOverview({
   }).length;
   const isQualifiedForParticipation =
     qualificationUploads >= MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION;
-  const canAccrueDebt = !isLightParticipant && isQualifiedForParticipation;
+  const canAccrueDebt =
+    canAccrueChallengeDebt({ isLightParticipant }) && isQualifiedForParticipation;
   let slackCount = 0;
   let totalDebtCents = 0;
   let totalDebtReductionCents = 0;
@@ -385,6 +391,7 @@ export function getChallengeOverview({
       repsTarget: getRequiredReps(cursor),
       status,
       canUpload:
+        canTrackWorkout({ isLightParticipant }) &&
         (status === "open" || status === "free" || status === "sickPending" || status === "slack") &&
         canSubmitForDate(cursor, now),
       canUseJoker: canApplyJokerToDay({
@@ -429,3 +436,8 @@ export function getChallengeOverview({
     days,
   };
 }
+import {
+  canAccrueChallengeDebt,
+  canTrackWorkout,
+  canUseChallengeJokers,
+} from "@/lib/participation-policy";

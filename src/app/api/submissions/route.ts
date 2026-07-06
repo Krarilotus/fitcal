@@ -24,6 +24,10 @@ import {
   type PersistedSubmissionVideo,
 } from "@/lib/submission-videos";
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
+import {
+  canReceiveWorkoutReviews,
+  canUploadWorkoutVideos,
+} from "@/lib/participation-policy";
 
 export const runtime = "nodejs";
 
@@ -49,6 +53,10 @@ function successRedirectUrl(
 
 function errorRedirectUrl(message: string, request: Request) {
   return dashboardMessageUrl(request, "error", message);
+}
+
+function getSubmissionReviewStatus(user: { isLightParticipant: boolean }) {
+  return canReceiveWorkoutReviews(user) ? "PENDING" : "NOT_REQUIRED";
 }
 
 function inferSubmissionErrorCode(message: string) {
@@ -139,7 +147,7 @@ export async function POST(request: Request) {
         })
       | null = null;
 
-    if (!user.isLightParticipant) {
+    if (canUploadWorkoutVideos(user)) {
       const rawFiles = formData
         .getAll("videos")
         .filter((value): value is File => value instanceof File && value.size > 0);
@@ -237,7 +245,7 @@ export async function POST(request: Request) {
           data: {
             notes: parsed.notes || null,
             pushupSets: serializeSets(parsed.pushupSets),
-            reviewStatus: user.isLightParticipant ? "NOT_REQUIRED" : "PENDING",
+            reviewStatus: getSubmissionReviewStatus(user),
             reviewedAt: null,
             situpSets: serializeSets(parsed.situpSets),
             status: "COMPLETED",
@@ -297,7 +305,7 @@ export async function POST(request: Request) {
         update: {
           notes: parsed.notes || null,
           pushupSets: serializeSets(parsed.pushupSets),
-          reviewStatus: user.isLightParticipant ? "NOT_REQUIRED" : "PENDING",
+          reviewStatus: getSubmissionReviewStatus(user),
           reviewedAt: null,
           situpSets: serializeSets(parsed.situpSets),
           status: "COMPLETED",
@@ -326,7 +334,7 @@ export async function POST(request: Request) {
           challengeDate: parsed.challengeDate,
           notes: parsed.notes || null,
           pushupSets: serializeSets(parsed.pushupSets),
-          reviewStatus: user.isLightParticipant ? "NOT_REQUIRED" : "PENDING",
+          reviewStatus: getSubmissionReviewStatus(user),
           situpSets: serializeSets(parsed.situpSets),
           status: "COMPLETED",
           submittedAt: new Date(),

@@ -12,6 +12,7 @@ import {
 } from "@/lib/auth/email";
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 import { reconcileRegistrationStatus } from "@/lib/registration-approval";
+import { canReviewPlatformContent } from "@/lib/participation-policy";
 
 const REVIEW_REWARD_CENTS = 5;
 
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
   if (
     !user ||
     user.registrationStatus !== RegistrationStatus.APPROVED ||
-    user.isLightParticipant
+    !canReviewPlatformContent(user)
   ) {
     return NextResponse.redirect(getAppUrl("/login", request));
   }

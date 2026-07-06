@@ -10,6 +10,7 @@ import {
 import { getSubmissionTotals } from "@/lib/submission";
 import { removeStoredSubmissionVideos } from "@/lib/submission-videos";
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
+import { canUseChallengeJokers } from "@/lib/participation-policy";
 
 export const runtime = "nodejs";
 
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     return redirectTo(getAppUrl("/login", request));
   }
 
-  if (user.isLightParticipant) {
+  if (!canUseChallengeJokers(user)) {
     return redirectTo(
       dashboardMessageUrl(request, "error", messages.jokerLightDisabled),
     );
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
       user.challengeEnrollment?.joinedChallengeDate ?? CHALLENGE_START_DATE,
     records: buildChallengeRecords(user),
     hasStudentDiscount: user.isStudentDiscount,
+    isLightParticipant: user.isLightParticipant,
   });
 
   const targetDay = overview.days.find((day) => day.challengeDate === challengeDate);

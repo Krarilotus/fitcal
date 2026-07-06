@@ -19,6 +19,7 @@ import { shouldCompressVideoBeforeUpload } from "@/lib/video-processing/compress
 import { TARGET_UPLOAD_VIDEO_MB } from "@/lib/video-processing/constants";
 import { buildSubmissionUploadFormData } from "@/lib/video-processing/upload-form-data";
 import { replaceTemplate } from "@/lib/template";
+import { canUploadWorkoutVideos } from "@/lib/participation-policy";
 
 type DashboardLabels = AppDictionary["dashboard"];
 
@@ -680,7 +681,7 @@ export function DashboardUploadSection({
               {(() => {
                 const uploadActivity = uploadActivities[day.challengeDate] ?? null;
                 const isUploading = uploadActivity != null;
-                const supportsVideoUploads = !overview.isLightParticipant;
+                const supportsVideoUploads = canUploadWorkoutVideos(overview);
                 const uploadError = uploadErrors[day.challengeDate];
                 const uploadActivityMessage = getUploadActivityMessage(labels.uploads, uploadActivity);
                 const draftSets = uploadSetDrafts[day.challengeDate] ?? buildUploadSetDraft(day);

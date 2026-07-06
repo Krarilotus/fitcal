@@ -31,6 +31,10 @@ import type {
 } from "@/components/fitcal/dashboard-types";
 import type { ActiveInviteSummary, PendingApprovalSummary } from "@/lib/dashboard-data";
 import type { Locale } from "@/lib/preferences";
+import {
+  canAccrueChallengeDebt,
+  canReviewPlatformContent,
+} from "@/lib/participation-policy";
 
 type DashboardLabels = AppDictionary["dashboard"];
 type SectionKey =
@@ -143,17 +147,19 @@ export function DashboardTabs({
     ],
   );
 
+  const canShowReviewSection = canReviewPlatformContent(overview);
+  const hasStudentPricing = overview.hasStudentDiscount && canAccrueChallengeDebt(overview);
+
   const sections = useMemo(() => {
     const nextSections = [...baseSections];
 
-    if (!overview.isLightParticipant) {
+    if (canShowReviewSection) {
       nextSections.splice(4, 0, { key: "review", label: labels.tabs.review });
     }
 
     return nextSections as readonly { key: SectionKey; label: string }[];
-  }, [baseSections, labels.tabs.review, overview.isLightParticipant]);
+  }, [baseSections, canShowReviewSection, labels.tabs.review]);
 
-  const hasStudentPricing = overview.hasStudentDiscount && !overview.isLightParticipant;
   const rules = overview.isLightParticipant
     ? labels.rules.lightRules
     : hasStudentPricing
@@ -404,7 +410,7 @@ export function DashboardTabs({
           profile={profile}
         />
 
-        {!overview.isLightParticipant ? (
+        {canShowReviewSection ? (
           <DashboardReviewSection
             commonLabels={commonLabels}
             escalationReviewItems={escalationReviewItems}

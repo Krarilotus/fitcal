@@ -7,6 +7,7 @@ import { sendAppInviteMail } from "@/lib/auth/email";
 import { getAppBaseUrl, getAppUrl } from "@/lib/auth/url";
 import { inviteSchema } from "@/lib/auth/validation";
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
+import { canReviewPlatformContent } from "@/lib/participation-policy";
 
 const INVITE_DURATION_DAYS = 14;
 
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
   if (
     !user ||
     user.registrationStatus !== RegistrationStatus.APPROVED ||
-    user.isLightParticipant
+    !canReviewPlatformContent(user)
   ) {
     return NextResponse.redirect(getAppUrl("/login", request));
   }

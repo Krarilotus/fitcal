@@ -14,6 +14,7 @@ import {
 import { prisma } from "@/lib/db";
 import { getDictionary } from "@/i18n";
 import { getPreferredLocale } from "@/lib/preferences";
+import { canSubmitSicknessClaims } from "@/lib/participation-policy";
 
 const MAX_SICKNESS_RANGE_DAYS = 31;
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     return NextResponse.redirect(getAppUrl("/login", request));
   }
 
-  if (user.isLightParticipant) {
+  if (!canSubmitSicknessClaims(user)) {
     return NextResponse.redirect(
       getAppUrl(`/dashboard?error=${encodeURIComponent(messages.lightDisabled)}`, request),
     );

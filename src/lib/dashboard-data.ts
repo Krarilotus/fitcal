@@ -43,6 +43,11 @@ import {
   isFreeChallengeDay,
 } from "@/lib/challenge";
 import { prisma } from "@/lib/db";
+import {
+  canAccrueChallengeDebt,
+  canReviewPlatformContent,
+  canUploadWorkoutVideos,
+} from "@/lib/participation-policy";
 import type { Locale } from "@/lib/preferences";
 import { getDailyMessage } from "@/lib/special-day";
 import {
@@ -247,7 +252,7 @@ function buildOpenDays(
         hasExistingClaim: Boolean(submission),
         isEditableClaim,
         canAddVideos:
-          !user.isLightParticipant &&
+          canUploadWorkoutVideos(user) &&
           Boolean(submission) &&
           isEditableClaim &&
           (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
@@ -264,13 +269,13 @@ function buildOpenDays(
           : null,
         reviewNotes,
         extraEntries: buildExtraEntries(submission?.extraEntries),
-        videos: user.isLightParticipant
-          ? []
-          : submission?.videos.map((video) => ({
+        videos: canUploadWorkoutVideos(user)
+          ? submission?.videos.map((video) => ({
               id: video.id,
               originalName: video.originalName,
               sizeLabel: formatFileSize(locale, video.sizeBytes),
-            })) ?? [],
+            })) ?? []
+          : [],
       };
     });
 }
@@ -331,7 +336,7 @@ function buildTimelineEntries(
           })
         : false,
       canAddVideos:
-        !user.isLightParticipant &&
+        canUploadWorkoutVideos(user) &&
         Boolean(submission) &&
         (submission
           ? canEditSubmissionBeforeReview({
@@ -340,13 +345,13 @@ function buildTimelineEntries(
             })
           : false) &&
         (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
-      videos: user.isLightParticipant
-        ? []
-        : submission?.videos.map((video) => ({
+      videos: canUploadWorkoutVideos(user)
+        ? submission?.videos.map((video) => ({
             id: video.id,
             originalName: video.originalName,
             sizeLabel: formatFileSize(locale, video.sizeBytes),
-          })) ?? [],
+          })) ?? []
+        : [],
     };
   });
 }
@@ -446,7 +451,9 @@ async function buildParticipantRows(
       joinedChallengeDate:
         participant.challengeEnrollment?.joinedChallengeDate ?? CHALLENGE_START_DATE,
       records: participantRecords,
-      hasStudentDiscount: participant.isStudentDiscount && !participant.isLightParticipant,
+      hasStudentDiscount:
+        participant.isStudentDiscount &&
+        canAccrueChallengeDebt(participant),
       isLightParticipant: participant.isLightParticipant,
     });
 
@@ -456,17 +463,17 @@ async function buildParticipantRows(
     const yesterdayStatus = currentOverview.previousDate
       ? participantOverview.days.find((day) => day.challengeDate === currentOverview.previousDate)
       : null;
-    const pendingReviewCount = participant.isLightParticipant
-      ? 0
-      : participant.dailySubmissions.filter((submission) =>
+    const pendingReviewCount = canReviewPlatformContent(participant)
+      ? participant.dailySubmissions.filter((submission) =>
           ["PENDING", "ESCALATED", "REVISION_REQUESTED"].includes(submission.reviewStatus),
-        ).length;
-    const effectiveDebtCents = participant.isLightParticipant
-      ? 0
-      : Math.max(
+        ).length
+      : 0;
+    const effectiveDebtCents = canAccrueChallengeDebt(participant)
+      ? Math.max(
           0,
           participantOverview.outstandingDebtCents - (participant.reviewCreditCents ?? 0),
-        );
+        )
+      : 0;
     const totalPushups = participant.dailySubmissions
       .filter((submission) => submission.status === "COMPLETED")
       .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectivePushupTotal, 0);
@@ -508,17 +515,17 @@ async function buildParticipantRows(
       documentedDays: participantOverview.documentedDays,
       sickDays: participantOverview.sickDays,
       pendingReviewCount,
-      debtLabel: participant.isLightParticipant
-        ? null
-        : formatCurrencyFromCents(effectiveDebtCents),
-      reviewLabel: participant.isLightParticipant
-        ? labels.participantReview.off
-        : pendingReviewCount > 0
+      debtLabel: canAccrueChallengeDebt(participant)
+        ? formatCurrencyFromCents(effectiveDebtCents)
+        : null,
+      reviewLabel: canReviewPlatformContent(participant)
+        ? pendingReviewCount > 0
           ? `${pendingReviewCount} ${labels.participantReview.pendingSuffix}`
-          : labels.participantReview.clear,
-      commonReviewerLabel: participant.isLightParticipant
-        ? labels.participantReview.off
-        : buildMostCommonReviewerLabel(allWorkoutReviews, labels),
+          : labels.participantReview.clear
+        : labels.participantReview.off,
+      commonReviewerLabel: canReviewPlatformContent(participant)
+        ? buildMostCommonReviewerLabel(allWorkoutReviews, labels)
+        : labels.participantReview.off,
     };
   }).sort((left, right) => {
     if (left.isSelf !== right.isSelf) {
@@ -865,7 +872,7 @@ function buildOverviewSummary(
     outstandingDebtCents: effectiveOutstandingDebtCents,
     reviewBudgetLabel: formatCurrencyFromCents(availableReviewBudgetCents),
     reviewBudgetCents: availableReviewBudgetCents,
-    hasStudentDiscount: user.isStudentDiscount && !user.isLightParticipant,
+    hasStudentDiscount: user.isStudentDiscount && canAccrueChallengeDebt(user),
     isLightParticipant: user.isLightParticipant,
     existingSlackDays: overview.days.filter(
       (day) => day.status === "slack" || day.status === "partial",
@@ -925,12 +932,14 @@ export async function getDashboardPageData(params: {
   labels: DashboardLabels;
 }): Promise<DashboardPageData> {
   const { locale, user, labels } = params;
-  const canReview = !user.isLightParticipant;
+  const canReview = canReviewPlatformContent(user);
   const challengeRecords = buildChallengeRecords(user);
   const challengeOverview = getChallengeOverview({
     joinedChallengeDate: user.challengeEnrollment?.joinedChallengeDate ?? CHALLENGE_START_DATE,
     records: challengeRecords,
-    hasStudentDiscount: user.isStudentDiscount && !user.isLightParticipant,
+    hasStudentDiscount:
+      user.isStudentDiscount &&
+      canAccrueChallengeDebt(user),
     isLightParticipant: user.isLightParticipant,
   });
 

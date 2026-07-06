@@ -8,6 +8,7 @@ import {
   removeReplacedSubmissionVideo,
 } from "@/lib/submission-videos";
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
+import { canUploadWorkoutVideos } from "@/lib/participation-policy";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   const messages = (await getApiMessages()).videos;
 
-  if (!user || user.isLightParticipant) {
+  if (!user || !canUploadWorkoutVideos(user)) {
     return redirectTo(getAppUrl("/login", request));
   }
 

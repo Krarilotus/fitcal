@@ -64,6 +64,7 @@ Jeder Workout-Eintrag speichert die Challenge-Kernwerte `Liegestuetze` und `Sit-
 - Zusatzkategorien werden normalisiert, gleichnamige Kategorien pro Eintrag werden zusammengefuehrt und in `DailySubmissionExtra` gespeichert.
 - Light-Teilnehmer koennen dieselben Tracking-Daten speichern, aber ohne Video-Upload, Review, Joker oder Schuldenlogik.
 - Im Light Mode bleiben die Eingabefelder fuer Push-ups, Sit-ups, Zusatzkategorien und Notizen sichtbar. Video-Upload, Krankmeldung, Joker, Einladungen und Review-Ansichten werden ausgeblendet bzw. serverseitig blockiert.
+- Die Light-/Full-Faehigkeiten sind zentral in `src/lib/participation-policy.ts` definiert. Neue UI- oder API-Gates sollen diese Funktionen nutzen statt eigene `isLightParticipant`-Checks zu duplizieren.
 
 Im Leistungsdiagramm sind standardmaessig nur die Gesamtwerte fuer Liegestuetze und Sit-ups sichtbar. Einzelne Sets und Zusatzkategorien sind vorhanden, aber ausgeblendet, damit der Graph ruhig bleibt. Der Zeitraum kann zwischen `7`, `14`, `30` und `Alle` gewechselt werden.
 

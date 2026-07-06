@@ -15,6 +15,10 @@ import {
   parsePrimaryWorkoutReviewAction,
   resolvePrimaryWorkoutReviewDecision,
 } from "@/lib/workout-reviews";
+import {
+  canReceiveWorkoutReviews,
+  canReviewPlatformContent,
+} from "@/lib/participation-policy";
 
 const REVIEW_REWARD_CENTS = 5;
 const MAX_REVIEW_COUNT = 5000;
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
   if (
     !user ||
     user.registrationStatus !== RegistrationStatus.APPROVED ||
-    user.isLightParticipant
+    !canReviewPlatformContent(user)
   ) {
     return NextResponse.redirect(getAppUrl("/login", request));
   }
@@ -90,7 +94,7 @@ export async function POST(request: Request) {
 
       if (
         submission.user.registrationStatus !== RegistrationStatus.APPROVED ||
-        submission.user.isLightParticipant
+        !canReceiveWorkoutReviews(submission.user)
       ) {
         throw new Error(messages.notReviewable);
       }

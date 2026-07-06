@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { getAppUrl } from "@/lib/auth/url";
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
+import { canReviewPlatformContent } from "@/lib/participation-policy";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
   if (
     !user ||
     user.registrationStatus !== RegistrationStatus.APPROVED ||
-    user.isLightParticipant
+    !canReviewPlatformContent(user)
   ) {
     return NextResponse.redirect(getAppUrl("/login", request));
   }
