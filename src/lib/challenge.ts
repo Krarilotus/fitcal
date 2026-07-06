@@ -385,7 +385,6 @@ export function getChallengeOverview({
       repsTarget: getRequiredReps(cursor),
       status,
       canUpload:
-        !isLightParticipant &&
         (status === "open" || status === "free" || status === "sickPending" || status === "slack") &&
         canSubmitForDate(cursor, now),
       canUseJoker: canApplyJokerToDay({

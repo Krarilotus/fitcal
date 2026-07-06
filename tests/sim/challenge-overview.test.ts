@@ -50,6 +50,41 @@ test("light participants never build debt or joker allowance", () => {
   assert.equal(overview.jokerBalance, 0);
 });
 
+test("light participants can track current and previous day entries", () => {
+  const overview = getChallengeOverview({
+    joinedChallengeDate: "2026-04-01",
+    records: [],
+    isLightParticipant: true,
+    now: new Date("2026-04-20T12:00:00Z"),
+  });
+
+  const currentDay = overview.days.find((day) => day.challengeDate === "2026-04-20");
+  const previousDay = overview.days.find((day) => day.challengeDate === "2026-04-19");
+  const staleDay = overview.days.find((day) => day.challengeDate === "2026-04-18");
+
+  assert.equal(currentDay?.canUpload, true);
+  assert.equal(previousDay?.canUpload, true);
+  assert.equal(staleDay?.canUpload, false);
+  assert.equal(currentDay?.canUseJoker, false);
+  assert.equal(previousDay?.canUseJoker, false);
+});
+
+test("light participants can track during qualification days", () => {
+  const overview = getChallengeOverview({
+    joinedChallengeDate: "2026-04-01",
+    records: [],
+    isLightParticipant: true,
+    now: new Date("2026-04-02T12:00:00Z"),
+  });
+
+  const currentQualificationDay = overview.days.find(
+    (day) => day.challengeDate === "2026-04-02",
+  );
+
+  assert.equal(currentQualificationDay?.status, "free");
+  assert.equal(currentQualificationDay?.canUpload, true);
+});
+
 test("full participants accumulate debt after the free qualification period", () => {
   const overview = getChallengeOverview({
     joinedChallengeDate: "2026-04-01",
