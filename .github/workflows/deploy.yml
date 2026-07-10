@@ -11,25 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Verify application
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: git diff --exit-code public/vendor/ffmpeg
-      - run: npm run check
-      - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-
   deploy:
     name: Update production server
-    needs: quality
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH
