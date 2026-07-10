@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
   try {
     const formData = await request.formData();
-    const parsed = parseSubmissionInput(formData);
+    const parsed = parseSubmissionInput(formData, user);
     const replaceVideoIdValue = formData.get("replaceVideoId");
     const replaceVideoId =
       typeof replaceVideoIdValue === "string" ? replaceVideoIdValue.trim() : "";
@@ -135,7 +135,7 @@ export async function POST(request: Request) {
       throw new Error(messages.claimLocked);
     }
 
-    if (!existing && !canSubmitForDate(parsed.challengeDate)) {
+    if (!existing && !user.isLightParticipant && !canSubmitForDate(parsed.challengeDate)) {
       throw new Error(messages.newUploadsWindow);
     }
 

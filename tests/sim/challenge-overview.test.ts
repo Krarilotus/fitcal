@@ -64,7 +64,7 @@ test("light participants can track current and previous day entries", () => {
 
   assert.equal(currentDay?.canUpload, true);
   assert.equal(previousDay?.canUpload, true);
-  assert.equal(staleDay?.canUpload, false);
+  assert.equal(staleDay?.canUpload, true);
   assert.equal(currentDay?.canUseJoker, false);
   assert.equal(previousDay?.canUseJoker, false);
 });

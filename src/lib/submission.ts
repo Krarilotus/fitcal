@@ -1,10 +1,10 @@
 import { WorkoutReviewStatus } from "@prisma/client";
 import { z } from "zod";
 import {
-  MAX_SETS_PER_EXERCISE,
   MAX_VIDEO_FILES_PER_DAY,
   MAX_VIDEO_SIZE_BYTES,
 } from "@/lib/challenge";
+import { getMaxSetsPerExercise, type ParticipationModeInput } from "@/lib/participation-policy";
 import {
   parseWorkoutExtraEntries,
   type WorkoutExtraInput,
@@ -27,28 +27,38 @@ function getSetValue(formData: FormData, key: string) {
 export interface ParsedSubmissionInput {
   challengeDate: string;
   extraEntries: ParsedSubmissionExtra[];
-  pushupSets: [number, number];
-  situpSets: [number, number];
+  pushupSets: number[];
+  situpSets: number[];
   notes: string;
 }
 
 export type ParsedSubmissionExtra = WorkoutExtraInput;
 
-export function parseSubmissionInput(formData: FormData): ParsedSubmissionInput {
+function getSetValues(formData: FormData, key: string, maxSets: number) {
+  const values = formData.getAll(key);
+  return values.slice(0, maxSets).map((value) => {
+    const parsed = Number(value || 0);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 10000) throw new Error("Invalid set value");
+    return parsed;
+  });
+}
+
+export function parseSubmissionInput(formData: FormData, mode: ParticipationModeInput = { isLightParticipant: false }): ParsedSubmissionInput {
   const parsed = dailySubmissionSchema.parse({
     challengeDate: formData.get("challengeDate"),
-    pushupSet1: getSetValue(formData, "pushupSet1"),
-    pushupSet2: getSetValue(formData, "pushupSet2"),
-    situpSet1: getSetValue(formData, "situpSet1"),
-    situpSet2: getSetValue(formData, "situpSet2"),
+    pushupSet1: getSetValue(formData, "pushupSet1"), pushupSet2: getSetValue(formData, "pushupSet2"),
+    situpSet1: getSetValue(formData, "situpSet1"), situpSet2: getSetValue(formData, "situpSet2"),
     notes: formData.get("notes"),
   });
+
+  const pushupSets = getSetValues(formData, "pushupSet", getMaxSetsPerExercise(mode));
+  const situpSets = getSetValues(formData, "situpSet", getMaxSetsPerExercise(mode));
 
   return {
     challengeDate: parsed.challengeDate,
     extraEntries: parseWorkoutExtraEntries(formData),
-    pushupSets: [parsed.pushupSet1, parsed.pushupSet2],
-    situpSets: [parsed.situpSet1, parsed.situpSet2],
+    pushupSets: pushupSets.length ? pushupSets : [parsed.pushupSet1, parsed.pushupSet2],
+    situpSets: situpSets.length ? situpSets : [parsed.situpSet1, parsed.situpSet2],
     notes: parsed.notes || "",
   };
 }
@@ -122,7 +132,7 @@ export function deserializeSets(value: string) {
 
   return parsed
     .map((item) => Number(item) || 0)
-    .slice(0, MAX_SETS_PER_EXERCISE) as number[];
+    .slice(0, 100) as number[];
 }
 
 export function getSetsTotal(value: string) {

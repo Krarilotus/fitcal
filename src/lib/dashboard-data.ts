@@ -435,7 +435,7 @@ async function buildParticipantRows(
     orderBy: [{ isLightParticipant: "asc" }, { createdAt: "asc" }],
   });
 
-  return participants.map((participant, index) => {
+  return participants.map((participant) => {
     const participantRecords = participant.dailySubmissions.map((submission) => {
       const totals = getSubmissionTotals(submission);
 
@@ -482,9 +482,8 @@ async function buildParticipantRows(
       .reduce((sum, submission) => sum + getSubmissionTotals(submission).effectiveSitupTotal, 0);
     const extraTotals = buildWorkoutExtraTotals(participant.dailySubmissions);
     const isSelf = participant.id === currentUser.id;
-    const participantLabel = currentUser.isLightParticipant && !isSelf
-      ? `Anonym ${index + 1}`
-      : participant.name || participant.email;
+    // Participant names are part of the shared overview in both modes.
+    const participantLabel = participant.name || participant.email;
     const allWorkoutReviews = participant.dailySubmissions.flatMap(
       (submission) => submission.workoutReviews,
     );

@@ -35,6 +35,7 @@ test("partial submissions below the daily target are parsed without rejection", 
 test("optional submission categories are parsed and merged by name", () => {
   const formData = new FormData();
   formData.set("challengeDate", "2026-04-20");
+  formData.set("notes", "");
   formData.set("pushupSet1", "0");
   formData.set("pushupSet2", "0");
   formData.set("situpSet1", "0");
@@ -59,6 +60,17 @@ test("optional submission categories are parsed and merged by name", () => {
       value: 5,
     },
   ]);
+});
+
+test("light submissions retain more than two sets", () => {
+  const formData = new FormData();
+  formData.set("challengeDate", "2026-04-20");
+  formData.set("notes", "");
+  for (const value of [10, 20, 30]) formData.append("pushupSet", String(value));
+  for (const value of [5, 15, 25]) formData.append("situpSet", String(value));
+
+  assert.deepEqual(parseSubmissionInput(formData, { isLightParticipant: true }).pushupSets, [10, 20, 30]);
+  assert.deepEqual(parseSubmissionInput(formData, { isLightParticipant: true }).situpSets, [5, 15, 25]);
 });
 
 test("partial completed days only charge proportional debt", () => {

@@ -2,6 +2,22 @@ export type ParticipationModeInput = {
   isLightParticipant: boolean;
 };
 
+/** Product limits that vary by participation mode belong here. */
+export const PAID_SETS_PER_EXERCISE = 2;
+export const LIGHT_SETS_PER_EXERCISE = 100;
+
+export function getMaxSetsPerExercise(mode: ParticipationModeInput) {
+  return mode.isLightParticipant ? LIGHT_SETS_PER_EXERCISE : PAID_SETS_PER_EXERCISE;
+}
+
+export function canSubmitWorkoutForDate(
+  mode: ParticipationModeInput,
+  dateIsWithinChallenge: boolean,
+  dateIsOpen: boolean,
+) {
+  return dateIsWithinChallenge && (mode.isLightParticipant || dateIsOpen);
+}
+
 export function canTrackWorkout(mode: ParticipationModeInput) {
   void mode;
   return true;

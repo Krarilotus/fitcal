@@ -1,3 +1,5 @@
+import { canSubmitWorkoutForDate } from "@/lib/participation-policy";
+
 export const CHALLENGE_TIME_ZONE = "Europe/Berlin";
 export const CHALLENGE_START_DATE = "2026-04-01";
 export const CHALLENGE_LENGTH_DAYS = 365;
@@ -393,7 +395,11 @@ export function getChallengeOverview({
       canUpload:
         canTrackWorkout({ isLightParticipant }) &&
         (status === "open" || status === "free" || status === "sickPending" || status === "slack") &&
-        canSubmitForDate(cursor, now),
+        canSubmitWorkoutForDate(
+          { isLightParticipant },
+          isWithinChallenge(cursor),
+          canSubmitForDate(cursor, now),
+        ),
       canUseJoker: canApplyJokerToDay({
         challengeDate: cursor,
         isLightParticipant,
