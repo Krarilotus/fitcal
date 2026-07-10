@@ -106,6 +106,7 @@ export function DashboardTabs({
   profile,
   sicknessReviewItems,
   timelineEntries,
+  previewMode,
 }: {
   activeInvites: ActiveInviteSummary[];
   canReview: boolean;
@@ -125,6 +126,7 @@ export function DashboardTabs({
   profile: ProfileSummary;
   sicknessReviewItems: SicknessReviewItem[];
   timelineEntries: TimelineEntry[];
+  previewMode?: boolean;
 }) {
   const baseSections = useMemo<ReadonlyArray<{ key: SectionKey; label: string }>>(
     () => [
@@ -151,14 +153,16 @@ export function DashboardTabs({
   const hasStudentPricing = overview.hasStudentDiscount && canAccrueChallengeDebt(overview);
 
   const sections = useMemo(() => {
-    const nextSections = [...baseSections];
+    const nextSections = previewMode
+      ? baseSections.filter((section) => section.key !== "uploads")
+      : [...baseSections];
 
     if (canShowReviewSection) {
       nextSections.splice(4, 0, { key: "review", label: labels.tabs.review });
     }
 
     return nextSections as readonly { key: SectionKey; label: string }[];
-  }, [baseSections, canShowReviewSection, labels.tabs.review]);
+  }, [baseSections, canShowReviewSection, labels.tabs.review, previewMode]);
 
   const rules = overview.isLightParticipant
     ? labels.rules.lightRules
@@ -362,7 +366,7 @@ export function DashboardTabs({
           pendingApprovals={pendingApprovals}
         />
 
-        <DashboardUploadSection
+        {!previewMode ? <DashboardUploadSection
           claimEditorReplacementTargets={claimEditorReplacementTargets}
           commonLabels={commonLabels}
           expandedClaimEditors={expandedClaimEditors}
@@ -384,7 +388,7 @@ export function DashboardTabs({
           uploadFileInputRefs={uploadFileInputRefs}
           uploadPrimaryInputRefs={uploadPrimaryInputRefs}
           uploadSectionRefs={uploadSectionRefs}
-        />
+        /> : null}
 
         <DashboardHistorySection
           commonLabels={commonLabels}
@@ -400,6 +404,7 @@ export function DashboardTabs({
             })
           }
           onVideoReplaceSelection={handleVideoReplaceSelection}
+          readOnly={previewMode}
           timelineEntries={timelineEntries}
         />
 

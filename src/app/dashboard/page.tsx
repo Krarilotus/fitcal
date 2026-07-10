@@ -37,6 +37,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   }
 
   const params = await searchParams;
+  const lightPreview = !user.isLightParticipant && params.preview === "light";
   const error = typeof params.error === "string" ? params.error : undefined;
   const success = typeof params.success === "string" ? params.success : undefined;
   const {
@@ -56,7 +57,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     timelineEntries,
   } = await getDashboardPageData({
     locale,
-    user,
+    user: lightPreview ? { ...user, isLightParticipant: true, isStudentDiscount: false } : user,
     labels: dashboardLabels,
   });
 
@@ -96,6 +97,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <FlashMessage error={error} success={success} />
 
+        {user.isLightParticipant ? null : (
+          <div className="fc-info-box flex flex-wrap items-center justify-between gap-3">
+            <span>{lightPreview ? "Light preview is active. Changes are disabled." : "Paid mode"}</span>
+            <a className="fc-button" href={lightPreview ? "/dashboard" : "/dashboard?preview=light"}>
+              {lightPreview ? "Return to paid mode" : "Preview Light mode"}
+            </a>
+          </div>
+        )}
+
         <DashboardTabs
           activeInvites={activeInvites}
           canReview={canReview}
@@ -115,6 +125,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           profile={profile}
           sicknessReviewItems={sicknessReviewItems}
           timelineEntries={timelineEntries}
+          previewMode={lightPreview}
         />
       </div>
     </div>

@@ -26,6 +26,7 @@ export function DashboardHistorySection({
   onEditableVideoReplace,
   timelineEntries,
   onVideoReplaceSelection,
+  readOnly = false,
 }: {
   commonLabels: AppDictionary["common"];
   labels: AppDictionary["dashboard"];
@@ -34,6 +35,7 @@ export function DashboardHistorySection({
   onEditableVideoReplace: (challengeDate: string, videoId: string) => void;
   timelineEntries: TimelineEntry[];
   onVideoReplaceSelection: (event: ChangeEvent<HTMLInputElement>) => void;
+  readOnly?: boolean;
 }) {
   const [selectedTimelineDate, setSelectedTimelineDate] = useState(
     timelineEntries[0]?.challengeDate ?? "",
@@ -194,7 +196,7 @@ export function DashboardHistorySection({
                   <p className="text-sm font-medium text-[var(--fc-warm)]">{selectedTimelineEntry.debtLabel}</p>
                 ) : null}
               </div>
-              {selectedTimelineEntry.status === "slack" ? (
+              {!readOnly && selectedTimelineEntry.status === "slack" ? (
                 <div className="mt-3 grid gap-3">
                   <form action="/api/challenge/joker" method="post">
                     <input
@@ -254,7 +256,7 @@ export function DashboardHistorySection({
                       <span className="text-[var(--fc-muted)]"> · {compactCountSummary}</span>
                     ) : null}
                   </p>
-                  {selectedTimelineEntry.isEditableClaim ? (
+                  {!readOnly && selectedTimelineEntry.isEditableClaim ? (
                     <DashboardActionCluster>
                       <DashboardActionButton
                         onClick={() => scrollToClaimEditor(selectedTimelineEntry.challengeDate)}
@@ -356,7 +358,7 @@ export function DashboardHistorySection({
 
               {selectedTimelineEntry.videos.length ? (
                 <div className="grid gap-2">
-                  {selectedTimelineEntry.canAddVideos ? (
+                  {!readOnly && selectedTimelineEntry.canAddVideos ? (
                     <DashboardActionCluster>
                       <DashboardActionButton
                         onClick={() => onClaimAddVideos(selectedTimelineEntry.challengeDate)}
@@ -376,7 +378,7 @@ export function DashboardHistorySection({
                         <DashboardActionButton onClick={() => openVideo(video.id)} type="button">
                           {commonLabels.open}
                         </DashboardActionButton>
-                        {selectedTimelineEntry.isEditableClaim ? (
+                        {!readOnly && selectedTimelineEntry.isEditableClaim ? (
                           <DashboardActionButton
                             onClick={() =>
                               onEditableVideoReplace(
@@ -412,12 +414,12 @@ export function DashboardHistorySection({
                             />
                           </form>
                         )}
-                        <form action="/api/videos/delete" method="post">
+                        {!readOnly ? <form action="/api/videos/delete" method="post">
                           <input name="videoId" type="hidden" value={video.id} />
                           <DashboardActionButton type="submit" variant="danger">
                             {labels.timeline.videoDelete}
                           </DashboardActionButton>
-                        </form>
+                        </form> : null}
                       </DashboardActionCluster>
                     </div>
                   ))}
