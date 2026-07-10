@@ -1,4 +1,4 @@
-import { mkdir, copyFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,8 +11,23 @@ const files = ["ffmpeg-core.js", "ffmpeg-core.wasm"];
 
 await mkdir(targetDir, { recursive: true });
 
-await Promise.all(
-  files.map((file) =>
-    copyFile(join(sourceDir, file), join(targetDir, file)),
-  ),
-);
+async function syncFileIfChanged(file) {
+  const sourcePath = join(sourceDir, file);
+  const targetPath = join(targetDir, file);
+  const source = await readFile(sourcePath);
+  const target = await readFile(targetPath).catch((error) => {
+    if (error?.code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  });
+
+  if (target && source.equals(target)) {
+    return;
+  }
+
+  await writeFile(targetPath, source);
+}
+
+await Promise.all(files.map(syncFileIfChanged));
