@@ -50,6 +50,7 @@ prisma/*.sqlite-*
 # local AI/tooling notes
 AGENTS.md
 CLAUDE.md
+docs/CODEBASE_IMPROVEMENT_PLAN.md
 
 # local runtime logs
 .dev-server.log
