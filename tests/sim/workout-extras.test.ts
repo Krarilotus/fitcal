@@ -4,6 +4,7 @@ import {
   buildWorkoutExtraTotals,
   listWorkoutExtraCategories,
   mergeWorkoutExtraEntries,
+  parseWorkoutExtraEntries,
 } from "@/lib/workout-extras";
 
 test("workout extra entries normalize names and merge duplicates", () => {
@@ -20,6 +21,18 @@ test("workout extra entries normalize names and merge duplicates", () => {
       { categoryName: "Farmer Carry", value: 4 },
     ],
   );
+});
+
+test("workout extra form sets can repeat one category", () => {
+  const formData = new FormData();
+  formData.append("extraCategoryName", "Plank");
+  formData.append("extraCategoryValue", "30");
+  formData.append("extraCategoryName", "plank");
+  formData.append("extraCategoryValue", "45");
+
+  assert.deepEqual(parseWorkoutExtraEntries(formData), [
+    { categoryName: "Plank", value: 75 },
+  ]);
 });
 
 test("workout extra totals include completed submissions only", () => {

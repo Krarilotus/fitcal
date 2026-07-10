@@ -91,12 +91,21 @@ function normalizeSetValue(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function normalizeExtraCategoryKey(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function buildUploadSetDraft(day: OpenDay): UploadSetDraft {
   return {
     extraEntries: day.extraEntries.map((entry, index) => ({
       id: `${day.challengeDate}-${entry.categoryName}-${index}`,
       categoryName: entry.categoryName,
-      value: entry.value,
+      values: [
+        {
+          id: `${day.challengeDate}-${entry.categoryName}-${index}-0`,
+          value: entry.value,
+        },
+      ],
     })),
     pushupSets: day.pushupSets.length ? day.pushupSets : [0],
     situpSets: day.situpSets.length ? day.situpSets : [0],
@@ -120,6 +129,18 @@ function createExtraEntryDraft(challengeDate: string) {
   return {
     id: `${challengeDate}-${crypto.randomUUID()}`,
     categoryName: "",
+    values: [
+      {
+        id: `${challengeDate}-${crypto.randomUUID()}`,
+        value: 0,
+      },
+    ],
+  };
+}
+
+function createExtraValueDraft(challengeDate: string) {
+  return {
+    id: `${challengeDate}-${crypto.randomUUID()}`,
     value: 0,
   };
 }
@@ -662,7 +683,72 @@ export function DashboardUploadSection({
   function updateExtraEntryDraft(
     challengeDate: string,
     entryId: string,
-    field: "categoryName" | "value",
+    value: string,
+  ) {
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => {
+        const nextKey = normalizeExtraCategoryKey(value);
+        const sourceEntry = draft.extraEntries.find((entry) => entry.id === entryId);
+        const targetEntry = nextKey
+          ? draft.extraEntries.find(
+              (entry) =>
+                entry.id !== entryId &&
+                normalizeExtraCategoryKey(entry.categoryName) === nextKey,
+            )
+          : undefined;
+
+        if (sourceEntry && targetEntry) {
+          return {
+            ...draft,
+            extraEntries: draft.extraEntries
+              .filter((entry) => entry.id !== entryId)
+              .map((entry) =>
+                entry.id === targetEntry.id
+                  ? {
+                      ...entry,
+                      categoryName: value,
+                      values: [...entry.values, ...sourceEntry.values],
+                    }
+                  : entry,
+              ),
+          };
+        }
+
+        return {
+          ...draft,
+          extraEntries: draft.extraEntries.map((entry) =>
+            entry.id === entryId
+              ? {
+                  ...entry,
+                  categoryName: value,
+                }
+              : entry,
+          ),
+        };
+      }),
+    );
+  }
+
+  function addExtraValueDraft(challengeDate: string, entryId: string) {
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
+        extraEntries: draft.extraEntries.map((entry) =>
+          entry.id === entryId
+            ? {
+                ...entry,
+                values: [...entry.values, createExtraValueDraft(challengeDate)],
+              }
+            : entry,
+        ),
+      })),
+    );
+  }
+
+  function updateExtraValueDraft(
+    challengeDate: string,
+    entryId: string,
+    valueId: string,
     value: string,
   ) {
     setUploadSetDrafts((current) =>
@@ -672,7 +758,34 @@ export function DashboardUploadSection({
           entry.id === entryId
             ? {
                 ...entry,
-                [field]: field === "value" ? normalizeSetValue(value) : value,
+                values: entry.values.map((setEntry) =>
+                  setEntry.id === valueId
+                    ? { ...setEntry, value: normalizeSetValue(value) }
+                    : setEntry,
+                ),
+              }
+            : entry,
+        ),
+      })),
+    );
+  }
+
+  function removeExtraValueDraft(
+    challengeDate: string,
+    entryId: string,
+    valueId: string,
+  ) {
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
+        extraEntries: draft.extraEntries.map((entry) =>
+          entry.id === entryId
+            ? {
+                ...entry,
+                values:
+                  entry.values.length > 1
+                    ? entry.values.filter((setEntry) => setEntry.id !== valueId)
+                    : entry.values,
               }
             : entry,
         ),
@@ -861,17 +974,26 @@ export function DashboardUploadSection({
                         disabled={isDisabled}
                         entries={draftSets.extraEntries}
                         labels={labels.uploads}
-                        onAdd={() => addExtraEntryDraft(day.challengeDate)}
-                        onChange={(entryId, field, value) =>
-                          updateExtraEntryDraft(
+                        onAddCategory={() => addExtraEntryDraft(day.challengeDate)}
+                        onAddValue={(entryId) =>
+                          addExtraValueDraft(day.challengeDate, entryId)
+                        }
+                        onCategoryNameChange={(entryId, value) =>
+                          updateExtraEntryDraft(day.challengeDate, entryId, value)
+                        }
+                        onRemoveCategory={(entryId) =>
+                          removeExtraEntryDraft(day.challengeDate, entryId)
+                        }
+                        onRemoveValue={(entryId, valueId) =>
+                          removeExtraValueDraft(day.challengeDate, entryId, valueId)
+                        }
+                        onValueChange={(entryId, valueId, value) =>
+                          updateExtraValueDraft(
                             day.challengeDate,
                             entryId,
-                            field,
+                            valueId,
                             value,
                           )
-                        }
-                        onRemove={(entryId) =>
-                          removeExtraEntryDraft(day.challengeDate, entryId)
                         }
                       />
                       <p className="fc-text-muted">{supportsVideoUploads ? labels.uploads.fullHint : labels.uploads.lightHint}</p>
