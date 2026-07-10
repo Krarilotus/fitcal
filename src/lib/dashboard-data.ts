@@ -48,6 +48,7 @@ import { prisma } from "@/lib/db";
 import {
   canAccrueChallengeDebt,
   canReviewPlatformContent,
+  canSubmitSicknessClaims,
   canUploadWorkoutVideos,
 } from "@/lib/participation-policy";
 import type { Locale } from "@/lib/preferences";
@@ -232,8 +233,9 @@ function buildOpenDays(
         challengeDate: day.challengeDate,
         dateLabel: formatChallengeDate(locale, day.challengeDate),
         targetReps: getRequiredReps(day.challengeDate),
-        showByDefault: day.isCurrentDay || day.isPreviousDay,
+        showByDefault: !submission && (day.isCurrentDay || day.isPreviousDay),
         isCurrentDay: day.isCurrentDay,
+        isPreviousDay: day.isPreviousDay,
         isQualificationDay: isFreeChallengeDay(day.challengeDate),
         canUseJoker: day.canUseJoker,
         hasExistingClaim: Boolean(submission),
@@ -289,6 +291,8 @@ function buildTimelineEntries(
       status: day.status,
       statusLabel: getDayStatusLabel(day.status, labels.statusLabels),
       canUseJoker: day.canUseJoker,
+      canUsePaidRecoveryActions: canSubmitSicknessClaims(user),
+      canCreateClaim: day.canUpload && !submission,
       debtLabel: day.debtCents > 0 ? formatCurrencyFromCents(day.debtCents) : null,
       pushupTotal: totals?.pushupTotal ?? null,
       situpTotal: totals?.situpTotal ?? null,

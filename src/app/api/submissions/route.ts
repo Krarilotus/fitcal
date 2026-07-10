@@ -7,6 +7,7 @@ import {
   MAX_VIDEO_FILES_PER_DAY,
   MAX_VIDEO_SIZE_BYTES,
   canSubmitForDate,
+  isWithinChallenge,
 } from "@/lib/challenge";
 import { prisma } from "@/lib/db";
 import { ensureDailyUploadDirectory } from "@/lib/storage";
@@ -26,6 +27,7 @@ import {
 import { dashboardMessageUrl, getApiMessages } from "@/lib/i18n-api";
 import {
   canReceiveWorkoutReviews,
+  canSubmitWorkoutForDate,
   canUploadWorkoutVideos,
 } from "@/lib/participation-policy";
 import { saveWorkoutRecord } from "@/application/workouts/save-workout-record";
@@ -129,7 +131,14 @@ export async function POST(request: Request) {
       throw new Error(messages.claimLocked);
     }
 
-    if (!existing && !user.isLightParticipant && !canSubmitForDate(parsed.challengeDate)) {
+    if (
+      !existing &&
+      !canSubmitWorkoutForDate(
+        user,
+        isWithinChallenge(parsed.challengeDate),
+        canSubmitForDate(parsed.challengeDate),
+      )
+    ) {
       throw new Error(messages.newUploadsWindow);
     }
 

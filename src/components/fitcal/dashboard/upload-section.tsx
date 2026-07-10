@@ -734,9 +734,11 @@ export function DashboardUploadSection({
                         <p className="mt-1 fc-text-muted">{day.targetReps} {labels.uploads.targetSuffix}</p>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        <DashboardStatusBadge tone="accent">
-                          {day.isCurrentDay ? labels.uploads.today : labels.uploads.yesterday}
-                        </DashboardStatusBadge>
+                        {day.isCurrentDay || day.isPreviousDay ? (
+                          <DashboardStatusBadge tone="accent">
+                            {day.isCurrentDay ? labels.uploads.today : labels.uploads.yesterday}
+                          </DashboardStatusBadge>
+                        ) : null}
                         {day.isQualificationDay ? (
                           <DashboardStatusBadge tone="warm">
                             {labels.uploads.qualification}

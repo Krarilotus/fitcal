@@ -69,6 +69,20 @@ test("light participants can track current and previous day entries", () => {
   assert.equal(previousDay?.canUseJoker, false);
 });
 
+test("full participants can backfill past workout claims from the timeline", () => {
+  const overview = getChallengeOverview({
+    joinedChallengeDate: "2026-04-01",
+    records: qualificationRecords(),
+    now: new Date("2026-04-20T12:00:00Z"),
+  });
+
+  const staleDay = overview.days.find((day) => day.challengeDate === "2026-04-18");
+
+  assert.equal(staleDay?.status, "slack");
+  assert.equal(staleDay?.canUpload, true);
+  assert.equal(staleDay?.canUseJoker, true);
+});
+
 test("light participants can track during qualification days", () => {
   const overview = getChallengeOverview({
     joinedChallengeDate: "2026-04-01",

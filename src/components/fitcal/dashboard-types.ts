@@ -40,6 +40,7 @@ export type OpenDay = {
   targetReps: number;
   showByDefault: boolean;
   isCurrentDay: boolean;
+  isPreviousDay: boolean;
   isQualificationDay: boolean;
   canUseJoker: boolean;
   hasExistingClaim: boolean;
@@ -62,6 +63,8 @@ export type TimelineEntry = {
   status: DayCompletionState;
   statusLabel: string;
   canUseJoker: boolean;
+  canUsePaidRecoveryActions: boolean;
+  canCreateClaim: boolean;
   debtLabel: string | null;
   pushupTotal: number | null;
   situpTotal: number | null;

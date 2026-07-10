@@ -231,7 +231,9 @@ export function DashboardHistorySection({
                   <p className="text-sm font-medium text-[var(--fc-warm)]">{selectedTimelineEntry.debtLabel}</p>
                 ) : null}
               </div>
-              {!readOnly && selectedTimelineEntry.status === "slack" ? (
+              {!readOnly &&
+              selectedTimelineEntry.status === "slack" &&
+              selectedTimelineEntry.canUsePaidRecoveryActions ? (
                 <div className="mt-3 grid gap-3">
                   <form action="/api/challenge/joker" method="post">
                     <input
@@ -329,7 +331,17 @@ export function DashboardHistorySection({
                   ) : null}
                 </div>
               ) : (
-                <p className="fc-text-muted">{labels.timeline.noEntry}</p>
+                <div className="flex flex-wrap items-center justify-between gap-3 fc-info-box">
+                  <p className="fc-text-muted">{labels.timeline.noEntry}</p>
+                  {!readOnly && selectedTimelineEntry.canCreateClaim ? (
+                    <DashboardActionButton
+                      onClick={() => scrollToClaimEditor(selectedTimelineEntry.challengeDate)}
+                      type="button"
+                    >
+                      {labels.timeline.claimEdit}
+                    </DashboardActionButton>
+                  ) : null}
+                </div>
               )}
 
               {((selectedTimelineEntry.pushupOverTarget ?? 0) > 0 ||
@@ -433,7 +445,7 @@ export function DashboardHistorySection({
                           >
                             {labels.timeline.videoReplace}
                           </DashboardActionButton>
-                        ) : (
+                        ) : !readOnly ? (
                           <form
                             action="/api/videos/replace"
                             encType="multipart/form-data"
@@ -456,7 +468,7 @@ export function DashboardHistorySection({
                               type="file"
                             />
                           </form>
-                        )}
+                        ) : null}
                         {!readOnly ? <form
                           action="/api/videos/delete"
                           method="post"

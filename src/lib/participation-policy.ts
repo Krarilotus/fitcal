@@ -54,7 +54,7 @@ export function canSubmitWorkoutForDate(
   dateIsWithinChallenge: boolean,
   dateIsOpen: boolean,
 ) {
-  return dateIsWithinChallenge && (mode.isLightParticipant || dateIsOpen);
+  return dateIsWithinChallenge && (mode.isLightParticipant || canTrackWorkout(mode) || dateIsOpen);
 }
 
 export function canTrackWorkout(mode: ParticipationModeInput) {
