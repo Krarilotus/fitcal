@@ -314,7 +314,7 @@ export function DashboardTabs({
           pendingApprovals={pendingApprovals}
         />
 
-        {!previewMode ? <DashboardUploadSection
+        <DashboardUploadSection
           claimEditorReplacementTargets={claimEditorReplacementTargets}
           commonLabels={commonLabels}
           expandedClaimEditors={expandedClaimEditors}
@@ -328,10 +328,11 @@ export function DashboardTabs({
           onVideoOpen={openVideo}
           openDays={openDays}
           overview={overview}
+          readOnly={previewMode}
           uploadFileInputRefs={uploadFileInputRefs}
           uploadPrimaryInputRefs={uploadPrimaryInputRefs}
           uploadSectionRefs={uploadSectionRefs}
-        /> : null}
+        />
 
         <DashboardHistorySection
           commonLabels={commonLabels}

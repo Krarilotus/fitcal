@@ -508,6 +508,7 @@ export function DashboardUploadSection({
   onVideoOpen,
   openDays,
   overview,
+  readOnly = false,
   uploadFileInputRefs,
   uploadPrimaryInputRefs,
   uploadSectionRefs,
@@ -525,6 +526,7 @@ export function DashboardUploadSection({
   onVideoOpen: (videoId: string) => void;
   openDays: OpenDay[];
   overview: OverviewSummary;
+  readOnly?: boolean;
   uploadFileInputRefs: MutableRefObject<Record<string, HTMLInputElement | null>>;
   uploadPrimaryInputRefs: MutableRefObject<Record<string, HTMLInputElement | null>>;
   uploadSectionRefs: MutableRefObject<Record<string, HTMLElement | null>>;
@@ -729,6 +731,7 @@ export function DashboardUploadSection({
                     : null;
                 const canCloseEditor =
                   !day.showByDefault && expandedClaimEditors[day.challengeDate];
+                const isDisabled = isUploading || readOnly;
 
                 return (
                   <>
@@ -753,7 +756,7 @@ export function DashboardUploadSection({
                         ) : null}
                         {canCloseEditor ? (
                           <DashboardActionButton
-                            disabled={isUploading}
+                            disabled={isDisabled}
                             onClick={() => onCloseClaimEditor(day.challengeDate)}
                             type="button"
                           >
@@ -789,7 +792,7 @@ export function DashboardUploadSection({
                         </p>
                       </div>
                     ) : null}
-                    {day.isEditableClaim && day.hasExistingClaim ? (
+                    {!readOnly && day.isEditableClaim && day.hasExistingClaim ? (
                       <div className="mt-4 fc-info-box">
                         <p className="fc-text-secondary">
                           {labels.uploads.currentClaimHint}
@@ -802,6 +805,10 @@ export function DashboardUploadSection({
                       encType="multipart/form-data"
                       method="post"
                       onSubmit={(event) => {
+                        if (readOnly) {
+                          event.preventDefault();
+                          return;
+                        }
                         const submitter = event.nativeEvent.submitter;
                         if (
                           submitter instanceof HTMLButtonElement &&
@@ -834,7 +841,7 @@ export function DashboardUploadSection({
                       />
                       <WorkoutSetsEditor
                         challengeDate={day.challengeDate}
-                        disabled={isUploading}
+                        disabled={isDisabled}
                         labels={labels.uploads}
                         maximumSets={maximumSets}
                         onAdd={(exercise) =>
@@ -851,7 +858,7 @@ export function DashboardUploadSection({
                         situpSets={draftSets.situpSets}
                       />
                       <WorkoutExtrasEditor
-                        disabled={isUploading}
+                        disabled={isDisabled}
                         entries={draftSets.extraEntries}
                         labels={labels.uploads}
                         onAdd={() => addExtraEntryDraft(day.challengeDate)}
@@ -895,7 +902,7 @@ export function DashboardUploadSection({
                                     </p>
                                   </div>
                                   <DashboardActionButton
-                                    disabled={isUploading}
+                                    disabled={isDisabled}
                                     onClick={() => onClearReplacementTarget(day.challengeDate)}
                                     type="button"
                                   >
@@ -906,7 +913,7 @@ export function DashboardUploadSection({
                             ) : null}
                             <label className="fc-input-group">
                               <span className="fc-input-label">{labels.uploads.videos}</span>
-                              <input accept="video/*" className="fc-input-file" disabled={isUploading} id={`upload-video-input-${day.challengeDate}`} multiple={!replaceVideoId} name="videos" onChange={(event) => handleUploadVideoSelection(day.challengeDate, day.videos.length, replaceVideoId, event)} ref={(node) => {
+                              <input accept="video/*" className="fc-input-file" disabled={isDisabled} id={`upload-video-input-${day.challengeDate}`} multiple={!replaceVideoId} name="videos" onChange={(event) => handleUploadVideoSelection(day.challengeDate, day.videos.length, replaceVideoId, event)} ref={(node) => {
                                 uploadFileInputRefs.current[day.challengeDate] = node;
                               }} required={!day.hasExistingClaim || Boolean(replaceVideoId)} type="file" />
                             </label>
@@ -932,7 +939,7 @@ export function DashboardUploadSection({
                                       {day.isEditableClaim ? (
                                         <>
                                           <DashboardActionButton
-                                            disabled={isUploading}
+                                            disabled={isDisabled}
                                             onClick={() =>
                                               onFocusClaimEditor(day.challengeDate, {
                                                 openFilePicker: true,
@@ -945,7 +952,7 @@ export function DashboardUploadSection({
                                           </DashboardActionButton>
                                           <DashboardActionButton
                                             data-post-action="true"
-                                            disabled={isUploading}
+                                            disabled={isDisabled}
                                             formAction="/api/videos/delete"
                                             formMethod="post"
                                             name="videoId"
@@ -973,7 +980,7 @@ export function DashboardUploadSection({
                                 {selectedUploadVideos[day.challengeDate].map((video, index) => (
                                   <label className="fc-input-group" key={video.id}>
                                     <span className="fc-input-label">{labels.uploads.videoNameLabel.replace("{index}", String(index + 1))}</span>
-                                    <input className="fc-input" disabled={isUploading} maxLength={120} name={`videoDisplayName${index}`} onChange={(event) => handleUploadVideoRename(day.challengeDate, video.id, event.target.value)} placeholder={video.originalName} type="text" value={video.displayName} />
+                                    <input className="fc-input" disabled={isDisabled} maxLength={120} name={`videoDisplayName${index}`} onChange={(event) => handleUploadVideoRename(day.challengeDate, video.id, event.target.value)} placeholder={video.originalName} type="text" value={video.displayName} />
                                     <span className="text-xs text-[var(--fc-muted)]">
                                       {video.compressedSizeLabel
                                         ? replaceTemplate(labels.uploads.videoSizeCompressed, {
@@ -988,7 +995,7 @@ export function DashboardUploadSection({
                             ) : null}
                           </div>
                         ) : null}
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.notes}</span><textarea className="fc-input min-h-[5.5rem]" defaultValue={day.notes} disabled={isUploading} name="notes" /></label>
+                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.notes}</span><textarea className="fc-input min-h-[5.5rem]" defaultValue={day.notes} disabled={isDisabled} name="notes" /></label>
                       </div>
                       {uploadError ? <p className="text-sm font-medium text-[var(--fc-warm)]">{uploadError}</p> : null}
                       {uploadActivityMessage ? (
@@ -1006,15 +1013,15 @@ export function DashboardUploadSection({
                       ) : null}
                       <div className="flex flex-wrap gap-3">
                         <Button
-                          disabled={isUploading}
+                          disabled={isDisabled}
                           type="submit"
                         >
                           {getUploadButtonLabel(labels.uploads, uploadActivity, supportsVideoUploads)}
                         </Button>
-                        {day.isEditableClaim && day.hasExistingClaim ? (
+                        {!readOnly && day.isEditableClaim && day.hasExistingClaim ? (
                           <Button
                             data-post-action="true"
-                            disabled={isUploading}
+                            disabled={isDisabled}
                             formAction="/api/submissions/delete"
                             formMethod="post"
                             onClick={(event) => {
@@ -1030,7 +1037,7 @@ export function DashboardUploadSection({
                         ) : null}
                       </div>
                     </form>
-                    {supportsVideoUploads ? (
+                    {!readOnly && supportsVideoUploads ? (
                       <>
                         <details className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
                           <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>
