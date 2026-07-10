@@ -27,7 +27,7 @@ export function WorkoutExtrasEditor({
   onRemove: (entryId: string) => void;
 }) {
   return (
-    <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] p-3">
+    <div className="grid gap-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="fc-meta-label">{labels.extraCategories}</p>
         <DashboardActionButton disabled={disabled} onClick={onAdd} type="button">
@@ -73,9 +73,7 @@ export function WorkoutExtrasEditor({
             </div>
           ))}
         </div>
-      ) : (
-        <p className="mt-2 fc-text-muted">{labels.extraCategoriesHint}</p>
-      )}
+      ) : null}
     </div>
   );
 }
