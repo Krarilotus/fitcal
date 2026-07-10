@@ -20,7 +20,7 @@
   --fc-surface: #18181b;
   --fc-surface-hover: #27272a;
 
-  --fc-accent: #e11d73;
+  --fc-accent: #d31666;
   --fc-accent-hover: #be185d;
   --fc-accent-soft: rgba(225, 29, 115, 0.1);
   --fc-accent-border: rgba(225, 29, 115, 0.3);
@@ -246,6 +246,7 @@ button, input, textarea, select {
   border-radius: var(--fc-radius-sm);
   background: var(--fc-bg);
   color: var(--fc-ink);
+  -webkit-text-fill-color: var(--fc-ink);
   padding: 0.6rem 0.75rem;
   font-size: 0.9rem;
   transition: border-color 150ms ease;
@@ -493,7 +494,8 @@ button, input, textarea, select {
 }
 
 .fc-toggle-chip:hover { border-color: var(--fc-border-strong); }
-.fc-toggle-chip.is-off { opacity: 0.35; }
+.fc-toggle-chip.is-off { color: var(--fc-ink); }
+.fc-toggle-chip.is-off .fc-toggle-dot { opacity: 0.35; }
 
 .fc-toggle-dot {
   width: 0.5rem;

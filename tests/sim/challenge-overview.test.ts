@@ -85,6 +85,21 @@ test("light participants can track during qualification days", () => {
   assert.equal(currentQualificationDay?.canUpload, true);
 });
 
+test("challenge overview honors the configured test clock when now is omitted", () => {
+  const previousOverride = process.env.FITCAL_TODAY_OVERRIDE;
+  process.env.FITCAL_TODAY_OVERRIDE = "2026-04-20";
+  try {
+    const overview = getChallengeOverview({
+      joinedChallengeDate: "2026-04-01",
+      records: [],
+    });
+    assert.equal(overview.currentDate, "2026-04-20");
+  } finally {
+    if (previousOverride === undefined) delete process.env.FITCAL_TODAY_OVERRIDE;
+    else process.env.FITCAL_TODAY_OVERRIDE = previousOverride;
+  }
+});
+
 test("full participants accumulate debt after the free qualification period", () => {
   const overview = getChallengeOverview({
     joinedChallengeDate: "2026-04-01",

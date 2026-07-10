@@ -63,7 +63,7 @@ export function buildWorkoutExtraTotals(
     extraEntries?: WorkoutExtraInput[];
   }>,
 ) {
-  const totals: Record<string, number> = {};
+  const totalsByKey = new Map<string, { label: string; value: number }>();
 
   for (const submission of submissions) {
     if (submission.status !== "COMPLETED") {
@@ -71,11 +71,22 @@ export function buildWorkoutExtraTotals(
     }
 
     for (const entry of submission.extraEntries ?? []) {
-      totals[entry.categoryName] = (totals[entry.categoryName] ?? 0) + entry.value;
+      const label = normalizeWorkoutExtraCategoryName(entry.categoryName);
+      if (!label) continue;
+      const key = label.toLocaleLowerCase();
+      const existing = totalsByKey.get(key);
+      totalsByKey.set(key, {
+        label: existing?.label ?? label,
+        value: (existing?.value ?? 0) + entry.value,
+      });
     }
   }
 
-  return totals;
+  return Object.fromEntries(
+    [...totalsByKey.values()]
+      .sort((left, right) => left.label.localeCompare(right.label))
+      .map((entry) => [entry.label, entry.value]),
+  );
 }
 
 export function listWorkoutExtraCategories(rows: Array<{ extraTotals: Record<string, number> }>) {

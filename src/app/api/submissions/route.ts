@@ -15,7 +15,7 @@ import {
   getVideoDisplayNames,
   getVideoFiles,
   parseSubmissionInput,
-  serializeSets,
+  SubmissionValidationError,
 } from "@/lib/submission";
 import {
   persistReplacementSubmissionVideo,
@@ -28,6 +28,7 @@ import {
   canReceiveWorkoutReviews,
   canUploadWorkoutVideos,
 } from "@/lib/participation-policy";
+import { saveWorkoutRecord } from "@/application/workouts/save-workout-record";
 
 export const runtime = "nodejs";
 
@@ -59,17 +60,10 @@ function getSubmissionReviewStatus(user: { isLightParticipant: boolean }) {
   return canReceiveWorkoutReviews(user) ? "PENDING" : "NOT_REQUIRED";
 }
 
-function inferSubmissionErrorCode(message: string) {
-  if (
-    message.includes("100 MB") ||
-    message.includes("Videodatei") ||
-    message.includes("zu groß") ||
-    message.includes("zu gross")
-  ) {
-    return "too_large";
-  }
-
-  return "submission_failed";
+function getSubmissionErrorCode(error: unknown) {
+  return error instanceof SubmissionValidationError && error.code === "VIDEO_TOO_LARGE"
+    ? "too_large"
+    : "submission_failed";
 }
 
 export async function POST(request: Request) {
@@ -172,7 +166,7 @@ export async function POST(request: Request) {
 
         for (const file of rawFiles) {
           if (file.size > MAX_VIDEO_SIZE_BYTES) {
-            throw new Error(messages.videoTooLarge);
+            throw new SubmissionValidationError("VIDEO_TOO_LARGE", messages.videoTooLarge);
           }
         }
 
@@ -236,127 +230,21 @@ export async function POST(request: Request) {
       }
     }
 
-    if (existing && canEditExistingSubmission) {
-      await prisma.$transaction(async (tx) => {
-        await tx.dailySubmission.update({
-          where: {
-            id: existing.id,
-          },
-          data: {
-            notes: parsed.notes || null,
-            pushupSets: serializeSets(parsed.pushupSets),
-            reviewStatus: getSubmissionReviewStatus(user),
-            reviewedAt: null,
-            situpSets: serializeSets(parsed.situpSets),
-            status: "COMPLETED",
-            submittedAt: new Date(),
-            verifiedPushupTotal: null,
-            verifiedSitupTotal: null,
-            videos:
-              appendedVideos.length > 0
-                ? {
-                    createMany: {
-                      data: appendedVideos,
-                    },
-                  }
-                : undefined,
-            extraEntries: {
-              deleteMany: {},
-              createMany:
-                parsed.extraEntries.length > 0
-                  ? {
-                      data: parsed.extraEntries,
-                    }
-                  : undefined,
-            },
-          },
-        });
+    await saveWorkoutRecord({
+      userId: user.id,
+      existingSubmissionId:
+        existing && canEditExistingSubmission ? existing.id : undefined,
+      parsed,
+      reviewStatus: getSubmissionReviewStatus(user),
+      appendedVideos,
+      replacementVideo,
+    });
 
-        if (replacementVideo) {
-          await tx.dailyVideo.update({
-            where: {
-              id: replacementVideo.targetId,
-            },
-            data: {
-              mimeType: replacementVideo.mimeType,
-              originalName: replacementVideo.originalName,
-              sizeBytes: replacementVideo.sizeBytes,
-              storedName: replacementVideo.storedName,
-              storedPath: replacementVideo.storedPath,
-            },
-          });
-        }
-      });
-
-      if (replacementVideo) {
-        await removeReplacedSubmissionVideo(
-          replacementVideo.previousStoredPath,
-          replacementVideo.storedPath,
-        );
-      }
-    } else {
-      await prisma.dailySubmission.upsert({
-        where: {
-          userId_challengeDate: {
-            challengeDate: parsed.challengeDate,
-            userId: user.id,
-          },
-        },
-        update: {
-          notes: parsed.notes || null,
-          pushupSets: serializeSets(parsed.pushupSets),
-          reviewStatus: getSubmissionReviewStatus(user),
-          reviewedAt: null,
-          situpSets: serializeSets(parsed.situpSets),
-          status: "COMPLETED",
-          submittedAt: new Date(),
-          verifiedPushupTotal: null,
-          verifiedSitupTotal: null,
-          videos:
-            appendedVideos.length > 0
-              ? {
-                  createMany: {
-                    data: appendedVideos,
-                  },
-                }
-              : undefined,
-          extraEntries: {
-            deleteMany: {},
-            createMany:
-              parsed.extraEntries.length > 0
-                ? {
-                    data: parsed.extraEntries,
-                  }
-                : undefined,
-          },
-        },
-        create: {
-          challengeDate: parsed.challengeDate,
-          notes: parsed.notes || null,
-          pushupSets: serializeSets(parsed.pushupSets),
-          reviewStatus: getSubmissionReviewStatus(user),
-          situpSets: serializeSets(parsed.situpSets),
-          status: "COMPLETED",
-          submittedAt: new Date(),
-          userId: user.id,
-          videos:
-            appendedVideos.length > 0
-              ? {
-                  createMany: {
-                    data: appendedVideos,
-                  },
-                }
-              : undefined,
-          extraEntries:
-            parsed.extraEntries.length > 0
-              ? {
-                  createMany: {
-                    data: parsed.extraEntries,
-                  },
-                }
-              : undefined,
-        },
-      });
+    if (replacementVideo) {
+      await removeReplacedSubmissionVideo(
+        replacementVideo.previousStoredPath,
+        replacementVideo.storedPath,
+      );
     }
 
     const redirectUrl = successRedirectUrl(user, request, messages);
@@ -373,17 +261,18 @@ export async function POST(request: Request) {
     const message =
       error instanceof Error ? error.message : messages.saveFailed;
     const redirectUrl = errorRedirectUrl(message, request);
+    const errorCode = getSubmissionErrorCode(error);
 
     if (wantsJsonResponse(request)) {
       return NextResponse.json(
         {
           ok: false,
           error: message,
-          errorCode: inferSubmissionErrorCode(message),
+          errorCode,
           redirectUrl,
         },
         {
-          status: inferSubmissionErrorCode(message) === "too_large" ? 413 : 400,
+          status: errorCode === "too_large" ? 413 : 400,
         },
       );
     }

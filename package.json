@@ -7,6 +7,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm run test:sim",
     "test:sim": "tsx --test tests/sim/**/*.test.ts",
     "e2e:prepare": "node scripts/e2e-prepare.mjs",
     "e2e:seed": "node scripts/e2e-seed.mjs",
@@ -14,31 +16,31 @@
     "test:e2e:headed": "playwright test --config=playwright.config.mts --headed",
     "postinstall": "prisma generate && node scripts/sync-ffmpeg-assets.mjs",
     "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev"
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "node scripts/deploy-migrations.mjs",
+    "db:backup": "node scripts/backup-database.mjs"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@prisma/client": "^6.19.3",
-    "@ffmpeg/core": "^0.12.10",
-    "@ffmpeg/ffmpeg": "^0.12.15",
-    "@ffmpeg/util": "^0.12.2",
     "@radix-ui/react-slot": "^1.2.4",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.7.0",
     "mediabunny": "^1.40.1",
-    "next": "16.2.2",
+    "next": "^16.2.10",
     "octokit": "^5.0.5",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.10.0",
+    "resend": "^6.17.2",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25.5.0",
@@ -50,5 +52,9 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
+  },
+  "overrides": {
+    "esbuild": "0.28.1",
+    "postcss": "8.5.10"
   }
 }

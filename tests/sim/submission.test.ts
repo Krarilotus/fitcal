@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getChallengeOverview, getSlackDebtCents } from "@/lib/challenge";
-import { parseSubmissionInput } from "@/lib/submission";
+import { deserializeSets, parseSubmissionInput } from "@/lib/submission";
 
 function qualificationRecords() {
   return Array.from({ length: 10 }, (_, index) => ({
@@ -71,6 +71,12 @@ test("light submissions retain more than two sets", () => {
 
   assert.deepEqual(parseSubmissionInput(formData, { isLightParticipant: true }).pushupSets, [10, 20, 30]);
   assert.deepEqual(parseSubmissionInput(formData, { isLightParticipant: true }).situpSets, [5, 15, 25]);
+});
+
+test("persisted set parsing is total and rejects corrupt values", () => {
+  assert.deepEqual(deserializeSets("not-json"), []);
+  assert.deepEqual(deserializeSets('{"sets": [1]}'), []);
+  assert.deepEqual(deserializeSets('[12,-1,"x",4,10001]'), [12, 4]);
 });
 
 test("partial completed days only charge proportional debt", () => {

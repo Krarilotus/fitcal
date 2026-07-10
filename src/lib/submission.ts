@@ -10,14 +10,35 @@ import {
   type WorkoutExtraInput,
 } from "@/lib/workout-extras";
 
+export const MAX_REPS_PER_SET = 10_000;
+export const MAX_PERSISTED_SETS_PER_EXERCISE = 100;
+
+export type SubmissionErrorCode =
+  | "INVALID_SET_VALUE"
+  | "VIDEO_COUNT"
+  | "VIDEO_TOO_LARGE";
+
+export class SubmissionValidationError extends Error {
+  constructor(
+    public readonly code: SubmissionErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "SubmissionValidationError";
+  }
+}
+
 export const dailySubmissionSchema = z.object({
   challengeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  pushupSet1: z.coerce.number().int().min(0).max(10000).default(0),
-  pushupSet2: z.coerce.number().int().min(0).max(10000).default(0),
-  situpSet1: z.coerce.number().int().min(0).max(10000).default(0),
-  situpSet2: z.coerce.number().int().min(0).max(10000).default(0),
   notes: z.string().trim().max(1000).optional().default(""),
 });
+
+const setValueSchema = z.coerce
+  .number()
+  .int()
+  .min(0)
+  .max(MAX_REPS_PER_SET)
+  .default(0);
 
 function getSetValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -38,16 +59,22 @@ function getSetValues(formData: FormData, key: string, maxSets: number) {
   const values = formData.getAll(key);
   return values.slice(0, maxSets).map((value) => {
     const parsed = Number(value || 0);
-    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 10000) throw new Error("Invalid set value");
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_REPS_PER_SET) {
+      throw new SubmissionValidationError("INVALID_SET_VALUE", "Invalid set value");
+    }
     return parsed;
   });
+}
+
+function getLegacySetValues(formData: FormData, exercise: "pushup" | "situp") {
+  return [1, 2].map((index) =>
+    setValueSchema.parse(getSetValue(formData, `${exercise}Set${index}`)),
+  );
 }
 
 export function parseSubmissionInput(formData: FormData, mode: ParticipationModeInput = { isLightParticipant: false }): ParsedSubmissionInput {
   const parsed = dailySubmissionSchema.parse({
     challengeDate: formData.get("challengeDate"),
-    pushupSet1: getSetValue(formData, "pushupSet1"), pushupSet2: getSetValue(formData, "pushupSet2"),
-    situpSet1: getSetValue(formData, "situpSet1"), situpSet2: getSetValue(formData, "situpSet2"),
     notes: formData.get("notes"),
   });
 
@@ -57,8 +84,8 @@ export function parseSubmissionInput(formData: FormData, mode: ParticipationMode
   return {
     challengeDate: parsed.challengeDate,
     extraEntries: parseWorkoutExtraEntries(formData),
-    pushupSets: pushupSets.length ? pushupSets : [parsed.pushupSet1, parsed.pushupSet2],
-    situpSets: situpSets.length ? situpSets : [parsed.situpSet1, parsed.situpSet2],
+    pushupSets: pushupSets.length ? pushupSets : getLegacySetValues(formData, "pushup"),
+    situpSets: situpSets.length ? situpSets : getLegacySetValues(formData, "situp"),
     notes: parsed.notes || "",
   };
 }
@@ -78,12 +105,12 @@ export function getVideoFiles(
     .filter((value): value is File => value instanceof File && value.size > 0);
 
   if (files.length < 1 || files.length > MAX_VIDEO_FILES_PER_DAY) {
-    throw new Error(messages.videoCount);
+    throw new SubmissionValidationError("VIDEO_COUNT", messages.videoCount);
   }
 
   for (const file of files) {
     if (file.size > MAX_VIDEO_SIZE_BYTES) {
-      throw new Error(messages.videoTooLarge);
+      throw new SubmissionValidationError("VIDEO_TOO_LARGE", messages.videoTooLarge);
     }
   }
 
@@ -124,15 +151,24 @@ export function serializeSets(sets: number[]) {
 }
 
 export function deserializeSets(value: string) {
-  const parsed = JSON.parse(value);
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return [];
+  }
 
   if (!Array.isArray(parsed)) {
-    return [0, 0];
+    return [];
   }
 
   return parsed
-    .map((item) => Number(item) || 0)
-    .slice(0, 100) as number[];
+    .map((item) => Number(item))
+    .filter(
+      (item) => Number.isInteger(item) && item >= 0 && item <= MAX_REPS_PER_SET,
+    )
+    .slice(0, MAX_PERSISTED_SETS_PER_EXERCISE) as number[];
 }
 
 export function getSetsTotal(value: string) {

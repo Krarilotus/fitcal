@@ -20,7 +20,6 @@ const figtree = Figtree({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   themeColor: "#0f0f11",
 };
 
@@ -59,7 +58,9 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <style>{themeCss}</style>
-        <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
+        <ThemeProvider initialTheme={theme}>
+          <main className="flex-1">{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -18,6 +18,7 @@ import {
 } from "@/components/fitcal/dashboard-labels";
 import type {
   ExtraWorkoutEntry,
+  ActiveInviteSummary,
   EscalationReviewItem,
   MeasurementPoint,
   OpenDay,
@@ -25,6 +26,7 @@ import type {
   ParticipantRow,
   PerformancePoint,
   PrimaryReviewItem,
+  PendingApprovalSummary,
   ProfileSummary,
   ReviewFeedbackItem,
   ReviewFeedbackNote,
@@ -72,26 +74,11 @@ function buildExtraEntries(
     }));
 }
 
-export type PendingApprovalSummary = {
-  id: string;
-  applicant: {
-    id: string;
-    email: string;
-    name: string | null;
-    motivation: string | null;
-    createdAt: Date;
-  };
-};
-
-export type ActiveInviteSummary = {
-  id: string;
-  email: string;
-};
-
 export type DashboardPageData = {
   activeInvites: ActiveInviteSummary[];
   canReview: boolean;
   escalationReviewItems: EscalationReviewItem[];
+  extraCategorySuggestions: string[];
   measurementPoints: MeasurementPoint[];
   openDays: OpenDay[];
   overview: OverviewSummary;
@@ -245,7 +232,7 @@ function buildOpenDays(
         challengeDate: day.challengeDate,
         dateLabel: formatChallengeDate(locale, day.challengeDate),
         targetReps: getRequiredReps(day.challengeDate),
-        showByDefault: day.canUpload,
+        showByDefault: day.isCurrentDay || day.isPreviousDay,
         isCurrentDay: day.isCurrentDay,
         isQualificationDay: isFreeChallengeDay(day.challengeDate),
         canUseJoker: day.canUseJoker,
@@ -256,10 +243,8 @@ function buildOpenDays(
           Boolean(submission) &&
           isEditableClaim &&
           (submission?.videos.length ?? 0) < MAX_VIDEO_FILES_PER_DAY,
-        pushupSet1: pushupSets[0] ?? 0,
-        pushupSet2: pushupSets[1] ?? 0,
-        situpSet1: situpSets[0] ?? 0,
-        situpSet2: situpSets[1] ?? 0,
+        pushupSets: pushupSets.length ? pushupSets : [0, 0],
+        situpSets: situpSets.length ? situpSets : [0, 0],
         notes: submission?.notes ?? "",
         reviewStatusLabel: submission
           ? formatReviewStatus(submission.reviewStatus, labels.reviewStatusLabels)
@@ -314,10 +299,8 @@ function buildTimelineEntries(
       reviewStatusLabel: submission
         ? formatReviewStatus(submission.reviewStatus, labels.reviewStatusLabels)
         : null,
-      pushupSet1: submission ? (pushupSets[0] ?? 0) : null,
-      pushupSet2: submission ? (pushupSets[1] ?? 0) : null,
-      situpSet1: submission ? (situpSets[0] ?? 0) : null,
-      situpSet2: submission ? (situpSets[1] ?? 0) : null,
+      pushupSets,
+      situpSets,
       pushupOverTarget: submission ? Math.max(0, totals!.pushupTotal - day.repsTarget) : null,
       situpOverTarget: submission ? Math.max(0, totals!.situpTotal - day.repsTarget) : null,
       notes: submission?.notes ?? null,
@@ -368,10 +351,8 @@ function buildPerformancePoints(user: CurrentUser): PerformancePoint[] {
         challengeDate: submission.challengeDate,
         pushups: totals.effectivePushupTotal,
         situps: totals.effectiveSitupTotal,
-        pushupSet1: pushupSets[0] ?? 0,
-        pushupSet2: pushupSets[1] ?? 0,
-        situpSet1: situpSets[0] ?? 0,
-        situpSet2: situpSets[1] ?? 0,
+        pushupSets,
+        situpSets,
         extras: buildWorkoutExtraTotals([submission]),
         target: getRequiredReps(submission.challengeDate),
       };
@@ -1002,6 +983,11 @@ export async function getDashboardPageData(params: {
     })),
     canReview,
     escalationReviewItems,
+    extraCategorySuggestions: [...new Set(
+      user.dailySubmissions.flatMap((submission) =>
+        submission.extraEntries.map((entry) => entry.categoryName),
+      ),
+    )].sort((left, right) => left.localeCompare(right)),
     measurementPoints: buildMeasurementPoints(user),
     openDays: buildOpenDays(user, locale, labels, challengeOverview),
     overview: buildOverviewSummary(

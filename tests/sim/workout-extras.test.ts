@@ -48,6 +48,16 @@ test("workout extra totals include completed submissions only", () => {
   );
 });
 
+test("workout extra totals use case-insensitive category identity", () => {
+  assert.deepEqual(
+    buildWorkoutExtraTotals([
+      { status: "COMPLETED", extraEntries: [{ categoryName: "Plank", value: 30 }] },
+      { status: "COMPLETED", extraEntries: [{ categoryName: "plank", value: 45 }] },
+    ]),
+    { Plank: 75 },
+  );
+});
+
 test("workout extra category list is unique and sorted", () => {
   assert.deepEqual(
     listWorkoutExtraCategories([

@@ -31,4 +31,4 @@ COPY --from=builder --chown=fitcal:fitcal /app/prisma ./prisma
 
 USER fitcal
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma db push && npm run start"]
+CMD ["npm", "run", "start"]

@@ -27,6 +27,7 @@ export function DashboardHistorySection({
   timelineEntries,
   onVideoReplaceSelection,
   readOnly = false,
+  initialTimelineDate,
 }: {
   commonLabels: AppDictionary["common"];
   labels: AppDictionary["dashboard"];
@@ -36,33 +37,57 @@ export function DashboardHistorySection({
   timelineEntries: TimelineEntry[];
   onVideoReplaceSelection: (event: ChangeEvent<HTMLInputElement>) => void;
   readOnly?: boolean;
+  initialTimelineDate?: string;
 }) {
-  const [selectedTimelineDate, setSelectedTimelineDate] = useState(
-    timelineEntries[0]?.challengeDate ?? "",
+  const [selectedTimelineDate, setSelectedTimelineDate] = useState(() =>
+    timelineEntries.some((entry) => entry.challengeDate === initialTimelineDate)
+      ? initialTimelineDate!
+      : (timelineEntries[0]?.challengeDate ?? ""),
   );
+  const [timelineSearch, setTimelineSearch] = useState("");
+  const filteredTimelineEntries = useMemo(() => {
+    const query = timelineSearch.trim().toLocaleLowerCase();
+    if (!query) return timelineEntries;
+    return timelineEntries.filter((entry) =>
+      [
+        entry.challengeDate,
+        entry.dateLabel,
+        entry.notes ?? "",
+        ...entry.extraEntries.map((extra) => extra.categoryName),
+      ].some((value) => value.toLocaleLowerCase().includes(query)),
+    );
+  }, [timelineEntries, timelineSearch]);
+
+  function selectTimelineDate(challengeDate: string) {
+    setSelectedTimelineDate(challengeDate);
+    const url = new URL(window.location.href);
+    url.searchParams.set("timelineDate", challengeDate);
+    url.hash = "timeline";
+    window.history.replaceState(null, "", url);
+  }
 
   const activeTimelineDate = useMemo(
     () =>
-      timelineEntries.some((entry) => entry.challengeDate === selectedTimelineDate)
+      filteredTimelineEntries.some((entry) => entry.challengeDate === selectedTimelineDate)
         ? selectedTimelineDate
-        : (timelineEntries[0]?.challengeDate ?? ""),
-    [selectedTimelineDate, timelineEntries],
+        : (filteredTimelineEntries[0]?.challengeDate ?? ""),
+    [filteredTimelineEntries, selectedTimelineDate],
   );
 
   const selectedTimelineEntry = useMemo(
     () =>
-      timelineEntries.find((entry) => entry.challengeDate === activeTimelineDate) ??
-      timelineEntries[0] ??
+      filteredTimelineEntries.find((entry) => entry.challengeDate === activeTimelineDate) ??
+      filteredTimelineEntries[0] ??
       null,
-    [activeTimelineDate, timelineEntries],
+    [activeTimelineDate, filteredTimelineEntries],
   );
 
-  const recentTimelineEntries = timelineEntries.slice(0, 3);
-  const quickTimelineEntries = timelineEntries.slice(0, 12);
-  const olderTimelineEntries = timelineEntries.slice(12);
+  const recentTimelineEntries = filteredTimelineEntries.slice(0, 3);
+  const quickTimelineEntries = filteredTimelineEntries.slice(0, 14);
+  const olderTimelineEntries = filteredTimelineEntries.slice(14);
   const compactSetSummary =
     selectedTimelineEntry != null
-      ? `${selectedTimelineEntry.pushupSet1 ?? 0};${selectedTimelineEntry.pushupSet2 ?? 0}/${selectedTimelineEntry.situpSet1 ?? 0};${selectedTimelineEntry.situpSet2 ?? 0}`
+      ? `${selectedTimelineEntry.pushupSets.join("; ") || "0"} / ${selectedTimelineEntry.situpSets.join("; ") || "0"}`
       : "";
   const compactCountSummary =
     selectedTimelineEntry?.verifiedPushupTotal != null &&
@@ -87,6 +112,16 @@ export function DashboardHistorySection({
   return (
     <section className="fc-section fc-rise" id="timeline">
       <DashboardSectionHeader title={labels.timeline.title} />
+      <label className="fc-input-group max-w-xl">
+        <span className="fc-input-label">{labels.timeline.searchLabel}</span>
+        <input
+          className="fc-input"
+          onChange={(event) => setTimelineSearch(event.target.value)}
+          placeholder={labels.timeline.searchPlaceholder}
+          type="search"
+          value={timelineSearch}
+        />
+      </label>
       {selectedTimelineEntry ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <div className="grid min-w-0 gap-4">
@@ -95,7 +130,7 @@ export function DashboardHistorySection({
                 <button
                   className={`text-left transition-colors ${selectedTimelineEntry.challengeDate === day.challengeDate ? "border-[var(--fc-accent)] shadow-[0_0_0_1px_var(--fc-accent)]" : ""}`}
                   key={day.challengeDate}
-                  onClick={() => setSelectedTimelineDate(day.challengeDate)}
+                  onClick={() => selectTimelineDate(day.challengeDate)}
                   type="button"
                 >
                   <Card className="h-full p-5">
@@ -134,7 +169,7 @@ export function DashboardHistorySection({
                           : "border-[var(--fc-border)] bg-[var(--fc-bg-raised)] text-[var(--fc-muted)] hover:text-[var(--fc-ink)]"
                       }`}
                       key={day.challengeDate}
-                      onClick={() => setSelectedTimelineDate(day.challengeDate)}
+                      onClick={() => selectTimelineDate(day.challengeDate)}
                       type="button"
                     >
                       <span className="block font-medium">{day.dateLabel}</span>
@@ -149,7 +184,7 @@ export function DashboardHistorySection({
                       className="fc-input"
                       onChange={(event) => {
                         if (event.target.value) {
-                          setSelectedTimelineDate(event.target.value);
+                          selectTimelineDate(event.target.value);
                         }
                       }}
                       value={
@@ -272,7 +307,15 @@ export function DashboardHistorySection({
                           {labels.timeline.videoAdd}
                         </DashboardActionButton>
                       ) : null}
-                      <form action="/api/submissions/delete" method="post">
+                      <form
+                        action="/api/submissions/delete"
+                        method="post"
+                        onSubmit={(event) => {
+                          if (!window.confirm(labels.timeline.confirmClaimDelete)) {
+                            event.preventDefault();
+                          }
+                        }}
+                      >
                         <input
                           name="challengeDate"
                           type="hidden"
@@ -414,7 +457,15 @@ export function DashboardHistorySection({
                             />
                           </form>
                         )}
-                        {!readOnly ? <form action="/api/videos/delete" method="post">
+                        {!readOnly ? <form
+                          action="/api/videos/delete"
+                          method="post"
+                          onSubmit={(event) => {
+                            if (!window.confirm(labels.timeline.confirmVideoDelete)) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
                           <input name="videoId" type="hidden" value={video.id} />
                           <DashboardActionButton type="submit" variant="danger">
                             {labels.timeline.videoDelete}
@@ -438,7 +489,9 @@ export function DashboardHistorySection({
           </Card>
         </div>
       ) : (
-        <Card className="p-5 fc-text-muted">{labels.timeline.noEntry}</Card>
+        <Card className="p-5 fc-text-muted">
+          {timelineSearch ? labels.timeline.noSearchResults : labels.timeline.noEntry}
+        </Card>
       )}
     </section>
   );

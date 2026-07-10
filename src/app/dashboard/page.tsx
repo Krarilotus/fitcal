@@ -1,4 +1,5 @@
 import { RegistrationStatus } from "@prisma/client";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DashboardTabs } from "@/components/fitcal/dashboard-tabs";
 import { DashboardAutoRefresh } from "@/components/fitcal/dashboard-auto-refresh";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/challenge";
 import { getDashboardPageData } from "@/lib/dashboard-data";
 import { getPreferredLocale, getPreferredTheme } from "@/lib/preferences";
+import { isLightPreview, PREVIEW_MODE_COOKIE } from "@/lib/preview-mode";
 
 interface DashboardPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -37,13 +39,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   }
 
   const params = await searchParams;
-  const lightPreview = !user.isLightParticipant && params.preview === "light";
-  const error = typeof params.error === "string" ? params.error : undefined;
+  const cookieStore = await cookies();
+  const lightPreview =
+    !user.isLightParticipant &&
+    isLightPreview(cookieStore.get(PREVIEW_MODE_COOKIE)?.value);
+  const rawError = typeof params.error === "string" ? params.error : undefined;
+  const error =
+    rawError === "preview_read_only" ? dashboardLabels.previewReadOnlyError : rawError;
   const success = typeof params.success === "string" ? params.success : undefined;
+  const initialTimelineDate =
+    typeof params.timelineDate === "string" ? params.timelineDate : undefined;
   const {
     activeInvites,
     canReview,
     escalationReviewItems,
+    extraCategorySuggestions,
     measurementPoints,
     openDays,
     overview,
@@ -99,10 +109,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         {user.isLightParticipant ? null : (
           <div className="fc-info-box flex flex-wrap items-center justify-between gap-3">
-            <span>{lightPreview ? "Light preview is active. Changes are disabled." : "Paid mode"}</span>
-            <a className="fc-button" href={lightPreview ? "/dashboard" : "/dashboard?preview=light"}>
-              {lightPreview ? "Return to paid mode" : "Preview Light mode"}
-            </a>
+            <span>{lightPreview ? dashboardLabels.previewActive : dashboardLabels.paidMode}</span>
+            <form action="/api/preview-mode" method="post">
+              <input name="mode" type="hidden" value={lightPreview ? "paid" : "light"} />
+              <Button type="submit" variant="secondary">
+                {lightPreview
+                  ? dashboardLabels.returnToPaidMode
+                  : dashboardLabels.previewLightMode}
+              </Button>
+            </form>
           </div>
         )}
 
@@ -111,6 +126,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           canReview={canReview}
           commonLabels={commonLabels}
           escalationReviewItems={escalationReviewItems}
+          extraCategorySuggestions={extraCategorySuggestions}
           featureRequestsEnabled={featureRequestsEnabled}
           labels={dashboardLabels}
           locale={locale}
@@ -125,6 +141,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           profile={profile}
           sicknessReviewItems={sicknessReviewItems}
           timelineEntries={timelineEntries}
+          initialTimelineDate={initialTimelineDate}
           previewMode={lightPreview}
         />
       </div>

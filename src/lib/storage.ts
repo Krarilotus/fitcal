@@ -21,7 +21,11 @@ export async function ensureDailyUploadDirectory(
   challengeDate: string,
 ) {
   const safeUserLabel = slugifySegment(userLabel) || "participant";
-  const folderPath = path.join(getUploadRoot(), safeUserLabel, challengeDate);
+  const folderPath = path.join(
+    /* turbopackIgnore: true */ getUploadRoot(),
+    safeUserLabel,
+    challengeDate,
+  );
 
   await mkdir(folderPath, { recursive: true });
 

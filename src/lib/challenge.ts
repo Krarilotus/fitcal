@@ -1,18 +1,33 @@
 import { canSubmitWorkoutForDate } from "@/lib/participation-policy";
 
-export const CHALLENGE_TIME_ZONE = "Europe/Berlin";
-export const CHALLENGE_START_DATE = "2026-04-01";
-export const CHALLENGE_LENGTH_DAYS = 365;
-export const CHALLENGE_FREE_DAYS = 14;
-export const MAX_VIDEO_FILES_PER_DAY = 4;
-export const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
-export const MONTHLY_JOKER_LIMIT = 2;
-export const MISSED_DAY_BASE_DEBT_CENTS = 1000;
-export const MISSED_DAY_INCREMENT_CENTS = 200;
-export const EXTRA_PUSHUP_REDUCTION_CENTS = 10;
-export const EXTRA_SITUP_REDUCTION_CENTS = 5;
-export const MAX_SETS_PER_EXERCISE = 2;
-export const MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION = 10;
+export const CHALLENGE_CONFIG = Object.freeze({
+  timeZone: "Europe/Berlin",
+  startDate: "2026-04-01",
+  lengthDays: 365,
+  freeDays: 14,
+  maxVideoFilesPerDay: 4,
+  maxVideoSizeBytes: 100 * 1024 * 1024,
+  monthlyJokerLimit: 2,
+  missedDayBaseDebtCents: 1000,
+  missedDayIncrementCents: 200,
+  extraPushupReductionCents: 10,
+  extraSitupReductionCents: 5,
+  minimumDocumentedDaysForParticipation: 10,
+});
+
+export const CHALLENGE_TIME_ZONE = CHALLENGE_CONFIG.timeZone;
+export const CHALLENGE_START_DATE = CHALLENGE_CONFIG.startDate;
+export const CHALLENGE_LENGTH_DAYS = CHALLENGE_CONFIG.lengthDays;
+export const CHALLENGE_FREE_DAYS = CHALLENGE_CONFIG.freeDays;
+export const MAX_VIDEO_FILES_PER_DAY = CHALLENGE_CONFIG.maxVideoFilesPerDay;
+export const MAX_VIDEO_SIZE_BYTES = CHALLENGE_CONFIG.maxVideoSizeBytes;
+export const MONTHLY_JOKER_LIMIT = CHALLENGE_CONFIG.monthlyJokerLimit;
+export const MISSED_DAY_BASE_DEBT_CENTS = CHALLENGE_CONFIG.missedDayBaseDebtCents;
+export const MISSED_DAY_INCREMENT_CENTS = CHALLENGE_CONFIG.missedDayIncrementCents;
+export const EXTRA_PUSHUP_REDUCTION_CENTS = CHALLENGE_CONFIG.extraPushupReductionCents;
+export const EXTRA_SITUP_REDUCTION_CENTS = CHALLENGE_CONFIG.extraSitupReductionCents;
+export const MIN_DOCUMENTED_DAYS_FOR_PARTICIPATION =
+  CHALLENGE_CONFIG.minimumDocumentedDaysForParticipation;
 
 export type DayCompletionState =
   | "upcoming"
@@ -136,14 +151,14 @@ export function formatCurrencyFromCents(cents: number) {
   }).format(cents / 100);
 }
 
-export function getOpenUploadDateKeys(now = new Date()) {
+export function getOpenUploadDateKeys(now?: Date) {
   const todayKey = getBerlinDateKey(now);
   const yesterdayKey = addDaysToDateKey(todayKey, -1);
 
   return [todayKey, yesterdayKey].filter((dateKey) => isWithinChallenge(dateKey));
 }
 
-export function canSubmitForDate(dateKey: string, now = new Date()) {
+export function canSubmitForDate(dateKey: string, now?: Date) {
   return getOpenUploadDateKeys(now).includes(dateKey);
 }
 
@@ -278,7 +293,7 @@ export function getChallengeOverview({
   records,
   hasStudentDiscount = false,
   isLightParticipant = false,
-  now = new Date(),
+  now,
 }: ChallengeOverviewInput): ChallengeOverview {
   const currentDate = getBerlinDateKey(now);
   const previousDate = isWithinChallenge(addDaysToDateKey(currentDate, -1))

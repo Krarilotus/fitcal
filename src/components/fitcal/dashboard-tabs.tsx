@@ -1,7 +1,6 @@
 "use client";
 
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 import type { AppDictionary } from "@/i18n";
 import { DashboardHistorySection } from "@/components/fitcal/dashboard/history-section";
 import { DashboardProfileSection } from "@/components/fitcal/dashboard/profile-section";
@@ -10,26 +9,25 @@ import { DashboardOverviewSection } from "@/components/fitcal/dashboard/overview
 import {
   DashboardUploadSection,
   type FocusedClaimEditorState,
-  type SelectedUploadVideo,
-  type UploadActivity,
 } from "@/components/fitcal/dashboard/upload-section";
 import { DashboardMetastatsSection } from "@/components/fitcal/dashboard/metastats-section";
 import { DashboardRulesSection } from "@/components/fitcal/dashboard/rules-section";
 import { DashboardCalculatorSection } from "@/components/fitcal/dashboard/calculator-section";
 import type {
   EscalationReviewItem,
+  ActiveInviteSummary,
   MeasurementPoint,
   OpenDay,
   OverviewSummary,
   ParticipantRow,
   PerformancePoint,
   PrimaryReviewItem,
+  PendingApprovalSummary,
   ProfileSummary,
   ReviewFeedbackItem,
   SicknessReviewItem,
   TimelineEntry,
 } from "@/components/fitcal/dashboard-types";
-import type { ActiveInviteSummary, PendingApprovalSummary } from "@/lib/dashboard-data";
 import type { Locale } from "@/lib/preferences";
 import {
   canAccrueChallengeDebt,
@@ -92,6 +90,7 @@ export function DashboardTabs({
   canReview,
   commonLabels,
   escalationReviewItems,
+  extraCategorySuggestions,
   featureRequestsEnabled,
   labels,
   locale,
@@ -106,12 +105,14 @@ export function DashboardTabs({
   profile,
   sicknessReviewItems,
   timelineEntries,
+  initialTimelineDate,
   previewMode,
 }: {
   activeInvites: ActiveInviteSummary[];
   canReview: boolean;
   commonLabels: AppDictionary["common"];
   escalationReviewItems: EscalationReviewItem[];
+  extraCategorySuggestions: string[];
   featureRequestsEnabled: boolean;
   labels: DashboardLabels;
   locale: Locale;
@@ -126,6 +127,7 @@ export function DashboardTabs({
   profile: ProfileSummary;
   sicknessReviewItems: SicknessReviewItem[];
   timelineEntries: TimelineEntry[];
+  initialTimelineDate?: string;
   previewMode?: boolean;
 }) {
   const baseSections = useMemo<ReadonlyArray<{ key: SectionKey; label: string }>>(
@@ -154,7 +156,9 @@ export function DashboardTabs({
 
   const sections = useMemo(() => {
     const nextSections = previewMode
-      ? baseSections.filter((section) => section.key !== "uploads")
+      ? baseSections.filter(
+          (section) => section.key !== "uploads" && section.key !== "profile",
+        )
       : [...baseSections];
 
     if (canShowReviewSection) {
@@ -170,14 +174,6 @@ export function DashboardTabs({
       ? labels.rules.studentRules
       : labels.rules.fullRules;
 
-  const [activeSection, setActiveSection] = useState<SectionKey>("overview");
-  const [selectedUploadVideos, setSelectedUploadVideos] = useState<
-    Record<string, SelectedUploadVideo[]>
-  >({});
-  const [uploadActivities, setUploadActivities] = useState<Record<string, UploadActivity | null>>(
-    {},
-  );
-  const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
   const [claimEditorReplacementTargets, setClaimEditorReplacementTargets] =
     useState<ClaimEditorReplacementState>({});
   const [expandedClaimEditors, setExpandedClaimEditors] = useState<Record<string, boolean>>({});
@@ -188,41 +184,7 @@ export function DashboardTabs({
   const uploadFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const uploadPrimaryInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const claimEditorFocusTokenRef = useRef(0);
-
-  useEffect(() => {
-    function updateActiveSection() {
-      const threshold = window.scrollY + getSectionScrollOffset() + 24;
-
-      let nextActiveSection = sections[0]?.key ?? "overview";
-
-      for (const section of sections) {
-        const element = document.getElementById(section.key);
-
-        if (!element) {
-          continue;
-        }
-
-        if (element.offsetTop <= threshold) {
-          nextActiveSection = section.key;
-        } else {
-          break;
-        }
-      }
-
-      setActiveSection((current) =>
-        current === nextActiveSection ? current : nextActiveSection,
-      );
-    }
-
-    updateActiveSection();
-    window.addEventListener("scroll", updateActiveSection, { passive: true });
-    window.addEventListener("resize", updateActiveSection);
-
-    return () => {
-      window.removeEventListener("scroll", updateActiveSection);
-      window.removeEventListener("resize", updateActiveSection);
-    };
-  }, [sections]);
+  const claimEditorFocusFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!focusedClaimEditor) {
@@ -248,68 +210,52 @@ export function DashboardTabs({
     const replaceVideoId = options.replaceVideoId ?? null;
     const shouldOpenFilePicker = Boolean(options.openFilePicker || replaceVideoId);
 
-    flushSync(() => {
-      setExpandedClaimEditors((current) => ({
-        ...current,
-        [challengeDate]: true,
-      }));
-      setFocusedClaimEditor({
-        challengeDate,
-        token: ++claimEditorFocusTokenRef.current,
-      });
-      setClaimEditorReplacementTargets((current) => ({
-        ...current,
-        [challengeDate]: replaceVideoId,
-      }));
-      setSelectedUploadVideos((current) => ({
-        ...current,
-        [challengeDate]: [],
-      }));
-      setUploadErrors((current) => ({
-        ...current,
-        [challengeDate]: null,
-      }));
-      setActiveSection("uploads");
+    setExpandedClaimEditors({ [challengeDate]: true });
+    setFocusedClaimEditor({
+      challengeDate,
+      openFilePicker: shouldOpenFilePicker,
+      token: ++claimEditorFocusTokenRef.current,
     });
+    setClaimEditorReplacementTargets((current) => ({
+      ...current,
+      [challengeDate]: replaceVideoId,
+    }));
+  }
 
-    scrollSectionIntoView("uploads");
+  useEffect(() => {
+    if (!focusedClaimEditor) return;
 
-    window.setTimeout(() => {
-      const target = uploadSectionRefs.current[challengeDate];
+    const frame = window.requestAnimationFrame(() => {
+      const target = uploadSectionRefs.current[focusedClaimEditor.challengeDate];
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-      if (!target) {
-        return;
-      }
-
-      const targetTop =
-        target.getBoundingClientRect().top + window.scrollY - getSectionScrollOffset();
-
-      window.scrollTo({
-        top: Math.max(0, targetTop),
-        behavior: "smooth",
-      });
-
-      window.setTimeout(() => {
-        if (shouldOpenFilePicker) {
-          const fileInput = uploadFileInputRefs.current[challengeDate];
+      const focusFrame = window.requestAnimationFrame(() => {
+        if (focusedClaimEditor.openFilePicker) {
+          const fileInput = uploadFileInputRefs.current[focusedClaimEditor.challengeDate];
           focusElementWithoutScrolling(fileInput);
           fileInput?.click();
-          return;
+        } else {
+          focusElementWithoutScrolling(
+            uploadPrimaryInputRefs.current[focusedClaimEditor.challengeDate],
+          );
         }
+      });
 
-        focusElementWithoutScrolling(uploadPrimaryInputRefs.current[challengeDate]);
-      }, 180);
-    }, 60);
-  }
+      claimEditorFocusFrameRef.current = focusFrame;
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (claimEditorFocusFrameRef.current != null) {
+        window.cancelAnimationFrame(claimEditorFocusFrameRef.current);
+      }
+    };
+  }, [focusedClaimEditor, uploadFileInputRefs, uploadPrimaryInputRefs, uploadSectionRefs]);
 
   function clearClaimEditorReplacementTarget(challengeDate: string) {
     setClaimEditorReplacementTargets((current) => ({
       ...current,
       [challengeDate]: null,
-    }));
-    setSelectedUploadVideos((current) => ({
-      ...current,
-      [challengeDate]: [],
     }));
   }
 
@@ -317,37 +263,15 @@ export function DashboardTabs({
     window.open(`/api/videos/${videoId}`, "_blank", "noopener,noreferrer");
   }
 
-  function submitDashboardPostAction(action: string, fields: Record<string, string>) {
-    const form = document.createElement("form");
-    form.method = "post";
-    form.action = action;
-    form.style.display = "none";
-
-    Object.entries(fields).forEach(([name, value]) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = value;
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.requestSubmit();
-    window.setTimeout(() => {
-      form.remove();
-    }, 0);
-  }
-
   return (
     <div className="grid gap-6 fc-has-bottom-nav">
       <nav aria-label="Dashboard sections" className="fc-tab-bar">
         {sections.map((section) => (
           <button
-            aria-current={activeSection === section.key ? "page" : undefined}
-            className={`fc-tab ${activeSection === section.key ? "is-active" : ""}`}
+            className="fc-tab"
             key={section.key}
             onClick={() => {
-              setActiveSection(section.key);
+              window.history.replaceState(null, "", `#${section.key}`);
               scrollSectionIntoView(section.key);
             }}
             type="button"
@@ -370,21 +294,15 @@ export function DashboardTabs({
           claimEditorReplacementTargets={claimEditorReplacementTargets}
           commonLabels={commonLabels}
           expandedClaimEditors={expandedClaimEditors}
+          extraCategorySuggestions={extraCategorySuggestions}
           focusedClaimEditor={focusedClaimEditor}
           labels={labels}
           locale={locale}
           onClearReplacementTarget={clearClaimEditorReplacementTarget}
           onFocusClaimEditor={focusClaimEditor}
-          onSubmitPostAction={submitDashboardPostAction}
           onVideoOpen={openVideo}
           openDays={openDays}
           overview={overview}
-          selectedUploadVideos={selectedUploadVideos}
-          setSelectedUploadVideos={setSelectedUploadVideos}
-          setUploadActivities={setUploadActivities}
-          setUploadErrors={setUploadErrors}
-          uploadActivities={uploadActivities}
-          uploadErrors={uploadErrors}
           uploadFileInputRefs={uploadFileInputRefs}
           uploadPrimaryInputRefs={uploadPrimaryInputRefs}
           uploadSectionRefs={uploadSectionRefs}
@@ -405,6 +323,7 @@ export function DashboardTabs({
           }
           onVideoReplaceSelection={handleVideoReplaceSelection}
           readOnly={previewMode}
+          initialTimelineDate={initialTimelineDate}
           timelineEntries={timelineEntries}
         />
 
@@ -427,7 +346,7 @@ export function DashboardTabs({
           />
         ) : null}
 
-        <DashboardProfileSection
+        {!previewMode ? <DashboardProfileSection
           activeInvites={activeInvites}
           canReview={canReview}
           commonLabels={commonLabels}
@@ -435,7 +354,7 @@ export function DashboardTabs({
           labels={labels}
           locale={locale}
           profile={profile}
-        />
+        /> : null}
 
         <DashboardRulesSection labels={labels} overview={overview} rules={rules} />
 

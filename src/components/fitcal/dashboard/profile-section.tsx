@@ -11,7 +11,7 @@ import { FeatureRequestCard } from "@/components/fitcal/feature-request-card";
 import { DateTextInput } from "@/components/ui/date-text-input";
 import { Button } from "@/components/ui/button";
 import type { ProfileSummary } from "@/components/fitcal/dashboard-types";
-import type { ActiveInviteSummary } from "@/lib/dashboard-data";
+import type { ActiveInviteSummary } from "@/components/fitcal/dashboard-types";
 import type { Locale } from "@/lib/preferences";
 import { replaceTemplate } from "@/lib/template";
 

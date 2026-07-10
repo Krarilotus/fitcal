@@ -1,5 +1,21 @@
 import type { DayCompletionState } from "@/lib/challenge";
 
+export type PendingApprovalSummary = {
+  id: string;
+  applicant: {
+    id: string;
+    email: string;
+    name: string | null;
+    motivation: string | null;
+    createdAt: Date;
+  };
+};
+
+export type ActiveInviteSummary = {
+  id: string;
+  email: string;
+};
+
 export type ReviewFeedbackNote = {
   id: string;
   reviewerLabel: string;
@@ -29,10 +45,8 @@ export type OpenDay = {
   hasExistingClaim: boolean;
   isEditableClaim: boolean;
   canAddVideos: boolean;
-  pushupSet1: number;
-  pushupSet2: number;
-  situpSet1: number;
-  situpSet2: number;
+  pushupSets: number[];
+  situpSets: number[];
   notes: string;
   reviewStatusLabel: string | null;
   reviewerSummaryLabel: string | null;
@@ -54,10 +68,8 @@ export type TimelineEntry = {
   verifiedPushupTotal: number | null;
   verifiedSitupTotal: number | null;
   reviewStatusLabel: string | null;
-  pushupSet1: number | null;
-  pushupSet2: number | null;
-  situpSet1: number | null;
-  situpSet2: number | null;
+  pushupSets: number[];
+  situpSets: number[];
   pushupOverTarget: number | null;
   situpOverTarget: number | null;
   notes: string | null;
@@ -74,10 +86,8 @@ export type PerformancePoint = {
   challengeDate: string;
   pushups: number;
   situps: number;
-  pushupSet1: number;
-  pushupSet2: number;
-  situpSet1: number;
-  situpSet2: number;
+  pushupSets: number[];
+  situpSets: number[];
   extras: Record<string, number>;
   target: number;
 };

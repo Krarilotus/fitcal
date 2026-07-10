@@ -9,6 +9,11 @@ import {
   DashboardStatusBadge,
 } from "@/components/fitcal/dashboard/dashboard-primitives";
 import { Button } from "@/components/ui/button";
+import { WorkoutSetsEditor } from "@/components/fitcal/dashboard/workout-sets-editor";
+import {
+  WorkoutExtrasEditor,
+  type WorkoutExtraDraft,
+} from "@/components/fitcal/dashboard/workout-extras-editor";
 import type { Locale } from "@/lib/preferences";
 import { MAX_VIDEO_FILES_PER_DAY } from "@/lib/challenge";
 import {
@@ -19,7 +24,7 @@ import { shouldCompressVideoBeforeUpload } from "@/lib/video-processing/compress
 import { TARGET_UPLOAD_VIDEO_MB } from "@/lib/video-processing/constants";
 import { buildSubmissionUploadFormData } from "@/lib/video-processing/upload-form-data";
 import { replaceTemplate } from "@/lib/template";
-import { canUploadWorkoutVideos } from "@/lib/participation-policy";
+import { canUploadWorkoutVideos, getMaxSetsPerExercise } from "@/lib/participation-policy";
 
 type DashboardLabels = AppDictionary["dashboard"];
 
@@ -41,6 +46,7 @@ export type UploadActivity = {
 
 export type FocusedClaimEditorState = {
   challengeDate: string;
+  openFilePicker: boolean;
   token: number;
 } | null;
 
@@ -52,23 +58,15 @@ type SubmissionResponsePayload = {
 };
 
 type UploadSetDraft = {
-  extraEntries: Array<{
-    id: string;
-    categoryName: string;
-    value: number;
-  }>;
-  pushupSet1: number;
-  pushupSet2: number;
-  situpSet1: number;
-  situpSet2: number;
+  extraEntries: WorkoutExtraDraft[];
+  pushupSets: number[];
+  situpSets: number[];
 };
 
 const EMPTY_UPLOAD_SET_DRAFT: UploadSetDraft = {
   extraEntries: [],
-  pushupSet1: 0,
-  pushupSet2: 0,
-  situpSet1: 0,
-  situpSet2: 0,
+  pushupSets: [0],
+  situpSets: [0],
 };
 
 /* ── Formatting helpers ── */
@@ -100,10 +98,8 @@ function buildUploadSetDraft(day: OpenDay): UploadSetDraft {
       categoryName: entry.categoryName,
       value: entry.value,
     })),
-    pushupSet1: day.pushupSet1,
-    pushupSet2: day.pushupSet2,
-    situpSet1: day.situpSet1,
-    situpSet2: day.situpSet2,
+    pushupSets: day.pushupSets.length ? day.pushupSets : [0],
+    situpSets: day.situpSets.length ? day.situpSets : [0],
   };
 }
 
@@ -122,7 +118,7 @@ function getUploadSetDraft(
 
 function createExtraEntryDraft(challengeDate: string) {
   return {
-    id: `${challengeDate}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: `${challengeDate}-${crypto.randomUUID()}`,
     categoryName: "",
     value: 0,
   };
@@ -502,21 +498,15 @@ export function DashboardUploadSection({
   claimEditorReplacementTargets,
   commonLabels,
   expandedClaimEditors,
+  extraCategorySuggestions,
   focusedClaimEditor,
   labels,
   locale,
   onClearReplacementTarget,
   onFocusClaimEditor,
-  onSubmitPostAction,
   onVideoOpen,
   openDays,
   overview,
-  selectedUploadVideos,
-  setSelectedUploadVideos,
-  setUploadActivities,
-  setUploadErrors,
-  uploadActivities,
-  uploadErrors,
   uploadFileInputRefs,
   uploadPrimaryInputRefs,
   uploadSectionRefs,
@@ -524,25 +514,26 @@ export function DashboardUploadSection({
   claimEditorReplacementTargets: Record<string, string | null>;
   commonLabels: AppDictionary["common"];
   expandedClaimEditors: Record<string, boolean>;
+  extraCategorySuggestions: string[];
   focusedClaimEditor: FocusedClaimEditorState;
   labels: DashboardLabels;
   locale: Locale;
   onClearReplacementTarget: (challengeDate: string) => void;
   onFocusClaimEditor: (challengeDate: string, options?: { openFilePicker?: boolean; replaceVideoId?: string | null }) => void;
-  onSubmitPostAction: (action: string, fields: Record<string, string>) => void;
   onVideoOpen: (videoId: string) => void;
   openDays: OpenDay[];
   overview: OverviewSummary;
-  selectedUploadVideos: Record<string, SelectedUploadVideo[]>;
-  setSelectedUploadVideos: Dispatch<SetStateAction<Record<string, SelectedUploadVideo[]>>>;
-  setUploadActivities: Dispatch<SetStateAction<Record<string, UploadActivity | null>>>;
-  setUploadErrors: Dispatch<SetStateAction<Record<string, string | null>>>;
-  uploadActivities: Record<string, UploadActivity | null>;
-  uploadErrors: Record<string, string | null>;
   uploadFileInputRefs: MutableRefObject<Record<string, HTMLInputElement | null>>;
   uploadPrimaryInputRefs: MutableRefObject<Record<string, HTMLInputElement | null>>;
   uploadSectionRefs: MutableRefObject<Record<string, HTMLElement | null>>;
 }) {
+  const [selectedUploadVideos, setSelectedUploadVideos] = useState<
+    Record<string, SelectedUploadVideo[]>
+  >({});
+  const [uploadActivities, setUploadActivities] = useState<
+    Record<string, UploadActivity | null>
+  >({});
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({});
   const renderedOpenDays = openDays.filter(
     (day) => day.showByDefault || expandedClaimEditors[day.challengeDate],
   );
@@ -614,13 +605,43 @@ export function DashboardUploadSection({
 
   function handleSetDraftChange(
     challengeDate: string,
-    field: keyof UploadSetDraft,
+    exercise: "pushupSets" | "situpSets",
+    index: number,
     value: string,
   ) {
     setUploadSetDrafts((current) =>
       updateUploadSetDraft(current, challengeDate, (draft) => ({
         ...draft,
-        [field]: normalizeSetValue(value),
+        [exercise]: draft[exercise].map((entry, entryIndex) =>
+          entryIndex === index ? normalizeSetValue(value) : entry,
+        ),
+      })),
+    );
+  }
+
+  function addSetDraft(
+    challengeDate: string,
+    exercise: "pushupSets" | "situpSets",
+    maximum: number,
+  ) {
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
+        [exercise]:
+          draft[exercise].length < maximum ? [...draft[exercise], 0] : draft[exercise],
+      })),
+    );
+  }
+
+  function removeSetDraft(
+    challengeDate: string,
+    exercise: "pushupSets" | "situpSets",
+    index: number,
+  ) {
+    setUploadSetDrafts((current) =>
+      updateUploadSetDraft(current, challengeDate, (draft) => ({
+        ...draft,
+        [exercise]: draft[exercise].filter((_, entryIndex) => entryIndex !== index),
       })),
     );
   }
@@ -667,6 +688,11 @@ export function DashboardUploadSection({
   return (
     <section className="fc-section fc-rise" id="uploads">
       <SectionHeader title={labels.uploads.title} />
+      <datalist id="workout-extra-category-suggestions">
+        {extraCategorySuggestions.map((categoryName) => (
+          <option key={categoryName} value={categoryName} />
+        ))}
+      </datalist>
       <div className="grid gap-4">
         {renderedOpenDays.length > 0 ? (
           renderedOpenDays.map((day) => (
@@ -685,8 +711,9 @@ export function DashboardUploadSection({
                 const uploadError = uploadErrors[day.challengeDate];
                 const uploadActivityMessage = getUploadActivityMessage(labels.uploads, uploadActivity);
                 const draftSets = uploadSetDrafts[day.challengeDate] ?? buildUploadSetDraft(day);
-                const pushupTotal = draftSets.pushupSet1 + draftSets.pushupSet2;
-                const situpTotal = draftSets.situpSet1 + draftSets.situpSet2;
+                const pushupTotal = draftSets.pushupSets.reduce((sum, value) => sum + value, 0);
+                const situpTotal = draftSets.situpSets.reduce((sum, value) => sum + value, 0);
+                const maximumSets = getMaxSetsPerExercise(overview);
                 const hasStartedClaim =
                   day.hasExistingClaim || pushupTotal > 0 || situpTotal > 0;
                 const showsPartialClaimHint =
@@ -760,6 +787,13 @@ export function DashboardUploadSection({
                       encType="multipart/form-data"
                       method="post"
                       onSubmit={(event) => {
+                        const submitter = event.nativeEvent.submitter;
+                        if (
+                          submitter instanceof HTMLButtonElement &&
+                          submitter.dataset.postAction === "true"
+                        ) {
+                          return;
+                        }
                         event.preventDefault();
                         void submitTrackedUpload(
                           event.currentTarget,
@@ -783,77 +817,41 @@ export function DashboardUploadSection({
                         type="hidden"
                         value={replaceVideoId ?? ""}
                       />
-                      <div className="fc-grid-2">
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet1}</span><input className="fc-input" defaultValue={day.pushupSet1} disabled={isUploading} min="0" name="pushupSet1" onChange={(event) => handleSetDraftChange(day.challengeDate, "pushupSet1", event.target.value)} placeholder="0" ref={(node) => {
-                          uploadPrimaryInputRefs.current[day.challengeDate] = node;
-                        }} type="number" /></label>
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.pushupSet2}</span><input className="fc-input" defaultValue={day.pushupSet2} disabled={isUploading} min="0" name="pushupSet2" onChange={(event) => handleSetDraftChange(day.challengeDate, "pushupSet2", event.target.value)} placeholder="0" type="number" /></label>
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet1}</span><input className="fc-input" defaultValue={day.situpSet1} disabled={isUploading} min="0" name="situpSet1" onChange={(event) => handleSetDraftChange(day.challengeDate, "situpSet1", event.target.value)} placeholder="0" type="number" /></label>
-                        <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.situpSet2}</span><input className="fc-input" defaultValue={day.situpSet2} disabled={isUploading} min="0" name="situpSet2" onChange={(event) => handleSetDraftChange(day.challengeDate, "situpSet2", event.target.value)} placeholder="0" type="number" /></label>
-                      </div>
-                      <div className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="fc-meta-label">{labels.uploads.extraCategories}</p>
-                          <DashboardActionButton
-                            disabled={isUploading}
-                            onClick={() => addExtraEntryDraft(day.challengeDate)}
-                            type="button"
-                          >
-                            +
-                          </DashboardActionButton>
-                        </div>
-                        {draftSets.extraEntries.length ? (
-                          <div className="mt-3 grid gap-2">
-                            {draftSets.extraEntries.map((entry) => (
-                              <div className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]" key={entry.id}>
-                                <input
-                                  className="fc-input"
-                                  disabled={isUploading}
-                                  maxLength={60}
-                                  name="extraCategoryName"
-                                  onChange={(event) =>
-                                    updateExtraEntryDraft(
-                                      day.challengeDate,
-                                      entry.id,
-                                      "categoryName",
-                                      event.target.value,
-                                    )
-                                  }
-                                  placeholder={labels.uploads.extraCategoryName}
-                                  value={entry.categoryName}
-                                />
-                                <input
-                                  className="fc-input"
-                                  disabled={isUploading}
-                                  min="0"
-                                  name="extraCategoryValue"
-                                  onChange={(event) =>
-                                    updateExtraEntryDraft(
-                                      day.challengeDate,
-                                      entry.id,
-                                      "value",
-                                      event.target.value,
-                                    )
-                                  }
-                                  placeholder="0"
-                                  type="number"
-                                  value={entry.value || ""}
-                                />
-                                <DashboardActionButton
-                                  disabled={isUploading}
-                                  onClick={() => removeExtraEntryDraft(day.challengeDate, entry.id)}
-                                  type="button"
-                                  variant="danger"
-                                >
-                                  {labels.uploads.removeExtraCategory}
-                                </DashboardActionButton>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="mt-2 fc-text-muted">{labels.uploads.extraCategoriesHint}</p>
-                        )}
-                      </div>
+                      <WorkoutSetsEditor
+                        challengeDate={day.challengeDate}
+                        disabled={isUploading}
+                        labels={labels.uploads}
+                        maximumSets={maximumSets}
+                        onAdd={(exercise) =>
+                          addSetDraft(day.challengeDate, exercise, maximumSets)
+                        }
+                        onChange={(exercise, index, value) =>
+                          handleSetDraftChange(day.challengeDate, exercise, index, value)
+                        }
+                        onRemove={(exercise, index) =>
+                          removeSetDraft(day.challengeDate, exercise, index)
+                        }
+                        primaryInputRefs={uploadPrimaryInputRefs}
+                        pushupSets={draftSets.pushupSets}
+                        situpSets={draftSets.situpSets}
+                      />
+                      <WorkoutExtrasEditor
+                        disabled={isUploading}
+                        entries={draftSets.extraEntries}
+                        labels={labels.uploads}
+                        onAdd={() => addExtraEntryDraft(day.challengeDate)}
+                        onChange={(entryId, field, value) =>
+                          updateExtraEntryDraft(
+                            day.challengeDate,
+                            entryId,
+                            field,
+                            value,
+                          )
+                        }
+                        onRemove={(entryId) =>
+                          removeExtraEntryDraft(day.challengeDate, entryId)
+                        }
+                      />
                       <p className="fc-text-muted">{supportsVideoUploads ? labels.uploads.fullHint : labels.uploads.lightHint}</p>
                       {showsPartialClaimHint ? (
                         <div className="fc-info-box">
@@ -931,13 +929,18 @@ export function DashboardUploadSection({
                                             {labels.timeline.videoReplace}
                                           </DashboardActionButton>
                                           <DashboardActionButton
+                                            data-post-action="true"
                                             disabled={isUploading}
-                                            onClick={() =>
-                                              onSubmitPostAction("/api/videos/delete", {
-                                                videoId: video.id,
-                                              })
-                                            }
-                                            type="button"
+                                            formAction="/api/videos/delete"
+                                            formMethod="post"
+                                            name="videoId"
+                                            onClick={(event) => {
+                                              if (!window.confirm(labels.timeline.confirmVideoDelete)) {
+                                                event.preventDefault();
+                                              }
+                                            }}
+                                            type="submit"
+                                            value={video.id}
                                             variant="danger"
                                           >
                                             {labels.timeline.videoDelete}
@@ -995,13 +998,16 @@ export function DashboardUploadSection({
                         </Button>
                         {day.isEditableClaim && day.hasExistingClaim ? (
                           <Button
+                            data-post-action="true"
                             disabled={isUploading}
-                            onClick={() =>
-                              onSubmitPostAction("/api/submissions/delete", {
-                                challengeDate: day.challengeDate,
-                              })
-                            }
-                            type="button"
+                            formAction="/api/submissions/delete"
+                            formMethod="post"
+                            onClick={(event) => {
+                              if (!window.confirm(labels.timeline.confirmClaimDelete)) {
+                                event.preventDefault();
+                              }
+                            }}
+                            type="submit"
                             variant="danger"
                           >
                             {labels.timeline.claimDelete}

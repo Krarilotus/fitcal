@@ -20,12 +20,12 @@ test("dashboard invite and approval areas work in their new sections", async ({ 
   const profileSection = page.locator("#profile");
   const overviewSection = page.locator("#overview");
 
-  await page.getByRole("button", { name: "Profil" }).click();
+  await page.getByRole("button", { name: "Profil", exact: true }).click();
   await profileSection.getByLabel("E-Mail der Person").fill("invitee@fitcal.test");
   await page.getByRole("button", { name: "Einladung senden" }).click();
   await expect(page).toHaveURL(/\/dashboard\?success=/);
   await expect(page.getByText(/Einladung verschickt/i)).toBeVisible();
-  await page.getByRole("button", { name: "Profil" }).click();
+  await page.getByRole("button", { name: "Profil", exact: true }).click();
   await expect(profileSection.getByText("invitee@fitcal.test")).toBeVisible();
 
   await page.getByRole("button", { name: "Übersicht" }).click();
@@ -52,10 +52,10 @@ test("upload draft state persists while switching dashboard panels", async ({ pa
   await page.getByRole("button", { name: "Uploads" }).click();
 
   const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
-  const pushupSet1 = uploadForm.locator('input[name="pushupSet1"]');
-  const pushupSet2 = uploadForm.locator('input[name="pushupSet2"]');
-  const situpSet1 = uploadForm.locator('input[name="situpSet1"]');
-  const situpSet2 = uploadForm.locator('input[name="situpSet2"]');
+  const pushupSet1 = uploadForm.locator('input[name="pushupSet"]').nth(0);
+  const pushupSet2 = uploadForm.locator('input[name="pushupSet"]').nth(1);
+  const situpSet1 = uploadForm.locator('input[name="situpSet"]').nth(0);
+  const situpSet2 = uploadForm.locator('input[name="situpSet"]').nth(1);
   const notes = uploadForm.locator('textarea[name="notes"]');
   const videos = uploadForm.locator('input[name="videos"]');
 
@@ -78,7 +78,7 @@ test("upload draft state persists while switching dashboard panels", async ({ pa
     )
     .toBe("draft-proof.mp4");
 
-  await page.getByRole("button", { name: "Profil" }).click();
+  await page.getByRole("button", { name: "Profil", exact: true }).click();
   await expect(page.locator("#profile")).toBeVisible();
   await page.getByRole("button", { name: "Uploads" }).click();
 
@@ -102,27 +102,27 @@ test("light mode can save entries but does not expose video, review, joker or si
   await loginAsLightParticipant(page);
 
   await expect(page.getByRole("button", { name: "Review" })).toHaveCount(0);
-  await expect(page.getByText("Light")).toBeVisible();
+  await expect(page.getByText("Light", { exact: true }).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Uploads" }).click();
   const uploadSection = page.locator("#uploads");
   const uploadForm = uploadSection.locator('form[enctype="multipart/form-data"]').first();
   const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
 
-  await expect(uploadForm.locator('input[name="pushupSet1"]')).toBeVisible();
-  await expect(uploadForm.locator('input[name="pushupSet2"]')).toBeVisible();
-  await expect(uploadForm.locator('input[name="situpSet1"]')).toBeVisible();
-  await expect(uploadForm.locator('input[name="situpSet2"]')).toBeVisible();
+  await expect(uploadForm.locator('input[name="pushupSet"]').nth(0)).toBeVisible();
+  await expect(uploadForm.locator('input[name="situpSet"]').nth(0)).toBeVisible();
   await expect(uploadForm.locator('textarea[name="notes"]')).toBeVisible();
   await expect(uploadForm.locator('input[name="videos"]')).toHaveCount(0);
   await expect(uploadSection.getByText(/Video/i)).toHaveCount(0);
   await expect(uploadSection.getByText(/Krank/i)).toHaveCount(0);
   await expect(uploadSection.getByRole("button", { name: /Joker/i })).toHaveCount(0);
 
-  await uploadForm.locator('input[name="pushupSet1"]').fill("4");
-  await uploadForm.locator('input[name="pushupSet2"]').fill("5");
-  await uploadForm.locator('input[name="situpSet1"]').fill("6");
-  await uploadForm.locator('input[name="situpSet2"]').fill("7");
+  await uploadForm.locator('input[name="pushupSet"]').nth(0).fill("4");
+  await uploadForm.locator('input[name="pushupSet"]').nth(1).fill("5");
+  await uploadForm.getByRole("button", { name: "Set hinzufügen" }).nth(0).click();
+  await uploadForm.locator('input[name="pushupSet"]').nth(2).fill("8");
+  await uploadForm.locator('input[name="situpSet"]').nth(0).fill("6");
+  await uploadForm.locator('input[name="situpSet"]').nth(1).fill("7");
   await uploadForm.locator('textarea[name="notes"]').fill("Lightmode E2E Eintrag");
 
   await Promise.all([
@@ -146,14 +146,41 @@ test("light mode can save entries but does not expose video, review, joker or si
   });
   expect(lightSubmission?.status).toBe("COMPLETED");
   expect(lightSubmission?.reviewStatus).toBe("NOT_REQUIRED");
-  expect(lightSubmission?.pushupSets).toBe("[4,5]");
+  expect(lightSubmission?.pushupSets).toBe("[4,5,8]");
   expect(lightSubmission?.situpSets).toBe("[6,7]");
   expect(lightSubmission?.notes).toBe("Lightmode E2E Eintrag");
   expect(lightSubmission?.videos).toHaveLength(0);
 
-  await page.getByRole("button", { name: "Profil" }).click();
+  await page.getByRole("button", { name: "Profil", exact: true }).click();
   await expect(page.locator("#profile").getByRole("button", { name: "Feature anfragen" })).toBeVisible();
   await expect(page.locator("#profile").getByLabel("E-Mail der Person")).toHaveCount(0);
+});
+
+test("paid users can switch to a server-enforced read-only Light preview", async ({ page }) => {
+  await loginAsReviewer(page);
+  await Promise.all([
+    page.waitForURL(/\/dashboard$/),
+    page.getByRole("button", { name: "Light-Modus ansehen" }).click(),
+  ]);
+
+  await expect(page.getByText(/Light-Vorschau ist aktiv/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Uploads" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Profil", exact: true })).toHaveCount(0);
+
+  const mutationResult = await page.evaluate(async () => {
+    const response = await fetch("/api/profile", {
+      method: "POST",
+      body: new URLSearchParams({ name: "Must not change" }),
+    });
+    return { status: response.status, url: response.url };
+  });
+  expect(mutationResult.url).toContain("preview_read_only");
+
+  await Promise.all([
+    page.waitForURL(/\/dashboard$/),
+    page.getByRole("button", { name: "Zurück zum Paid-Modus" }).click(),
+  ]);
+  await expect(page.getByRole("button", { name: "Uploads" })).toBeVisible();
 });
 
 test("review area shows participant progress and can approve a workout", async ({ page }) => {
@@ -347,7 +374,7 @@ test("dashboard profile and measurement entries can be saved", async ({ page }) 
 
   const profileSection = page.locator("#profile");
   const measurementForm = page.locator('form[action="/api/measurements"]');
-  await page.getByRole("button", { name: "Profil" }).click();
+  await page.getByRole("button", { name: "Profil", exact: true }).click();
   await expect(profileSection.getByRole("button", { name: "Bestätigungslink senden" })).toBeVisible();
   await expect(profileSection.getByText("E-Mail unbestätigt").first()).toBeVisible();
   await profileSection.getByLabel("Name").fill("Rita Test");
@@ -415,10 +442,10 @@ test("dashboard upload and video delete buttons work", async ({ page }) => {
 
   const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
   const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
-  await uploadForm.locator('input[name="pushupSet1"]').fill("16");
-  await uploadForm.locator('input[name="pushupSet2"]').fill("15");
-  await uploadForm.locator('input[name="situpSet1"]').fill("16");
-  await uploadForm.locator('input[name="situpSet2"]').fill("15");
+  await uploadForm.locator('input[name="pushupSet"]').nth(0).fill("16");
+  await uploadForm.locator('input[name="pushupSet"]').nth(1).fill("15");
+  await uploadForm.locator('input[name="situpSet"]').nth(0).fill("16");
+  await uploadForm.locator('input[name="situpSet"]').nth(1).fill("15");
   await uploadForm.locator('input[name="videos"]').setInputFiles({
     name: "proof.mp4",
     mimeType: "video/mp4",
@@ -459,6 +486,7 @@ test("dashboard upload and video delete buttons work", async ({ page }) => {
     .click();
   await expect(page.locator("#timeline").getByText("proof.mp4")).toBeVisible();
 
+  page.once("dialog", (dialog) => dialog.accept());
   await Promise.all([
     page.waitForURL(/\/dashboard\?(success|error)=/),
     page
@@ -488,10 +516,10 @@ test("editable claim buttons focus the upload editor and open the replacement fi
 
   const uploadForm = page.locator('#uploads form[enctype="multipart/form-data"]').first();
   const uploadDate = await uploadForm.locator('input[name="challengeDate"]').inputValue();
-  await uploadForm.locator('input[name="pushupSet1"]').fill("12");
-  await uploadForm.locator('input[name="pushupSet2"]').fill("12");
-  await uploadForm.locator('input[name="situpSet1"]').fill("12");
-  await uploadForm.locator('input[name="situpSet2"]').fill("12");
+  await uploadForm.locator('input[name="pushupSet"]').nth(0).fill("12");
+  await uploadForm.locator('input[name="pushupSet"]').nth(1).fill("12");
+  await uploadForm.locator('input[name="situpSet"]').nth(0).fill("12");
+  await uploadForm.locator('input[name="situpSet"]').nth(1).fill("12");
   await uploadForm.locator('input[name="videos"]').setInputFiles({
     name: "editable-proof.mp4",
     mimeType: "video/mp4",
@@ -547,10 +575,10 @@ test("editable claim buttons focus the upload editor and open the replacement fi
 
   const uploadCard = page.locator(`#upload-${uploadDate}`);
   await expect(uploadCard).toHaveClass(/is-focused-claim/);
-  await expect(uploadCard.locator('input[name="pushupSet1"]')).toBeFocused();
+  await expect(uploadCard.locator('input[name="pushupSet"]').nth(0)).toBeFocused();
 });
 
-test.fixme("dashboard joker button works", async ({ page }) => {
+test("dashboard joker button works", async ({ page }) => {
   await loginAsReviewer(page);
 
   const jokerForm = page.locator('form[action="/api/challenge/joker"]').last();

@@ -3,7 +3,7 @@ import type {
   OverviewSummary,
   ParticipantRow,
 } from "@/components/fitcal/dashboard-types";
-import type { PendingApprovalSummary } from "@/lib/dashboard-data";
+import type { PendingApprovalSummary } from "@/components/fitcal/dashboard-types";
 import { listWorkoutExtraCategories } from "@/lib/workout-extras";
 import {
   DashboardActionButton,
@@ -34,6 +34,7 @@ export function DashboardOverviewSection({
 
   return (
     <section className="fc-section fc-rise" id="overview">
+      <h2 className="sr-only">{labels.tabs.overview}</h2>
       <div className="fc-card-lg">
         <div className="flex flex-wrap items-center gap-3">
           <Badge variant="warm">{labels.overview.dayPrefix} {overview.dayNumber}</Badge>

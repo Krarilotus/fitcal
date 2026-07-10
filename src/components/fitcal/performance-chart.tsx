@@ -43,10 +43,8 @@ function buildPerformanceChartPoints(points: PerformancePoint[]) {
     values: {
       pushups: point.pushups,
       situps: point.situps,
-      pushupSet1: point.pushupSet1,
-      pushupSet2: point.pushupSet2,
-      situpSet1: point.situpSet1,
-      situpSet2: point.situpSet2,
+      ...Object.fromEntries(point.pushupSets.map((value, index) => [`pushupSet:${index}`, value])),
+      ...Object.fromEntries(point.situpSets.map((value, index) => [`situpSet:${index}`, value])),
       target: point.target,
       ...Object.fromEntries(
         Object.entries(point.extras).map(([key, value]) => [`extra:${key}`, value]),
@@ -55,7 +53,12 @@ function buildPerformanceChartPoints(points: PerformancePoint[]) {
   }));
 }
 
-function buildPerformanceSeries(labels: ChartLabels, extraCategories: string[]) {
+function buildPerformanceSeries(
+  labels: ChartLabels,
+  extraCategories: string[],
+  maximumPushupSets: number,
+  maximumSitupSets: number,
+) {
   const formatRepetitions = (value: number) => `${value} ${labels.repetitions}`;
 
   return [
@@ -71,34 +74,20 @@ function buildPerformanceSeries(labels: ChartLabels, extraCategories: string[]) 
       color: "var(--fc-accent-2)",
       formatter: formatRepetitions,
     },
-    {
-      key: "pushupSet1",
-      label: labels.pushupSet1,
-      color: "#00d4aa",
+    ...Array.from({ length: maximumPushupSets }, (_, index) => ({
+      key: `pushupSet:${index}`,
+      label: labels.pushupSet.replace("{index}", String(index + 1)),
+      color: EXTRA_SERIES_COLORS[index % EXTRA_SERIES_COLORS.length],
       defaultHidden: true,
       formatter: formatRepetitions,
-    },
-    {
-      key: "pushupSet2",
-      label: labels.pushupSet2,
-      color: "#66e8d0",
+    })),
+    ...Array.from({ length: maximumSitupSets }, (_, index) => ({
+      key: `situpSet:${index}`,
+      label: labels.situpSet.replace("{index}", String(index + 1)),
+      color: EXTRA_SERIES_COLORS[(index + maximumPushupSets) % EXTRA_SERIES_COLORS.length],
       defaultHidden: true,
       formatter: formatRepetitions,
-    },
-    {
-      key: "situpSet1",
-      label: labels.situpSet1,
-      color: "#ff8c42",
-      defaultHidden: true,
-      formatter: formatRepetitions,
-    },
-    {
-      key: "situpSet2",
-      label: labels.situpSet2,
-      color: "#ffba80",
-      defaultHidden: true,
-      formatter: formatRepetitions,
-    },
+    })),
     {
       key: "target",
       label: labels.target,
@@ -130,7 +119,14 @@ export function PerformanceChart({
   );
   const visiblePoints = getVisiblePerformancePoints(points, range);
   const chartPoints = buildPerformanceChartPoints(visiblePoints);
-  const series = buildPerformanceSeries(labels, extraCategories);
+  const maximumPushupSets = Math.max(0, ...visiblePoints.map((point) => point.pushupSets.length));
+  const maximumSitupSets = Math.max(0, ...visiblePoints.map((point) => point.situpSets.length));
+  const series = buildPerformanceSeries(
+    labels,
+    extraCategories,
+    maximumPushupSets,
+    maximumSitupSets,
+  );
 
   return (
     <div className="grid gap-3">
