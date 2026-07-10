@@ -32,7 +32,7 @@ test("partial submissions below the daily target are parsed without rejection", 
   });
 });
 
-test("optional submission categories are parsed and merged by name", () => {
+test("optional submission categories preserve repeated category sets", () => {
   const formData = new FormData();
   formData.set("challengeDate", "2026-04-20");
   formData.set("notes", "");
@@ -53,10 +53,17 @@ test("optional submission categories are parsed and merged by name", () => {
   assert.deepEqual(parsed.extraEntries, [
     {
       categoryName: "Plank",
-      value: 90,
+      orderIndex: 0,
+      value: 60,
+    },
+    {
+      categoryName: "plank",
+      orderIndex: 1,
+      value: 30,
     },
     {
       categoryName: "Running",
+      orderIndex: 2,
       value: 5,
     },
   ]);

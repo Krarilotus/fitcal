@@ -132,11 +132,13 @@ model DailySubmissionExtra {
   dailySubmissionId String
   categoryName      String
   value             Int
+  orderIndex        Int             @default(0)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   dailySubmission   DailySubmission @relation(fields: [dailySubmissionId], references: [id], onDelete: Cascade)
 
   @@index([dailySubmissionId])
+  @@index([dailySubmissionId, orderIndex])
   @@index([categoryName])
 }
 

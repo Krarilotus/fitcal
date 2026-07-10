@@ -1,11 +1,13 @@
 export type WorkoutExtraInput = {
   categoryName: string;
+  orderIndex?: number;
   value: number;
 };
 
 const MAX_EXTRA_CATEGORY_NAME_LENGTH = 60;
 const MAX_EXTRA_CATEGORY_VALUE = 1000000;
 const MAX_EXTRA_CATEGORIES_PER_SUBMISSION = 12;
+const MAX_EXTRA_SETS_PER_SUBMISSION = 100;
 
 export function normalizeWorkoutExtraCategoryName(value: string) {
   return value.replace(/\s+/g, " ").trim().slice(0, MAX_EXTRA_CATEGORY_NAME_LENGTH);
@@ -22,39 +24,38 @@ export function parseWorkoutExtraValue(value: FormDataEntryValue | undefined) {
   return Math.max(0, Math.min(MAX_EXTRA_CATEGORY_VALUE, parsedValue));
 }
 
-export function mergeWorkoutExtraEntries(entries: WorkoutExtraInput[]) {
-  const byName = new Map<string, WorkoutExtraInput>();
+export function parseWorkoutExtraEntries(formData: FormData) {
+  const names = formData.getAll("extraCategoryName");
+  const values = formData.getAll("extraCategoryValue");
+  const acceptedCategoryKeys = new Set<string>();
+  const entries: WorkoutExtraInput[] = [];
 
-  for (const entry of entries) {
-    const categoryName = normalizeWorkoutExtraCategoryName(entry.categoryName);
-    const value = Math.max(0, Math.min(MAX_EXTRA_CATEGORY_VALUE, entry.value));
+  for (const [index, rawName] of names.entries()) {
+    const categoryName = normalizeWorkoutExtraCategoryName(
+      typeof rawName === "string" ? rawName : "",
+    );
+    const value = parseWorkoutExtraValue(values[index]);
 
     if (!categoryName || value <= 0) {
       continue;
     }
 
     const key = categoryName.toLocaleLowerCase();
-    const existing = byName.get(key);
+    if (!acceptedCategoryKeys.has(key)) {
+      if (acceptedCategoryKeys.size >= MAX_EXTRA_CATEGORIES_PER_SUBMISSION) {
+        continue;
+      }
+      acceptedCategoryKeys.add(key);
+    }
 
-    byName.set(key, {
-      categoryName: existing?.categoryName ?? categoryName,
-      value: (existing?.value ?? 0) + value,
-    });
+    entries.push({ categoryName, orderIndex: entries.length, value });
+
+    if (entries.length >= MAX_EXTRA_SETS_PER_SUBMISSION) {
+      break;
+    }
   }
 
-  return [...byName.values()].slice(0, MAX_EXTRA_CATEGORIES_PER_SUBMISSION);
-}
-
-export function parseWorkoutExtraEntries(formData: FormData) {
-  const names = formData.getAll("extraCategoryName");
-  const values = formData.getAll("extraCategoryValue");
-
-  return mergeWorkoutExtraEntries(
-    names.map((rawName, index) => ({
-      categoryName: typeof rawName === "string" ? rawName : "",
-      value: parseWorkoutExtraValue(values[index]),
-    })),
-  );
+  return entries;
 }
 
 export function buildWorkoutExtraTotals(

@@ -100,17 +100,29 @@ function normalizeExtraCategoryKey(value: string) {
 }
 
 function buildUploadSetDraft(day: OpenDay): UploadSetDraft {
+  const extraEntriesByKey = new Map<string, WorkoutExtraDraft>();
+
+  for (const [index, entry] of day.extraEntries.entries()) {
+    const key = normalizeExtraCategoryKey(entry.categoryName);
+    const existingEntry = extraEntriesByKey.get(key);
+    const setEntry = {
+      id: `${day.challengeDate}-${entry.categoryName}-${index}-0`,
+      value: entry.value,
+    };
+
+    if (existingEntry) {
+      existingEntry.values.push(setEntry);
+    } else {
+      extraEntriesByKey.set(key, {
+        id: `${day.challengeDate}-${entry.categoryName}-${index}`,
+        categoryName: entry.categoryName,
+        values: [setEntry],
+      });
+    }
+  }
+
   return {
-    extraEntries: day.extraEntries.map((entry, index) => ({
-      id: `${day.challengeDate}-${entry.categoryName}-${index}`,
-      categoryName: entry.categoryName,
-      values: [
-        {
-          id: `${day.challengeDate}-${entry.categoryName}-${index}-0`,
-          value: entry.value,
-        },
-      ],
-    })),
+    extraEntries: [...extraEntriesByKey.values()],
     pushupSets: day.pushupSets.length ? day.pushupSets : [0],
     situpSets: day.situpSets.length ? day.situpSets : [0],
   };

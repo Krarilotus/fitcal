@@ -12,9 +12,7 @@ export const currentUserInclude = Prisma.validator<Prisma.UserInclude>()({
   dailySubmissions: {
     include: {
       extraEntries: {
-        orderBy: {
-          categoryName: "asc",
-        },
+        orderBy: [{ orderIndex: "asc" }, { createdAt: "asc" }],
       },
       videos: true,
       workoutReviews: {

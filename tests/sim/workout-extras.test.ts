@@ -3,27 +3,30 @@ import assert from "node:assert/strict";
 import {
   buildWorkoutExtraTotals,
   listWorkoutExtraCategories,
-  mergeWorkoutExtraEntries,
   parseWorkoutExtraEntries,
 } from "@/lib/workout-extras";
 
-test("workout extra entries normalize names and merge duplicates", () => {
+test("workout extra form parsing normalizes valid set entries", () => {
+  const formData = new FormData();
+  formData.append("extraCategoryName", " Plank ");
+  formData.append("extraCategoryValue", "60");
+  formData.append("extraCategoryName", "");
+  formData.append("extraCategoryValue", "20");
+  formData.append("extraCategoryName", "Running");
+  formData.append("extraCategoryValue", "0");
+  formData.append("extraCategoryName", "  Farmer   Carry  ");
+  formData.append("extraCategoryValue", "4");
+
   assert.deepEqual(
-    mergeWorkoutExtraEntries([
-      { categoryName: " Plank ", value: 60 },
-      { categoryName: "plank", value: 30 },
-      { categoryName: "", value: 20 },
-      { categoryName: "Running", value: 0 },
-      { categoryName: "  Farmer   Carry  ", value: 4 },
-    ]),
+    parseWorkoutExtraEntries(formData),
     [
-      { categoryName: "Plank", value: 90 },
-      { categoryName: "Farmer Carry", value: 4 },
+      { categoryName: "Plank", orderIndex: 0, value: 60 },
+      { categoryName: "Farmer Carry", orderIndex: 1, value: 4 },
     ],
   );
 });
 
-test("workout extra form sets can repeat one category", () => {
+test("workout extra form parsing preserves sets for repeated categories", () => {
   const formData = new FormData();
   formData.append("extraCategoryName", "Plank");
   formData.append("extraCategoryValue", "30");
@@ -31,7 +34,8 @@ test("workout extra form sets can repeat one category", () => {
   formData.append("extraCategoryValue", "45");
 
   assert.deepEqual(parseWorkoutExtraEntries(formData), [
-    { categoryName: "Plank", value: 75 },
+    { categoryName: "Plank", orderIndex: 0, value: 30 },
+    { categoryName: "plank", orderIndex: 1, value: 45 },
   ]);
 });
 
