@@ -95,9 +95,6 @@ export function getVideoFiles(
   messages: {
     videoCount: string;
     videoTooLarge: string;
-  } = {
-    videoCount: "Bitte lade zwischen 1 und 4 Videos hoch.",
-    videoTooLarge: "Jede Videodatei darf höchstens 100 MB groß sein.",
   },
 ) {
   const files = formData

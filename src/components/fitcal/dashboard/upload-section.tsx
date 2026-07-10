@@ -22,7 +22,10 @@ import {
 } from "@/lib/video-processing/browser/video-transcoder";
 import { shouldCompressVideoBeforeUpload } from "@/lib/video-processing/compression-policy";
 import { TARGET_UPLOAD_VIDEO_MB } from "@/lib/video-processing/constants";
-import { buildSubmissionUploadFormData } from "@/lib/video-processing/upload-form-data";
+import {
+  buildSubmissionUploadFormData,
+  UploadFormDataError,
+} from "@/lib/video-processing/upload-form-data";
 import { replaceTemplate } from "@/lib/template";
 import {
   canSubmitSicknessClaims,
@@ -240,9 +243,10 @@ function getVideoCompressionErrorMessage(
     }
   }
 
-  const message = error instanceof Error ? error.message : "";
-
-  if (message.includes("15 MB")) {
+  if (
+    error instanceof UploadFormDataError &&
+    error.code === "prepared_video_too_large"
+  ) {
     return labels.compressionTooLarge;
   }
 

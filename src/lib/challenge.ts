@@ -6,7 +6,7 @@ export const CHALLENGE_CONFIG = Object.freeze({
   lengthDays: 365,
   freeDays: 14,
   maxVideoFilesPerDay: 4,
-  maxVideoSizeBytes: 100 * 1024 * 1024,
+  maxVideoSizeBytes: 15 * 1024 * 1024,
   monthlyJokerLimit: 2,
   missedDayBaseDebtCents: 1000,
   missedDayIncrementCents: 200,

@@ -105,7 +105,7 @@
       videoNotYours: "Dieses Video gehört nicht zu deinem Account.",
       replaceSingleVideo: "Bitte wähle genau ein neues Video aus.",
       videoCount: "Bitte lade zwischen 1 und 4 Videos hoch.",
-      videoTooLarge: "Jede Videodatei darf höchstens 100 MB groß sein.",
+      videoTooLarge: "Jede Videodatei darf nach der Kompression höchstens 15 MB groß sein.",
       saveFailed: "Submission konnte nicht gespeichert werden.",
       claimMissing: "Der Claim konnte nicht gefunden werden.",
       claimNotYours: "Dieser Claim gehört nicht zu deinem Account.",
@@ -134,7 +134,7 @@
       missing: "Video konnte nicht gefunden werden.",
       notYours: "Dieses Video gehört nicht zu deinem Account.",
       chooseReplacement: "Bitte wähle ein neues Video aus.",
-      tooLarge: "Jede Videodatei darf höchstens 100 MB groß sein.",
+      tooLarge: "Jede Videodatei darf nach der Kompression höchstens 15 MB groß sein.",
       replaced: "Video ersetzt.",
       replaceFailed: "Video konnte nicht ersetzt werden.",
       deleted: "Video gelöscht.",
@@ -282,7 +282,7 @@
     slackDayLabel: "Slack-Tag",
     slackDaysLabel: "Slack-Tage",
     referenceVideos: "Referenzvideos",
-    videoMeta: "Max. 4 Videos, max. 100 MB pro Datei.",
+    videoMeta: "Max. 4 Videos, max. 15 MB pro Datei nach Kompression.",
     pushupReference: "Referenzvideo Liegest\u00fctze",
     situpReference: "Referenzvideo Sit-Ups",
   },
@@ -441,7 +441,7 @@
       uploadPendingHint:
         "Upload läuft. Gerade bei Handy-Videos kann das etwas dauern, also die Seite am besten offen lassen.",
       uploadTooMany: "Bitte wähle höchstens 4 Videos aus.",
-      uploadTooLarge: "Ein Video ist zu groß. Pro Datei sind maximal 100 MB erlaubt.",
+      uploadTooLarge: "Ein Video ist zu groß. Pro Datei sind nach der Kompression maximal 15 MB erlaubt.",
       uploadTooLargeRequest:
         "Der Upload wurde vom Server abgewiesen. Bitte kürze oder komprimiere das Video deutlich.",
       encoderLoadFailed:

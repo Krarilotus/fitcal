@@ -7,7 +7,10 @@ import {
   scaleVideoDimensions,
   shouldCompressVideoBeforeUpload,
 } from "@/lib/video-processing/compression-policy";
-import { buildSubmissionUploadFormData } from "@/lib/video-processing/upload-form-data";
+import {
+  buildSubmissionUploadFormData,
+  UploadFormDataError,
+} from "@/lib/video-processing/upload-form-data";
 import { TARGET_UPLOAD_VIDEO_BYTES } from "@/lib/video-processing/constants";
 
 test("compression plan keeps landscape videos inside 480p bounds", () => {
@@ -82,4 +85,29 @@ test("submission form data swaps original upload files for processed files", () 
   assert.ok(videos[0] instanceof File);
   assert.equal((videos[0] as File).name, "raw.mp4");
   assert.equal(rebuilt.get("challengeDate"), "2026-04-08");
+});
+
+test("submission form data rejects prepared videos above the upload limit", () => {
+  const formData = new FormData();
+  formData.append("challengeDate", "2026-04-08");
+
+  const oversizedFile = new File(
+    [new Uint8Array(TARGET_UPLOAD_VIDEO_BYTES + 1)],
+    "too-large.mp4",
+    { type: "video/mp4" },
+  );
+
+  assert.throws(
+    () =>
+      buildSubmissionUploadFormData(formData, [
+        {
+          file: oversizedFile,
+          originalSizeBytes: oversizedFile.size,
+          outputSizeBytes: oversizedFile.size,
+        },
+      ]),
+    (error) =>
+      error instanceof UploadFormDataError &&
+      error.code === "prepared_video_too_large",
+  );
 });

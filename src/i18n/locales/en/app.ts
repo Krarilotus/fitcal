@@ -104,7 +104,7 @@
       videoNotYours: "This video does not belong to your account.",
       replaceSingleVideo: "Please choose exactly one new video.",
       videoCount: "Please upload between 1 and 4 videos.",
-      videoTooLarge: "Each video file may be at most 100 MB.",
+      videoTooLarge: "Each video file may be at most 15 MB after compression.",
       saveFailed: "Submission could not be saved.",
       claimMissing: "The claim could not be found.",
       claimNotYours: "This claim does not belong to your account.",
@@ -133,7 +133,7 @@
       missing: "Video could not be found.",
       notYours: "This video does not belong to your account.",
       chooseReplacement: "Please choose a new video.",
-      tooLarge: "Each video file may be at most 100 MB.",
+      tooLarge: "Each video file may be at most 15 MB after compression.",
       replaced: "Video replaced.",
       replaceFailed: "Video could not be replaced.",
       deleted: "Video deleted.",
@@ -281,7 +281,7 @@
     slackDayLabel: "Slack day",
     slackDaysLabel: "Slack days",
     referenceVideos: "Reference videos",
-    videoMeta: "Max. 4 videos, max. 100 MB per file.",
+    videoMeta: "Max. 4 videos, max. 15 MB per file after compression.",
     pushupReference: "Reference video push-ups",
     situpReference: "Reference video sit-ups",
   },
@@ -442,7 +442,7 @@
       uploadPendingHint:
         "Upload in progress. Phone videos can take a bit, so it is best to keep the page open.",
       uploadTooMany: "Please choose at most 4 videos.",
-      uploadTooLarge: "A video is too large. Each file may be at most 100 MB.",
+      uploadTooLarge: "A video is too large. Each file may be at most 15 MB after compression.",
       uploadTooLargeRequest:
         "The server rejected this upload. Please trim or compress the video significantly.",
       encoderLoadFailed:
