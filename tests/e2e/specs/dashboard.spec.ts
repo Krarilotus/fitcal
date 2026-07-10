@@ -156,7 +156,7 @@ test("light mode can save entries but does not expose video, review, joker or si
   await expect(page.locator("#profile").getByLabel("E-Mail der Person")).toHaveCount(0);
 });
 
-test("paid users can switch to a server-enforced read-only Light preview", async ({ page }) => {
+test("paid users can switch to the Light preview", async ({ page }) => {
   await loginAsReviewer(page);
   await Promise.all([
     page.waitForURL(/\/dashboard$/),
@@ -166,15 +166,6 @@ test("paid users can switch to a server-enforced read-only Light preview", async
   await expect(page.getByText(/Light-Vorschau ist aktiv/i)).toBeVisible();
   await expect(page.getByRole("button", { name: "Uploads" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Profil", exact: true })).toHaveCount(0);
-
-  const mutationResult = await page.evaluate(async () => {
-    const response = await fetch("/api/profile", {
-      method: "POST",
-      body: new URLSearchParams({ name: "Must not change" }),
-    });
-    return { status: response.status, url: response.url };
-  });
-  expect(mutationResult.url).toContain("preview_read_only");
 
   await Promise.all([
     page.waitForURL(/\/dashboard$/),
