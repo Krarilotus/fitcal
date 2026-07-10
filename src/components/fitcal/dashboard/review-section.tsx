@@ -87,10 +87,6 @@ export function DashboardReviewSection({
     () => listWorkoutExtraCategories(reviewParticipants),
     [reviewParticipants],
   );
-  const reviewSelfRow = useMemo(
-    () => reviewParticipants.find((row) => row.isSelf) ?? null,
-    [reviewParticipants],
-  );
   const activeTodayCount = useMemo(
     () => reviewParticipants.filter((row) => isCompletedLikeStatus(row.todayStatus)).length,
     [reviewParticipants],
@@ -141,38 +137,6 @@ export function DashboardReviewSection({
             <Card><CardContent className="p-5"><DashboardStatBox label={labels.review.summary.qualified} value={qualifiedCount} /></CardContent></Card>
             <Card><CardContent className="p-5"><DashboardStatBox label={labels.review.summary.pendingReviews} value={openReviewCount} /></CardContent></Card>
           </div>
-
-          {reviewSelfRow ? (
-            <Card>
-              <CardHeader>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <CardTitle>{reviewSelfRow.name}</CardTitle>
-                      <DashboardStatusBadge tone="accent">{labels.review.you}</DashboardStatusBadge>
-                      <DashboardStatusBadge>{reviewSelfRow.modeLabel}</DashboardStatusBadge>
-                    </div>
-                    <CardDescription className="mt-1">{labels.review.selfHint}</CardDescription>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <DashboardStatusBadge>{labels.review.todayStat} {reviewSelfRow.todayLabel}</DashboardStatusBadge>
-                    <DashboardStatusBadge>{labels.review.yesterdayStat} {reviewSelfRow.yesterdayLabel}</DashboardStatusBadge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-7">
-                  <DashboardStatBox label={labels.review.stats.totalPushups} value={reviewSelfRow.totalPushups} />
-                  <DashboardStatBox label={labels.review.stats.totalSitups} value={reviewSelfRow.totalSitups} />
-                  <DashboardStatBox label={labels.review.stats.days} value={reviewSelfRow.documentedDays} />
-                  <DashboardStatBox label={labels.review.stats.sickDays} value={reviewSelfRow.sickDays} />
-                  <DashboardStatBox label={labels.review.stats.qualification} value={reviewSelfRow.qualificationLabel} />
-                  <DashboardStatBox label={labels.review.stats.debt} value={reviewSelfRow.debtLabel ?? labels.participantReview.off} />
-                  <DashboardStatBox label={labels.review.stats.commonReviewer} value={reviewSelfRow.commonReviewerLabel} />
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
 
           <div className="grid gap-4">
             <DashboardSubsectionHeader

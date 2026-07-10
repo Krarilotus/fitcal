@@ -108,7 +108,6 @@ export function DashboardHistorySection({
     [activeTimelineDate, filteredTimelineEntries],
   );
 
-  const recentTimelineEntries = filteredTimelineEntries.slice(0, 3);
   const quickTimelineEntries = filteredTimelineEntries.slice(0, 14);
   const olderTimelineEntries = filteredTimelineEntries.slice(14);
   const compactSetSummary =
@@ -154,34 +153,6 @@ export function DashboardHistorySection({
       {filteredTimelineEntries.length > 0 ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <div className="grid min-w-0 gap-4">
-            <div className="grid gap-3 sm:grid-cols-3">
-              {recentTimelineEntries.map((day) => (
-                <button
-                  className={`text-left transition-colors ${selectedTimelineEntry?.challengeDate === day.challengeDate ? "border-[var(--fc-accent)] shadow-[0_0_0_1px_var(--fc-accent)]" : ""}`}
-                  key={day.challengeDate}
-                  onClick={() => handleTimelineEntryAction(day)}
-                  type="button"
-                >
-                  <Card className="h-full p-5">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold">{day.dateLabel}</p>
-                      <DashboardStatusBadge tone="warm">{day.statusLabel}</DashboardStatusBadge>
-                    </div>
-                    <p className="mt-2 fc-meta-label">
-                      {labels.timeline.recentTitle}
-                    </p>
-                    {day.pushupTotal != null && day.situpTotal != null ? (
-                      <p className="mt-1 text-sm text-[var(--fc-ink)]">
-                        {day.pushupTotal} / {day.situpTotal}
-                      </p>
-                    ) : (
-                      <p className="mt-1 fc-text-muted">{labels.timeline.noEntry}</p>
-                    )}
-                  </Card>
-                </button>
-              ))}
-            </div>
-
             <Card className="min-w-0 overflow-hidden">
               <CardHeader className="pb-3">
                 <CardDescription className="fc-meta-label">
