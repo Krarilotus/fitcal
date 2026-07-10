@@ -30,6 +30,7 @@ export function DashboardHistorySection({
   commonLabels,
   labels,
   onClaimEdit,
+  onClaimToggle,
   onClaimAddVideos,
   onEditableVideoReplace,
   timelineEntries,
@@ -40,6 +41,7 @@ export function DashboardHistorySection({
   commonLabels: AppDictionary["common"];
   labels: AppDictionary["dashboard"];
   onClaimEdit: (challengeDate: string) => void;
+  onClaimToggle: (challengeDate: string) => void;
   onClaimAddVideos: (challengeDate: string) => void;
   onEditableVideoReplace: (challengeDate: string, videoId: string) => void;
   timelineEntries: TimelineEntry[];
@@ -47,13 +49,8 @@ export function DashboardHistorySection({
   readOnly?: boolean;
   initialTimelineDate?: string;
 }) {
-  const initialSelectableEntry =
-    timelineEntries.find((entry) => entry.challengeDate === initialTimelineDate) ??
-    timelineEntries.find(hasReportedEntry) ??
-    timelineEntries[0] ??
-    null;
   const [selectedTimelineDate, setSelectedTimelineDate] = useState(() =>
-    initialSelectableEntry?.challengeDate ?? "",
+    initialTimelineDate ?? "",
   );
   const [timelineSearch, setTimelineSearch] = useState("");
   const filteredTimelineEntries = useMemo(() => {
@@ -70,16 +67,24 @@ export function DashboardHistorySection({
   }, [timelineEntries, timelineSearch]);
 
   function selectTimelineDate(challengeDate: string) {
-    setSelectedTimelineDate(challengeDate);
+    const nextTimelineDate =
+      selectedTimelineDate === challengeDate ? "" : challengeDate;
+
+    setSelectedTimelineDate(nextTimelineDate);
     const url = new URL(window.location.href);
-    url.searchParams.set("timelineDate", challengeDate);
-    url.hash = "timeline";
+    if (nextTimelineDate) {
+      url.searchParams.set("timelineDate", nextTimelineDate);
+      url.hash = "timeline";
+    } else {
+      url.searchParams.delete("timelineDate");
+    }
     window.history.replaceState(null, "", url);
   }
 
   function handleTimelineEntryAction(entry: TimelineEntry) {
-    if (shouldOpenClaimEditor(entry, readOnly)) {
-      scrollToClaimEditor(entry.challengeDate);
+    if (!readOnly && (entry.isEditableClaim || entry.canCreateClaim)) {
+      onClaimToggle(entry.challengeDate);
+      setSelectedTimelineDate("");
       return;
     }
 
@@ -87,20 +92,13 @@ export function DashboardHistorySection({
   }
 
   const activeTimelineDate = useMemo(
-    () => {
-      const selectedEntry = filteredTimelineEntries.find(
+    () =>
+      filteredTimelineEntries.find(
         (entry) => entry.challengeDate === selectedTimelineDate,
-      );
-
-      if (selectedEntry && !shouldOpenClaimEditor(selectedEntry, readOnly)) {
-        return selectedTimelineDate;
-      }
-
-      return filteredTimelineEntries.find(
-        (entry) => !shouldOpenClaimEditor(entry, readOnly),
-      )?.challengeDate ?? "";
-    },
-    [filteredTimelineEntries, readOnly, selectedTimelineDate],
+      )
+        ? selectedTimelineDate
+        : "",
+    [filteredTimelineEntries, selectedTimelineDate],
   );
 
   const selectedTimelineEntry = useMemo(

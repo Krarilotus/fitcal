@@ -222,6 +222,15 @@ export function DashboardTabs({
     }));
   }
 
+  function toggleClaimEditor(challengeDate: string) {
+    if (expandedClaimEditors[challengeDate]) {
+      closeClaimEditor(challengeDate);
+      return;
+    }
+
+    focusClaimEditor(challengeDate);
+  }
+
   useEffect(() => {
     if (!focusedClaimEditor) return;
 
@@ -328,6 +337,7 @@ export function DashboardTabs({
           commonLabels={commonLabels}
           labels={labels}
           onClaimEdit={(challengeDate) => focusClaimEditor(challengeDate)}
+          onClaimToggle={toggleClaimEditor}
           onClaimAddVideos={(challengeDate) =>
             focusClaimEditor(challengeDate, { openFilePicker: true })
           }
