@@ -48,6 +48,10 @@ test("light participants never build debt or joker allowance", () => {
   assert.equal(overview.outstandingDebtCents, 0);
   assert.equal(overview.jokerAllowance, 0);
   assert.equal(overview.jokerBalance, 0);
+  assert.equal(
+    overview.days.find((day) => day.challengeDate === "2026-04-15")?.status,
+    "open",
+  );
 });
 
 test("light participants can track current and previous day entries", () => {

@@ -20,7 +20,7 @@ test("light participants can track workouts without privileged challenge capabil
   assert.equal(canAccrueChallengeDebt(lightParticipant), false);
   assert.equal(canReceiveWorkoutReviews(lightParticipant), false);
   assert.equal(canReviewPlatformContent(lightParticipant), false);
-  assert.equal(canSubmitSicknessClaims(lightParticipant), false);
+  assert.equal(canSubmitSicknessClaims(lightParticipant), true);
   assert.equal(canUploadWorkoutVideos(lightParticipant), false);
   assert.equal(canUseChallengeJokers(lightParticipant), false);
 });

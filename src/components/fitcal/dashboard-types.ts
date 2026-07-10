@@ -63,7 +63,7 @@ export type TimelineEntry = {
   status: DayCompletionState;
   statusLabel: string;
   canUseJoker: boolean;
-  canUsePaidRecoveryActions: boolean;
+  canSubmitSicknessClaims: boolean;
   canCreateClaim: boolean;
   debtLabel: string | null;
   pushupTotal: number | null;

@@ -291,7 +291,7 @@ function buildTimelineEntries(
       status: day.status,
       statusLabel: getDayStatusLabel(day.status, labels.statusLabels),
       canUseJoker: day.canUseJoker,
-      canUsePaidRecoveryActions: canSubmitSicknessClaims(user),
+      canSubmitSicknessClaims: canSubmitSicknessClaims(user),
       canCreateClaim: day.canUpload && !submission,
       debtLabel: day.debtCents > 0 ? formatCurrencyFromCents(day.debtCents) : null,
       pushupTotal: totals?.pushupTotal ?? null,

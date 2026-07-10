@@ -374,9 +374,9 @@ export function getChallengeOverview({
     } else if (record?.status === "JOKER") {
       status = "joker";
     } else if (record?.status === "SLACK") {
-      status = "slack";
+      status = isLightParticipant ? "open" : "slack";
 
-      if (canAccrueDebt) {
+      if (!isLightParticipant && canAccrueDebt) {
         dayDebtCents = getSlackDebtCents(slackCount, hasStudentDiscount);
         slackCount += 1;
         totalDebtCents += dayDebtCents;

@@ -24,7 +24,11 @@ import { shouldCompressVideoBeforeUpload } from "@/lib/video-processing/compress
 import { TARGET_UPLOAD_VIDEO_MB } from "@/lib/video-processing/constants";
 import { buildSubmissionUploadFormData } from "@/lib/video-processing/upload-form-data";
 import { replaceTemplate } from "@/lib/template";
-import { canUploadWorkoutVideos, getMaxSetsPerExercise } from "@/lib/participation-policy";
+import {
+  canSubmitSicknessClaims,
+  canUploadWorkoutVideos,
+  getMaxSetsPerExercise,
+} from "@/lib/participation-policy";
 
 type DashboardLabels = AppDictionary["dashboard"];
 
@@ -825,6 +829,7 @@ export function DashboardUploadSection({
                 const uploadActivity = uploadActivities[day.challengeDate] ?? null;
                 const isUploading = uploadActivity != null;
                 const supportsVideoUploads = canUploadWorkoutVideos(overview);
+                const supportsSicknessClaims = canSubmitSicknessClaims(overview);
                 const uploadError = uploadErrors[day.challengeDate];
                 const uploadActivityMessage = getUploadActivityMessage(labels.uploads, uploadActivity);
                 const draftSets = uploadSetDrafts[day.challengeDate] ?? buildUploadSetDraft(day);
@@ -1159,27 +1164,29 @@ export function DashboardUploadSection({
                         ) : null}
                       </div>
                     </form>
-                    {!readOnly && supportsVideoUploads ? (
+                    {!readOnly && (supportsSicknessClaims || supportsVideoUploads) ? (
                       <>
-                        <details className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
-                          <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>
-                          <form action="/api/challenge/sickness" className="mt-4 space-y-4" method="post">
-                            <input name="challengeDate" type="hidden" value={day.challengeDate} />
-                            <div className="fc-grid-2">
-                              <label className="fc-input-group">
-                                <span className="fc-input-label">{labels.uploads.sicknessStartDate}</span>
-                                <input className="fc-input" defaultValue={day.challengeDate} min={day.challengeDate} name="startDate" type="date" />
-                              </label>
-                              <label className="fc-input-group">
-                                <span className="fc-input-label">{labels.uploads.sicknessEndDate}</span>
-                                <input className="fc-input" defaultValue={day.challengeDate} min={day.challengeDate} name="endDate" type="date" />
-                              </label>
-                            </div>
-                            <label className="flex items-start gap-3 fc-text-muted"><input className="mt-1" name="consent" type="checkbox" /><span>{labels.uploads.sicknessConsent}</span></label>
-                            <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.comment}</span><textarea className="fc-input min-h-20" name="notes" placeholder={labels.uploads.notes} /></label>
-                            <Button type="submit" variant="secondary">{labels.uploads.submitSickness}</Button>
-                          </form>
-                        </details>
+                        {supportsSicknessClaims ? (
+                          <details className="mt-4 rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
+                            <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>
+                            <form action="/api/challenge/sickness" className="mt-4 space-y-4" method="post">
+                              <input name="challengeDate" type="hidden" value={day.challengeDate} />
+                              <div className="fc-grid-2">
+                                <label className="fc-input-group">
+                                  <span className="fc-input-label">{labels.uploads.sicknessStartDate}</span>
+                                  <input className="fc-input" defaultValue={day.challengeDate} min={day.challengeDate} name="startDate" type="date" />
+                                </label>
+                                <label className="fc-input-group">
+                                  <span className="fc-input-label">{labels.uploads.sicknessEndDate}</span>
+                                  <input className="fc-input" defaultValue={day.challengeDate} min={day.challengeDate} name="endDate" type="date" />
+                                </label>
+                              </div>
+                              <label className="flex items-start gap-3 fc-text-muted"><input className="mt-1" name="consent" type="checkbox" /><span>{labels.uploads.sicknessConsent}</span></label>
+                              <label className="fc-input-group"><span className="fc-input-label">{labels.uploads.comment}</span><textarea className="fc-input min-h-20" name="notes" placeholder={labels.uploads.notes} /></label>
+                              <Button type="submit" variant="secondary">{labels.uploads.submitSickness}</Button>
+                            </form>
+                          </details>
+                        ) : null}
                         {day.canUseJoker ? <form action="/api/challenge/joker" className="mt-3" method="post"><input name="challengeDate" type="hidden" value={day.challengeDate} /><Button type="submit" variant="secondary">{labels.uploads.useJoker}</Button></form> : null}
                       </>
                     ) : null}

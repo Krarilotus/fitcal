@@ -265,53 +265,60 @@ export function DashboardHistorySection({
                 ) : null}
               </div>
               {!readOnly &&
-              selectedTimelineEntry.status === "slack" &&
-              selectedTimelineEntry.canUsePaidRecoveryActions ? (
+              (selectedTimelineEntry.canUseJoker ||
+                (selectedTimelineEntry.canSubmitSicknessClaims &&
+                  ["open", "free", "slack", "sickPending"].includes(
+                    selectedTimelineEntry.status,
+                  ))) ? (
                 <div className="mt-3 grid gap-3">
-                  <form action="/api/challenge/joker" method="post">
-                    <input
-                      name="challengeDate"
-                      type="hidden"
-                      value={selectedTimelineEntry.challengeDate}
-                    />
-                    <DashboardActionButton
-                      disabled={!selectedTimelineEntry.canUseJoker}
-                      type="submit"
-                    >
-                      {labels.uploads.useJoker}
-                    </DashboardActionButton>
-                  </form>
-                  <details className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
-                    <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>
-                    <form action="/api/challenge/sickness" className="mt-4 space-y-4" method="post">
+                  {selectedTimelineEntry.canUseJoker ? (
+                    <form action="/api/challenge/joker" method="post">
                       <input
                         name="challengeDate"
                         type="hidden"
                         value={selectedTimelineEntry.challengeDate}
                       />
-                      <input
-                        name="startDate"
-                        type="hidden"
-                        value={selectedTimelineEntry.challengeDate}
-                      />
-                      <input
-                        name="endDate"
-                        type="hidden"
-                        value={selectedTimelineEntry.challengeDate}
-                      />
-                      <label className="flex items-start gap-3 fc-text-muted">
-                        <input className="mt-1" name="consent" type="checkbox" />
-                        <span>{labels.uploads.sicknessConsent}</span>
-                      </label>
-                      <label className="fc-input-group">
-                        <span className="fc-input-label">{labels.uploads.comment}</span>
-                        <textarea className="fc-input min-h-20" name="notes" placeholder={labels.uploads.notes} />
-                      </label>
                       <DashboardActionButton type="submit">
-                        {labels.uploads.submitSickness}
+                        {labels.uploads.useJoker}
                       </DashboardActionButton>
                     </form>
-                  </details>
+                  ) : null}
+                  {selectedTimelineEntry.canSubmitSicknessClaims &&
+                  ["open", "free", "slack", "sickPending"].includes(
+                    selectedTimelineEntry.status,
+                  ) ? (
+                    <details className="rounded-[var(--fc-radius)] border border-[var(--fc-border)] bg-[var(--fc-surface)] px-4 py-3">
+                      <summary className="cursor-pointer fc-text-emphasis">{labels.uploads.sicknessToggle}</summary>
+                      <form action="/api/challenge/sickness" className="mt-4 space-y-4" method="post">
+                        <input
+                          name="challengeDate"
+                          type="hidden"
+                          value={selectedTimelineEntry.challengeDate}
+                        />
+                        <input
+                          name="startDate"
+                          type="hidden"
+                          value={selectedTimelineEntry.challengeDate}
+                        />
+                        <input
+                          name="endDate"
+                          type="hidden"
+                          value={selectedTimelineEntry.challengeDate}
+                        />
+                        <label className="flex items-start gap-3 fc-text-muted">
+                          <input className="mt-1" name="consent" type="checkbox" />
+                          <span>{labels.uploads.sicknessConsent}</span>
+                        </label>
+                        <label className="fc-input-group">
+                          <span className="fc-input-label">{labels.uploads.comment}</span>
+                          <textarea className="fc-input min-h-20" name="notes" placeholder={labels.uploads.notes} />
+                        </label>
+                        <DashboardActionButton type="submit">
+                          {labels.uploads.submitSickness}
+                        </DashboardActionButton>
+                      </form>
+                    </details>
+                  ) : null}
                 </div>
               ) : null}
             </CardHeader>

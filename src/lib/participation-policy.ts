@@ -39,7 +39,7 @@ export function getParticipationCapabilities(
     canAccessWorkoutVideos: isPaid,
     canReviewPlatformContent: isPaid,
     canUseChallengeJokers: isPaid,
-    canSubmitSicknessClaims: isPaid,
+    canSubmitSicknessClaims: true,
     canAccrueChallengeDebt: isPaid,
     canReceiveWorkoutReviews: isPaid,
   };
