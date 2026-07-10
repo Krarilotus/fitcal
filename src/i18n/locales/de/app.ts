@@ -459,6 +459,7 @@
       comment: "Kommentar",
       submitSickness: "Krankmeldung einreichen",
       useJoker: "Joker setzen",
+      closeEditor: "Schließen",
       empty: "Aktuell sind keine Eintr\u00e4ge offen.",
       uploadError: "Upload fehlgeschlagen",
     },

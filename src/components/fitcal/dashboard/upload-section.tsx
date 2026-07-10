@@ -503,6 +503,7 @@ export function DashboardUploadSection({
   labels,
   locale,
   onClearReplacementTarget,
+  onCloseClaimEditor,
   onFocusClaimEditor,
   onVideoOpen,
   openDays,
@@ -519,6 +520,7 @@ export function DashboardUploadSection({
   labels: DashboardLabels;
   locale: Locale;
   onClearReplacementTarget: (challengeDate: string) => void;
+  onCloseClaimEditor: (challengeDate: string) => void;
   onFocusClaimEditor: (challengeDate: string, options?: { openFilePicker?: boolean; replaceVideoId?: string | null }) => void;
   onVideoOpen: (videoId: string) => void;
   openDays: OpenDay[];
@@ -725,6 +727,8 @@ export function DashboardUploadSection({
                   replaceVideoId != null
                     ? day.videos.find((video) => video.id === replaceVideoId) ?? null
                     : null;
+                const canCloseEditor =
+                  !day.showByDefault && expandedClaimEditors[day.challengeDate];
 
                 return (
                   <>
@@ -746,6 +750,15 @@ export function DashboardUploadSection({
                         ) : null}
                         {day.reviewStatusLabel ? (
                           <DashboardStatusBadge>{day.reviewStatusLabel}</DashboardStatusBadge>
+                        ) : null}
+                        {canCloseEditor ? (
+                          <DashboardActionButton
+                            disabled={isUploading}
+                            onClick={() => onCloseClaimEditor(day.challengeDate)}
+                            type="button"
+                          >
+                            {labels.uploads.closeEditor}
+                          </DashboardActionButton>
                         ) : null}
                       </div>
                     </div>

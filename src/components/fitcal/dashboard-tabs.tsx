@@ -259,6 +259,21 @@ export function DashboardTabs({
     }));
   }
 
+  function closeClaimEditor(challengeDate: string) {
+    setExpandedClaimEditors((current) => {
+      const next = { ...current };
+      delete next[challengeDate];
+      return next;
+    });
+    setClaimEditorReplacementTargets((current) => ({
+      ...current,
+      [challengeDate]: null,
+    }));
+    setFocusedClaimEditor((current) =>
+      current?.challengeDate === challengeDate ? null : current,
+    );
+  }
+
   function openVideo(videoId: string) {
     window.open(`/api/videos/${videoId}`, "_blank", "noopener,noreferrer");
   }
@@ -299,6 +314,7 @@ export function DashboardTabs({
           labels={labels}
           locale={locale}
           onClearReplacementTarget={clearClaimEditorReplacementTarget}
+          onCloseClaimEditor={closeClaimEditor}
           onFocusClaimEditor={focusClaimEditor}
           onVideoOpen={openVideo}
           openDays={openDays}

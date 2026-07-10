@@ -18,6 +18,14 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
+function hasReportedEntry(entry: TimelineEntry) {
+  return entry.pushupTotal != null && entry.situpTotal != null;
+}
+
+function shouldOpenClaimEditor(entry: TimelineEntry, readOnly: boolean) {
+  return !readOnly && entry.canCreateClaim && !hasReportedEntry(entry);
+}
+
 export function DashboardHistorySection({
   commonLabels,
   labels,
@@ -39,10 +47,13 @@ export function DashboardHistorySection({
   readOnly?: boolean;
   initialTimelineDate?: string;
 }) {
+  const initialSelectableEntry =
+    timelineEntries.find((entry) => entry.challengeDate === initialTimelineDate) ??
+    timelineEntries.find(hasReportedEntry) ??
+    timelineEntries[0] ??
+    null;
   const [selectedTimelineDate, setSelectedTimelineDate] = useState(() =>
-    timelineEntries.some((entry) => entry.challengeDate === initialTimelineDate)
-      ? initialTimelineDate!
-      : (timelineEntries[0]?.challengeDate ?? ""),
+    initialSelectableEntry?.challengeDate ?? "",
   );
   const [timelineSearch, setTimelineSearch] = useState("");
   const filteredTimelineEntries = useMemo(() => {
@@ -66,18 +77,35 @@ export function DashboardHistorySection({
     window.history.replaceState(null, "", url);
   }
 
+  function handleTimelineEntryAction(entry: TimelineEntry) {
+    if (shouldOpenClaimEditor(entry, readOnly)) {
+      scrollToClaimEditor(entry.challengeDate);
+      return;
+    }
+
+    selectTimelineDate(entry.challengeDate);
+  }
+
   const activeTimelineDate = useMemo(
-    () =>
-      filteredTimelineEntries.some((entry) => entry.challengeDate === selectedTimelineDate)
-        ? selectedTimelineDate
-        : (filteredTimelineEntries[0]?.challengeDate ?? ""),
-    [filteredTimelineEntries, selectedTimelineDate],
+    () => {
+      const selectedEntry = filteredTimelineEntries.find(
+        (entry) => entry.challengeDate === selectedTimelineDate,
+      );
+
+      if (selectedEntry && !shouldOpenClaimEditor(selectedEntry, readOnly)) {
+        return selectedTimelineDate;
+      }
+
+      return filteredTimelineEntries.find(
+        (entry) => !shouldOpenClaimEditor(entry, readOnly),
+      )?.challengeDate ?? "";
+    },
+    [filteredTimelineEntries, readOnly, selectedTimelineDate],
   );
 
   const selectedTimelineEntry = useMemo(
     () =>
       filteredTimelineEntries.find((entry) => entry.challengeDate === activeTimelineDate) ??
-      filteredTimelineEntries[0] ??
       null,
     [activeTimelineDate, filteredTimelineEntries],
   );
@@ -96,6 +124,9 @@ export function DashboardHistorySection({
       : null;
   const deletingLastVideoRemovesClaim =
     selectedTimelineEntry?.deletingLastVideoRemovesClaim ?? false;
+  const shouldShowTimelineDetail =
+    selectedTimelineEntry != null &&
+    !shouldOpenClaimEditor(selectedTimelineEntry, readOnly);
 
   function scrollToClaimEditor(challengeDate: string) {
     onClaimEdit(challengeDate);
@@ -122,15 +153,15 @@ export function DashboardHistorySection({
           value={timelineSearch}
         />
       </label>
-      {selectedTimelineEntry ? (
+      {filteredTimelineEntries.length > 0 ? (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
           <div className="grid min-w-0 gap-4">
             <div className="grid gap-3 sm:grid-cols-3">
               {recentTimelineEntries.map((day) => (
                 <button
-                  className={`text-left transition-colors ${selectedTimelineEntry.challengeDate === day.challengeDate ? "border-[var(--fc-accent)] shadow-[0_0_0_1px_var(--fc-accent)]" : ""}`}
+                  className={`text-left transition-colors ${selectedTimelineEntry?.challengeDate === day.challengeDate ? "border-[var(--fc-accent)] shadow-[0_0_0_1px_var(--fc-accent)]" : ""}`}
                   key={day.challengeDate}
-                  onClick={() => selectTimelineDate(day.challengeDate)}
+                  onClick={() => handleTimelineEntryAction(day)}
                   type="button"
                 >
                   <Card className="h-full p-5">
@@ -164,12 +195,12 @@ export function DashboardHistorySection({
                   {quickTimelineEntries.map((day) => (
                     <button
                       className={`shrink-0 rounded-[var(--fc-radius-sm)] border px-3 py-2 text-left text-sm transition-colors ${
-                        selectedTimelineEntry.challengeDate === day.challengeDate
+                        selectedTimelineEntry?.challengeDate === day.challengeDate
                           ? "border-[var(--fc-accent)] bg-[var(--fc-accent-soft)] text-[var(--fc-ink)]"
                           : "border-[var(--fc-border)] bg-[var(--fc-bg-raised)] text-[var(--fc-muted)] hover:text-[var(--fc-ink)]"
                       }`}
                       key={day.challengeDate}
-                      onClick={() => selectTimelineDate(day.challengeDate)}
+                      onClick={() => handleTimelineEntryAction(day)}
                       type="button"
                     >
                       <span className="block font-medium">{day.dateLabel}</span>
@@ -183,15 +214,19 @@ export function DashboardHistorySection({
                     <select
                       className="fc-input"
                       onChange={(event) => {
-                        if (event.target.value) {
-                          selectTimelineDate(event.target.value);
+                        const entry = olderTimelineEntries.find(
+                          (day) => day.challengeDate === event.target.value,
+                        );
+
+                        if (entry) {
+                          handleTimelineEntryAction(entry);
                         }
                       }}
                       value={
                         olderTimelineEntries.some(
-                          (day) => day.challengeDate === selectedTimelineEntry.challengeDate,
+                          (day) => day.challengeDate === selectedTimelineEntry?.challengeDate,
                         )
-                          ? selectedTimelineEntry.challengeDate
+                          ? selectedTimelineEntry?.challengeDate
                           : ""
                       }
                     >
@@ -208,7 +243,7 @@ export function DashboardHistorySection({
             </Card>
           </div>
 
-          <Card className="min-w-0">
+          {shouldShowTimelineDetail ? <Card className="min-w-0">
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -498,7 +533,7 @@ export function DashboardHistorySection({
                 </div>
               )}
             </CardContent>
-          </Card>
+          </Card> : null}
         </div>
       ) : (
         <Card className="p-5 fc-text-muted">

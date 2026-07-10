@@ -460,6 +460,7 @@
       comment: "Comment",
       submitSickness: "Submit sickness claim",
       useJoker: "Use joker",
+      closeEditor: "Close",
       empty: "There are no open entries right now.",
       uploadError: "Upload failed",
     },
