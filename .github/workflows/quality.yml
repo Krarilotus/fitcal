@@ -1,9 +1,7 @@
 name: Verify FitCal
 
 on:
-  pull_request:
-    branches:
-      - main
+  # Runs only when started by hand (Actions tab > Run workflow), to save CI minutes.
   workflow_dispatch:
 
 concurrency:
